@@ -74,7 +74,7 @@ document.querySelectorAll("[data-tilt]").forEach((card) => {
     gsap.to(card, { x: 0, y: 0, rotation: originalRotation, scale: 1, zIndex: 1, ease: "elastic.out(1,0.3)", duration: 1 });
   });
 });
-/* INFO CARDS — offset + rotatie via script, binnen schuiven op scroll */
+/* INFO CARDS — sectie pint, cards schuiven binnen tijdens de pin */
 const infoSection2 = document.getElementById("info-section-2");
 const cardConfig = [
   { el: document.getElementById("info-card-1"), x: "4vw",  y: "18vh", rotation: -6, z: 1 },
@@ -85,9 +85,11 @@ if (infoSection2 && cardConfig.every(c => c.el)) {
   const cardsTl = gsap.timeline({
     scrollTrigger: {
       trigger: infoSection2,
-      start: "top 100%",
-      end: "top top",
+      start: "top top",
+      end: "+=150%",
       scrub: 1,
+      pin: true,
+      anticipatePin: 1,
       invalidateOnRefresh: true
     }
   });
