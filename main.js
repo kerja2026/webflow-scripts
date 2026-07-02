@@ -85,7 +85,7 @@ if (infoSection2 && cardConfig.every(c => c.el)) {
   const cardsTl = gsap.timeline({
     scrollTrigger: {
       trigger: infoSection2,
-      start: "top 20%",
+      start: "top 1%",
       end: "top top",
       scrub: 1,
       invalidateOnRefresh: true
