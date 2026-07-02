@@ -84,12 +84,12 @@ const cardConfig = [
 if (infoSection2 && cardConfig.every(c => c.el)) {
   const cardsTl = gsap.timeline({
     scrollTrigger: {
-  trigger: infoSection2,
-  start: "top 50%",
-  end: "top top",
-  scrub: 1,
-  invalidateOnRefresh: true
-}
+      trigger: infoSection2,
+      start: "top 80%",
+      end: "top top",
+      scrub: 1,
+      invalidateOnRefresh: true
+    }
   });
   cardConfig.forEach((card, i) => {
     gsap.set(card.el, {
@@ -99,8 +99,8 @@ if (infoSection2 && cardConfig.every(c => c.el)) {
     });
     cardsTl.fromTo(card.el,
       { x: "110vw" },
-      { x: card.x, ease: "power2.out", duration: 2 },
-      i * 0.4
+      { x: card.x, ease: "power2.out", duration: 1 },
+      i * 1.2
     );
   });
 }
