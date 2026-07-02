@@ -99,8 +99,8 @@ if (infoSection2 && cardConfig.every(c => c.el)) {
     });
     cardsTl.fromTo(card.el,
       { x: "110vw" },
-      { x: card.x, ease: "power2.out", duration: 1 },
-      i * 0.6
+      { x: card.x, ease: "power2.out", duration: 2 },
+      i * 0.4
     );
   });
 }
