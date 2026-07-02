@@ -79,7 +79,7 @@ const infoSection2 = document.getElementById("info-section-2");
 const cardConfig = [
   { el: document.getElementById("info-card-1"), x: 0,   y: 0,   rotation: -8, z: 1 },
   { el: document.getElementById("info-card-2"), x: 120, y: 60,  rotation: 5,  z: 2 },
-  { el: document.getElementById("info-card-3"), x: 240, y: 140, rotation: 6, z: 3 }
+  { el: document.getElementById("info-card-3"), x: 240, y: 140, rotation: 12, z: 3 }
 ];
 if (infoSection2 && cardConfig.every(c => c.el)) {
   const cardsTl = gsap.timeline({
