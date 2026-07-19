@@ -1,0 +1,106 @@
+/* Alleen op apparaten met een muis: echte cursor verbergen */
+@media (hover: hover) and (pointer: fine) {
+  body { cursor: none; }
+}
+
+/* Touch-apparaten (mobiel/tablet): blob verbergen */
+@media (hover: none), (pointer: coarse) {
+  .cursor-blob { display: none !important; }
+}
+
+/* Vangnet: ook verbergen op kleine schermen */
+@media screen and (max-width: 767px) {
+  .cursor-blob { display: none !important; }
+}
+
+body {
+  font-size: var(--size-font) !important;
+}
+.container {
+  max-width: var(--size-container);
+}
+.container.medium {
+  max-width: calc(var(--size-container) * 0.85);
+}
+.container.small {
+  max-width: calc(var(--size-container) * 0.7);
+}
+.link-blur {
+  display: inline;
+  transition: filter 0.3s ease;
+  cursor: pointer;
+  will-change: filter;
+}
+.link-blur:hover {
+  filter: blur(3px);
+}
+.reshaping_heading,
+.rebranding_heading,
+.reinventing_heading {
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Stay connected button */
+.cursor-blob {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #111;
+  color: #ff0000;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: filter 0.2s ease;
+  line-height: 1.3;
+}
+.cursor-blob.is-hovering {
+  filter: blur(6px);
+}
+
+/* ------------------------- Scaling System by Osmo [https://osmo.supply/] ------------------------- */
+
+/* Desktop */
+:root {
+  --size-unit: 16; /* body font-size in design - no px */
+  --size-container-ideal: 1440; /* screen-size in design - no px */
+  --size-container-min: 992px;
+  --size-container-max: 1920px;
+  --size-container: clamp(var(--size-container-min), 100vw, var(--size-container-max));
+  --size-font: calc(var(--size-container) / (var(--size-container-ideal) / var(--size-unit)));
+}
+
+/* Tablet */
+@media screen and (max-width: 991px) {
+  :root {
+    --size-container-ideal: 834;
+    --size-container-min: 768px;
+    --size-container-max: 991px;
+  }
+}
+
+/* Mobile Landscape */
+@media screen and (max-width: 767px) {
+  :root {
+    --size-container-ideal: 550;
+    --size-container-min: 480px;
+    --size-container-max: 767px;
+  }
+}
+
+/* Mobile Portrait */
+@media screen and (max-width: 479px) {
+  :root {
+    --size-container-ideal: 390;
+    --size-container-min: 320px;
+    --size-container-max: 479px;
+  }
+}
