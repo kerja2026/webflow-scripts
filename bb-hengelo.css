@@ -1,0 +1,17 @@
+body {
+    font-size: var(--size-font);
+    overflow-x: hidden;
+  }
+  .page_wrapper {
+    min-height: 100vh;
+    background-size: 400% 400% !important;
+    background-repeat: no-repeat !important;
+  }
+  .hscroll_track { width: fit-content; }
+  .hscroll_slide { flex-shrink: 0; }
+  .img_holder { flex-shrink: 0; }
+  .l-container { max-width: var(--size-container); }
+  #hscroll-section,
+  #marquee-section {
+    overflow: hidden;
+  }
