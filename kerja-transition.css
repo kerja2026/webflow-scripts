@@ -1,0 +1,46 @@
+/* ==========================================================================
+   PAGE TRANSITION — skyline
+   ========================================================================== */
+
+:root {
+  --kj-pt-color: #F23610;
+}
+
+/* Dekt het scherm al bij de eerste paint van de binnenkomende pagina, zodat
+   je de nieuwe content niet even ziet flitsen voordat GSAP het overneemt. */
+html[data-kj-pt="enter"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--kj-pt-color);
+  pointer-events: none;
+}
+
+.kj-pt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  display: none;
+  pointer-events: none;
+}
+
+/* pointer-events aan: tijdens de transitie kun je er niet doorheen klikken */
+.kj-pt.is-active {
+  display: block;
+  pointer-events: auto;
+}
+
+.kj-pt__svg { display: block; }
+
+/* elk gebouw beweegt apart */
+.kj-pt__shape {
+  fill: var(--kj-pt-color);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-kj-pt="enter"]::before { display: none; }
+}
