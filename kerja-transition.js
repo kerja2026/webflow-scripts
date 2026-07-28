@@ -15,10 +15,11 @@
        parent, bijv. een hele footer). */
     include: [
       /^\/$/,                 // home
-      /^\/work\/?$/,          // hoofdpagina's
-      /^\/studio\/?$/,
-      /^\/contact\/?$/,
-      /^\/work\/[^/]+\/?$/    // CMS projectpagina's
+      /^\/contact\/?$/        // contact
+
+      // Regels voor nieuwe pagina's hier toevoegen, bijvoorbeeld:
+      //   /^\/work\/?$/           een hoofdpagina
+      //   /^\/work\/[^/]+\/?$/    de CMS-projectpagina's daaronder
     ],
 
     color:          '#F23610',
@@ -35,7 +36,7 @@
     seedSpeed:      5150,     // verander voor een ander ritme
 
     revealOnLoad:   'always', // 'always' | 'after-transition'
-    debug:          false     // logt interne links die zijn overgeslagen
+    debug:          true      // logt overgeslagen interne links — uitzetten voor live
   };
 
   const root    = document.documentElement;
