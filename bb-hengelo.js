@@ -179,3 +179,100 @@ window.addEventListener("load", () => {
   ScrollTrigger.sort();
   ScrollTrigger.refresh();
 });
+
+
+/* ============================================================
+   MESH GRADIENT BACKGROUND — scroll-driven
+   Gebruikt de bestaande gsap.registerPlugin + Lenis bovenaan dit bestand.
+   ============================================================ */
+(() => {
+  const mesh = document.getElementById("bbh-mesh");
+  if (!mesh) return;
+
+  const root   = document.documentElement;
+  const blobs  = gsap.utils.toArray("#bbh-mesh .bbh-blob");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const TRAVEL = 2.5;   // reisafstand 250%
+  const SCRUB  = 2.5;   // scrub-lag 2.5s
+
+  /* Per blob twee etappes, zodat het pad krom is en de blobs
+     langs elkaar heen bewegen in plaats van als één blok. */
+  const PATHS = [
+    { sel: ".bbh-blob.b1", a: { yPercent:   8, xPercent:   5, scale: 1.10 }, b: { yPercent:  20, xPercent:  16, scale: 1.22 } },
+    { sel: ".bbh-blob.b2", a: { yPercent:  14, xPercent: -12, scale: 1.14 }, b: { yPercent:  34, xPercent:  -4, scale: 0.92 } },
+    { sel: ".bbh-blob.b3", a: { yPercent: -16, xPercent:  14, scale: 1.18 }, b: { yPercent: -34, xPercent:  34, scale: 1.32 } },
+    { sel: ".bbh-blob.b4", a: { yPercent: -26, xPercent:  -8, scale: 1.20 }, b: { yPercent: -58, xPercent: -22, scale: 1.55 } },
+    { sel: ".bbh-blob.b5", a: { yPercent: -10, xPercent:  18, scale: 0.90 }, b: { yPercent: -26, xPercent:   6, scale: 1.16 } }
+  ];
+
+  /* Zwaartepunt van de basisgradient kantelt mee: bovenaan paarser,
+     onderaan warmer. Subtiel, maar het maakt boven/onder leesbaar. */
+  const STOPS_START = { top: "#7c1a66", upper: "#a81c79", mid: "#c42d6e", lower: "#de5a55", bottom: "#ee8f4f" };
+  const STOPS_END   = { top: "#5e1a72", upper: "#9c2472", mid: "#d13f63", lower: "#e8724c", bottom: "#f7a83f" };
+
+  const scale = v => ({
+    yPercent: v.yPercent * TRAVEL,
+    xPercent: v.xPercent * TRAVEL,
+    scale: 1 + (v.scale - 1) * TRAVEL
+  });
+
+  const tl = gsap.timeline({
+    defaults: { ease: "none", duration: 0.5 },
+    scrollTrigger: {
+      trigger: document.body,
+      start: "top top",
+      end: "bottom bottom",
+      scrub: SCRUB,
+      invalidateOnRefresh: true,
+      refreshPriority: -1        // ná de gepinde secties herberekenen
+    }
+  });
+
+  PATHS.forEach(p => {
+    tl.to(p.sel, scale(p.a), 0);
+    tl.to(p.sel, scale(p.b), 0.5);
+  });
+
+  const stops = { ...STOPS_START };
+  tl.to(stops, {
+    ...STOPS_END,
+    duration: 1,
+    onUpdate() {
+      root.style.setProperty("--bbh-c-top",    stops.top);
+      root.style.setProperty("--bbh-c-upper",  stops.upper);
+      root.style.setProperty("--bbh-c-mid",    stops.mid);
+      root.style.setProperty("--bbh-c-lower",  stops.lower);
+      root.style.setProperty("--bbh-c-bottom", stops.bottom);
+    }
+  }, 0);
+
+  /* Idle drift — heel langzaam, zodat de achtergrond stil ook leeft */
+  if (!reduce) {
+    blobs.forEach((el, i) => {
+      gsap.to(el, {
+        x: gsap.utils.random(-40, 40),
+        y: gsap.utils.random(-40, 40),
+        duration: gsap.utils.random(14, 22),
+        repeat: -1, yoyo: true, ease: "sine.inOut", delay: i * 0.6
+      });
+    });
+  }
+
+  /* Reactie op scrollsnelheid — korte saturatie-flare, max +28% */
+  const satTo = gsap.quickTo(root, "--bbh-sat", { duration: 0.6, ease: "power2.out" });
+  ScrollTrigger.create({
+    trigger: document.body,
+    start: "top top",
+    end: "bottom bottom",
+    onUpdate(self) {
+      if (reduce) return;
+      const v = Math.min(Math.abs(self.getVelocity()) / 2400, 1);
+      satTo(1 + v * 0.28);
+    }
+  });
+
+  if (reduce) root.style.setProperty("--bbh-intensity", 0.6);
+
+  window.addEventListener("load", () => ScrollTrigger.refresh());
+})();
