@@ -1,0 +1,12 @@
+/* ═══ CROSSFIT HENGELO — pagina-overgang ═══ */
+
+/* Overlay-beginstaat */
+#page-overlay {
+  -webkit-clip-path: inset(0 0 0% 0);
+  clip-path: inset(0 0 0% 0);
+  pointer-events: none;
+}
+
+/* Cookiebot verborgen tot na de overgang */
+#CybotCookiebotDialog,
+#CybotCookiebotDialogBodyUnderlay { display: none !important; }
