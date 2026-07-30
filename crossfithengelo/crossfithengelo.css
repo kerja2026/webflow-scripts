@@ -1,0 +1,52 @@
+/* ═══════════════════════════════════════════════════════════
+   CROSSFIT HENGELO — stijlen
+   Laden in <head> via jsDelivr.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Basis ────────────────────────────────────────────────── */
+
+/* Tap-delay van 300ms voorkomen */
+* { touch-action: manipulation; }
+
+/* Lenis smooth scroll */
+html.lenis { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* Animatie-beginstaten */
+.anim-heading { opacity: 0; }
+.anim-mask-section { clip-path: inset(100% 0 0 0); }
+
+/* Parallax */
+.parallax-img { will-change: transform; }
+
+/* ─── Navbar ───────────────────────────────────────────────── */
+
+/* Kleurwissel op donkere secties */
+.line-1, .line-2, .line-3 { transition: background-color 0.5s ease; }
+.cfh_logo { transition: filter 0.5s ease; }
+.navbar--light .line-1,
+.navbar--light .line-2,
+.navbar--light .line-3 { background-color: #efe4d5 !important; }
+.navbar--light .cfh_logo { filter: brightness(0) invert(1) sepia(0.15) saturate(0.8) hue-rotate(10deg) !important; }
+
+/* Verbergen bij naar beneden scrollen */
+.nav_section { transition: transform 0.6s ease; }
+.navbar--hidden { transform: translateY(-100%); }
+
+/* ─── Marquee ──────────────────────────────────────────────── */
+.scrolling_text_section { overflow: hidden; }
+.scrolling-text-wrapper { display: flex; width: fit-content; will-change: transform; }
+.scrolling-text { white-space: nowrap; flex-shrink: 0; padding-right: 80px; }
+
+/* ─── Cookiebot popup-formaat ──────────────────────────────── */
+#CybotCookiebotDialog {
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+#CybotCookiebotDialogBody {
+  overflow-y: auto !important;
+  max-height: 70vh !important;
+}
