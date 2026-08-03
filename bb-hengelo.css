@@ -16,131 +16,106 @@ body {
     overflow: hidden;
   }
 
-
 /* ============================================================
    MESH GRADIENT BACKGROUND — scroll-driven
-   Gebruikt de bestaande gsap.registerPlugin + Lenis bovenaan dit bestand.
    ============================================================ */
-(() => {
-  const mesh = document.getElementById("bbh-mesh");
-  if (!mesh) return;
+:root{
+  /* ── de vijf merkkleuren — enige plek om te wijzigen ── */
+  --bbh-aubergine: #4E2050;
+  --bbh-plum:      #8C2D6D;
+  --bbh-amber:     #E8B32E;
+  --bbh-navy:      #33455E;
+  --bbh-teal:      #4E7573;
 
-  const root   = document.documentElement;
-  const blobs  = gsap.utils.toArray("#bbh-mesh .bbh-blob");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* startwaarden van de gradient, JS neemt ze bij scroll over */
+  --bbh-c-top:    color-mix(in srgb, var(--bbh-aubergine) 70%, #000);
+  --bbh-c-upper:  var(--bbh-aubergine);
+  --bbh-c-mid:    var(--bbh-plum);
+  --bbh-c-lower:  var(--bbh-navy);
+  --bbh-c-bottom: var(--bbh-teal);
 
-  const TRAVEL = 2.5;   // reisafstand 250%
-  const SCRUB  = 2.5;   // scrub-lag 2.5s
+  --bbh-intensity: 1;
+  --bbh-sat: 1;
+}
 
-  /* Per blob twee etappes, zodat het pad krom is en de blobs
-     langs elkaar heen bewegen in plaats van als één blok. */
-  const PATHS = [
-    { sel: ".bbh-blob.b1", a: { yPercent:   8, xPercent:   5, scale: 1.10 }, b: { yPercent:  20, xPercent:  16, scale: 1.22 } },
-    { sel: ".bbh-blob.b2", a: { yPercent:  14, xPercent: -12, scale: 1.14 }, b: { yPercent:  34, xPercent:  -4, scale: 0.92 } },
-    { sel: ".bbh-blob.b3", a: { yPercent: -16, xPercent:  14, scale: 1.18 }, b: { yPercent: -34, xPercent:  34, scale: 1.32 } },
-    { sel: ".bbh-blob.b4", a: { yPercent: -26, xPercent:  -8, scale: 1.20 }, b: { yPercent: -58, xPercent: -22, scale: 1.55 } },
-    { sel: ".bbh-blob.b5", a: { yPercent: -10, xPercent:  18, scale: 0.90 }, b: { yPercent: -26, xPercent:   6, scale: 1.16 } }
-  ];
+/* fallback-kleur, voorkomt een witte flash voor het paint */
+body{ background-color: var(--bbh-c-top); }
 
-  /* Kleuren komen uit de CSS-variabelen in :root, de tinten leidt GSAP
-     eruit af. De hero (scrollpositie 0) gebruikt alléén aubergine, plum
-     en amber; navy en teal komen pas op zodra je de hero uit scrollt. */
-  const css = getComputedStyle(root);
-  const C   = n => css.getPropertyValue("--bbh-" + n).trim();
-  const mix = (a, b, t) => gsap.utils.interpolate(a, b, t);
+/* content moet bóven de achtergrond liggen */
+.page_wrapper{ position: relative; z-index: 2; }
 
-  const AUB = C("aubergine"), PLUM = C("plum"), AMBER = C("amber"),
-        NAVY = C("navy"), TEAL = C("teal");
-  const BLACK = "#000000";
+#bbh-mesh{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    var(--bbh-c-top)     0%,
+    var(--bbh-c-upper)  22%,
+    var(--bbh-c-mid)    48%,
+    var(--bbh-c-lower)  74%,
+    var(--bbh-c-bottom) 100%);
+  filter: saturate(var(--bbh-sat));
+}
 
-  const STOPS_START = {
-    top:    mix(AUB, BLACK, 0.34),
-    upper:  AUB,
-    mid:    mix(AUB, PLUM, 0.75),
-    lower:  PLUM,
-    bottom: mix(PLUM, AMBER, 0.55)
-  };
-  const STOPS_END = {
-    top:    mix(AUB, BLACK, 0.42),
-    upper:  mix(AUB, PLUM, 0.30),
-    mid:    mix(PLUM, NAVY, 0.40),
-    lower:  NAVY,
-    bottom: mix(NAVY, TEAL, 0.55)
-  };
+.bbh-blob{
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  opacity: calc(var(--o, .5) * var(--bbh-intensity));
+}
+.bbh-blob.light{ mix-blend-mode: screen; }
+.bbh-blob.deep { mix-blend-mode: multiply; }
 
-  const scale = v => ({
-    yPercent: v.yPercent * TRAVEL,
-    xPercent: v.xPercent * TRAVEL,
-    scale: 1 + (v.scale - 1) * TRAVEL
-  });
+/* diepte bovenaan */
+.bbh-blob.b1{
+  --o:.85; width:80vmax; height:80vmax; top:-28vmax; left:-22vmax;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--bbh-aubergine) 55%, #000) 0%,
+    color-mix(in srgb, var(--bbh-aubergine) 32%, transparent) 42%,
+    transparent 70%);
+}
+/* plum-gloed */
+.bbh-blob.b2{
+  --o:.7; width:65vmax; height:65vmax; top:2vmax; left:48vw;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--bbh-plum) 60%, #fff) 0%,
+    color-mix(in srgb, var(--bbh-plum) 38%, transparent) 40%,
+    transparent 68%);
+}
+/* amber, komt van links opzetten */
+.bbh-blob.b3{
+  --o:.5; width:70vmax; height:70vmax; top:40vh; left:-26vmax;
+  background: radial-gradient(circle at 50% 50%,
+    var(--bbh-amber) 0%,
+    color-mix(in srgb, var(--bbh-amber) 38%, transparent) 40%,
+    transparent 68%);
+}
+/* amber-bloom, de grote sweep omhoog */
+.bbh-blob.b4{
+  --o:.45; width:52vmax; height:52vmax; top:75vh; left:42vw;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--bbh-amber) 78%, #fff) 0%,
+    color-mix(in srgb, var(--bbh-amber) 32%, transparent) 38%,
+    transparent 66%);
+}
+/* teal, komt pas op na de hero (JS zet --o op 0 bij start) */
+.bbh-blob.b5{
+  --o:.6; width:58vmax; height:58vmax; top:52vh; left:8vw;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--bbh-teal) 65%, #fff) 0%,
+    color-mix(in srgb, var(--bbh-teal) 38%, transparent) 40%,
+    transparent 68%);
+}
 
-  const tl = gsap.timeline({
-    defaults: { ease: "none", duration: 0.5 },
-    scrollTrigger: {
-      trigger: document.body,
-      start: "top top",
-      end: "bottom bottom",
-      scrub: SCRUB,
-      invalidateOnRefresh: true,
-      refreshPriority: -1        // ná de gepinde secties herberekenen
-    }
-  });
+/* korrel — haalt de banding uit de gradient */
+#bbh-grain{
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; opacity: .045; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
 
-  PATHS.forEach(p => {
-    tl.to(p.sel, scale(p.a), 0);
-    tl.to(p.sel, scale(p.b), 0.5);
-  });
-
-  /* Teal blijft uit de hero: begint onzichtbaar en komt pas op na de fold. */
-  gsap.set(".bbh-blob.b5", { "--o": 0 });
-  tl.to(".bbh-blob.b5", { "--o": 0.6, duration: 0.45 }, 0.22);
-
-  /* Amber zakt terug richting het einde, zodat de koele onderkant niet
-     vertroebelt. Wil je de warmte doorzetten, haal deze regel weg. */
-  tl.to(".bbh-blob.b3, .bbh-blob.b4", { "--o": 0.18, duration: 0.5 }, 0.5);
-
-  const stops = { ...STOPS_START };
-  tl.to(stops, {
-    ...STOPS_END,
-    duration: 1,
-    onUpdate() {
-      root.style.setProperty("--bbh-c-top",    stops.top);
-      root.style.setProperty("--bbh-c-upper",  stops.upper);
-      root.style.setProperty("--bbh-c-mid",    stops.mid);
-      root.style.setProperty("--bbh-c-lower",  stops.lower);
-      root.style.setProperty("--bbh-c-bottom", stops.bottom);
-    }
-  }, 0);
-
-  /* Idle drift — heel langzaam, zodat de achtergrond stil ook leeft */
-  if (!reduce) {
-    blobs.forEach((el, i) => {
-      gsap.to(el, {
-        x: gsap.utils.random(-40, 40),
-        y: gsap.utils.random(-40, 40),
-        duration: gsap.utils.random(14, 22),
-        repeat: -1, yoyo: true, ease: "sine.inOut", delay: i * 0.6
-      });
-    });
-  }
-
-  /* Reactie op scrollsnelheid — korte saturatie-flare, max +28% */
-  const satTo = gsap.quickTo(root, "--bbh-sat", { duration: 0.6, ease: "power2.out" });
-  ScrollTrigger.create({
-    trigger: document.body,
-    start: "top top",
-    end: "bottom bottom",
-    onUpdate(self) {
-      if (reduce) return;
-      const v = Math.min(Math.abs(self.getVelocity()) / 2400, 1);
-      satTo(1 + v * 0.28);
-    }
-  });
-
-  if (reduce) {
-    root.style.setProperty("--bbh-intensity", 0.6);
-    gsap.set(".bbh-blob.b5", { "--o": 0.6 });
-  }
-
-  window.addEventListener("load", () => ScrollTrigger.refresh());
-})();
+@media (prefers-reduced-motion: reduce){
+  #bbh-grain{ opacity: .03; }
+}
