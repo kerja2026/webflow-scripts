@@ -27,12 +27,12 @@ body {
   --bbh-navy:      #33455E;
   --bbh-teal:      #4E7573;
 
-  /* startwaarden van de gradient, JS neemt ze bij scroll over */
-  --bbh-c-top:    color-mix(in srgb, var(--bbh-aubergine) 70%, #000);
+/* startwaarden van de gradient, JS neemt ze bij scroll over */
+  --bbh-c-top:    color-mix(in srgb, var(--bbh-aubergine) 66%, #000);
   --bbh-c-upper:  var(--bbh-aubergine);
-  --bbh-c-mid:    var(--bbh-plum);
-  --bbh-c-lower:  var(--bbh-navy);
-  --bbh-c-bottom: var(--bbh-teal);
+  --bbh-c-mid:    color-mix(in srgb, var(--bbh-plum) 75%, var(--bbh-aubergine));
+  --bbh-c-lower:  var(--bbh-plum);
+  --bbh-c-bottom: color-mix(in srgb, var(--bbh-amber) 55%, var(--bbh-plum));
 
   --bbh-intensity: 1;
   --bbh-sat: 1;
