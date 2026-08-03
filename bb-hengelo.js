@@ -214,22 +214,25 @@ window.addEventListener("load", () => {
   const C   = n => css.getPropertyValue("--bbh-" + n).trim();
   const mix = (a, b, t) => gsap.utils.interpolate(a, b, t);
 
-  const AUB = C("aubergine"), PLUM = C("plum"), NAVY = C("navy"), TEAL = C("teal");
-  const BLACK = "#000000", WHITE = "#ffffff";
+    const AUB = C("aubergine"), PLUM = C("plum"), AMBER = C("amber"),
+        NAVY = C("navy"), TEAL = C("teal");
+  const BLACK = "#000000";
 
+  /* Hero (scrollpositie 0) gebruikt alléén aubergine, plum en amber.
+     Navy en teal komen pas op zodra je de hero uit scrollt. */
   const STOPS_START = {
-    top:    mix(AUB, BLACK, 0.30),
+    top:    mix(AUB, BLACK, 0.34),
     upper:  AUB,
-    mid:    PLUM,
-    lower:  NAVY,
-    bottom: TEAL
+    mid:    mix(AUB, PLUM, 0.75),
+    lower:  PLUM,
+    bottom: mix(PLUM, AMBER, 0.55)
   };
   const STOPS_END = {
-    top:    mix(AUB, BLACK, 0.46),
-    upper:  mix(AUB, PLUM, 0.35),
-    mid:    mix(PLUM, WHITE, 0.10),
-    lower:  mix(NAVY, TEAL, 0.32),
-    bottom: mix(TEAL, WHITE, 0.16)
+    top:    mix(AUB, BLACK, 0.42),
+    upper:  mix(AUB, PLUM, 0.30),
+    mid:    mix(PLUM, NAVY, 0.40),
+    lower:  NAVY,
+    bottom: mix(NAVY, TEAL, 0.55)
   };
 
   const scale = v => ({
@@ -251,8 +254,14 @@ window.addEventListener("load", () => {
   });
 
   PATHS.forEach(p => {
-    tl.to(p.sel, scale(p.a), 0);
-    tl.to(p.sel, scale(p.b), 0.5);
+    
+  /* Teal blijft uit de hero: begint onzichtbaar en komt op na de fold. */
+  gsap.set(".bbh-blob.b5", { "--o": 0 });
+  tl.to(".bbh-blob.b5", { "--o": 0.6, duration: 0.45 }, 0.22);
+
+  /* Amber zakt terug richting het einde, zodat de koele onderkant niet
+     vertroebelt. Wil je de warmte doorzetten, haal deze regel weg. */
+  tl.to(".bbh-blob.b3, .bbh-blob.b4", { "--o": 0.18, duration: 0.5 }, 0.5);
   });
 
   const stops = { ...STOPS_START };
@@ -293,7 +302,10 @@ window.addEventListener("load", () => {
     }
   });
 
-  if (reduce) root.style.setProperty("--bbh-intensity", 0.6);
+  if (reduce) {
+   root.style.setProperty("--bbh-intensity", 0.6);
+   gsap.set(".bbh-blob.b5", { "--o": 0.6 });
+  }
 
   window.addEventListener("load", () => ScrollTrigger.refresh());
 })();
