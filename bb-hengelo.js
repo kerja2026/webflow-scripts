@@ -206,10 +206,31 @@ window.addEventListener("load", () => {
     { sel: ".bbh-blob.b5", a: { yPercent: -10, xPercent:  18, scale: 0.90 }, b: { yPercent: -26, xPercent:   6, scale: 1.16 } }
   ];
 
-  /* Zwaartepunt van de basisgradient kantelt mee: bovenaan paarser,
-     onderaan warmer. Subtiel, maar het maakt boven/onder leesbaar. */
-  const STOPS_START = { top: "#7c1a66", upper: "#a81c79", mid: "#c42d6e", lower: "#de5a55", bottom: "#ee8f4f" };
-  const STOPS_END   = { top: "#5e1a72", upper: "#9c2472", mid: "#d13f63", lower: "#e8724c", bottom: "#f7a83f" };
+  /* Kleuren komen uit de CSS-variabelen in :root, de tinten leidt GSAP
+     eruit af. Wijzig je de merkkleuren in de CSS, dan volgt dit mee.
+     De gradient kantelt bij het scrollen: bovenin dieper aubergine,
+     onderin frisser teal. */
+  const css = getComputedStyle(root);
+  const C   = n => css.getPropertyValue("--bbh-" + n).trim();
+  const mix = (a, b, t) => gsap.utils.interpolate(a, b, t);
+
+  const AUB = C("aubergine"), PLUM = C("plum"), NAVY = C("navy"), TEAL = C("teal");
+  const BLACK = "#000000", WHITE = "#ffffff";
+
+  const STOPS_START = {
+    top:    mix(AUB, BLACK, 0.30),
+    upper:  AUB,
+    mid:    PLUM,
+    lower:  NAVY,
+    bottom: TEAL
+  };
+  const STOPS_END = {
+    top:    mix(AUB, BLACK, 0.46),
+    upper:  mix(AUB, PLUM, 0.35),
+    mid:    mix(PLUM, WHITE, 0.10),
+    lower:  mix(NAVY, TEAL, 0.32),
+    bottom: mix(TEAL, WHITE, 0.16)
+  };
 
   const scale = v => ({
     yPercent: v.yPercent * TRAVEL,
