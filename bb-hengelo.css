@@ -39,6 +39,36 @@ body {
   --bbh-sat: 1;
 }
 
+/* fallback-kleur, voorkomt een witte flash voor het paint */
+body{ background-color: var(--bbh-c-top); }
+
+/* content moet bóven de achtergrond liggen */
+.page_wrapper{ position: relative; z-index: 2; }
+
+#bbh-mesh{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    var(--bbh-c-top)     0%,
+    var(--bbh-c-upper)  22%,
+    var(--bbh-c-mid)    48%,
+    var(--bbh-c-lower)  74%,
+    var(--bbh-c-bottom) 100%);
+  filter: saturate(var(--bbh-sat));
+}
+
+.bbh-blob{
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  opacity: calc(var(--o, .5) * var(--bbh-intensity));
+}
+.bbh-blob.light{ mix-blend-mode: screen; }
+.bbh-blob.deep { mix-blend-mode: multiply; }
+
 /* diepte bovenaan */
 .bbh-blob.b1{
   --o:.85; width:80vmax; height:80vmax; top:-28vmax; left:-22vmax;
@@ -78,6 +108,13 @@ body {
     color-mix(in srgb, var(--bbh-teal) 65%, #fff) 0%,
     color-mix(in srgb, var(--bbh-teal) 38%, transparent) 40%,
     transparent 68%);
+}
+
+/* korrel — haalt de banding uit de gradient */
+#bbh-grain{
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; opacity: .045; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
 }
 
 @media (prefers-reduced-motion: reduce){
