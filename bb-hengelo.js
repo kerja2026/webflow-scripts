@@ -206,34 +206,10 @@ window.addEventListener("load", () => {
     { sel: ".bbh-blob.b5", a: { yPercent: -10, xPercent:  18, scale: 0.90 }, b: { yPercent: -26, xPercent:   6, scale: 1.16 } }
   ];
 
-  /* Kleuren komen uit de CSS-variabelen in :root, de tinten leidt GSAP
-     eruit af. Wijzig je de merkkleuren in de CSS, dan volgt dit mee.
-     De gradient kantelt bij het scrollen: bovenin dieper aubergine,
-     onderin frisser teal. */
-  const css = getComputedStyle(root);
-  const C   = n => css.getPropertyValue("--bbh-" + n).trim();
-  const mix = (a, b, t) => gsap.utils.interpolate(a, b, t);
-
-    const AUB = C("aubergine"), PLUM = C("plum"), AMBER = C("amber"),
-        NAVY = C("navy"), TEAL = C("teal");
-  const BLACK = "#000000";
-
-  /* Hero (scrollpositie 0) gebruikt alléén aubergine, plum en amber.
-     Navy en teal komen pas op zodra je de hero uit scrollt. */
-  const STOPS_START = {
-    top:    mix(AUB, BLACK, 0.34),
-    upper:  AUB,
-    mid:    mix(AUB, PLUM, 0.75),
-    lower:  PLUM,
-    bottom: mix(PLUM, AMBER, 0.55)
-  };
-  const STOPS_END = {
-    top:    mix(AUB, BLACK, 0.42),
-    upper:  mix(AUB, PLUM, 0.30),
-    mid:    mix(PLUM, NAVY, 0.40),
-    lower:  NAVY,
-    bottom: mix(NAVY, TEAL, 0.55)
-  };
+  /* Zwaartepunt van de basisgradient kantelt mee: bovenaan paarser,
+     onderaan warmer. Subtiel, maar het maakt boven/onder leesbaar. */
+  const STOPS_START = { top: "#7c1a66", upper: "#a81c79", mid: "#c42d6e", lower: "#de5a55", bottom: "#ee8f4f" };
+  const STOPS_END   = { top: "#5e1a72", upper: "#9c2472", mid: "#d13f63", lower: "#e8724c", bottom: "#f7a83f" };
 
   const scale = v => ({
     yPercent: v.yPercent * TRAVEL,
@@ -254,14 +230,8 @@ window.addEventListener("load", () => {
   });
 
   PATHS.forEach(p => {
-    
-  /* Teal blijft uit de hero: begint onzichtbaar en komt op na de fold. */
-  gsap.set(".bbh-blob.b5", { "--o": 0 });
-  tl.to(".bbh-blob.b5", { "--o": 0.6, duration: 0.45 }, 0.22);
-
-  /* Amber zakt terug richting het einde, zodat de koele onderkant niet
-     vertroebelt. Wil je de warmte doorzetten, haal deze regel weg. */
-  tl.to(".bbh-blob.b3, .bbh-blob.b4", { "--o": 0.18, duration: 0.5 }, 0.5);
+    tl.to(p.sel, scale(p.a), 0);
+    tl.to(p.sel, scale(p.b), 0.5);
   });
 
   const stops = { ...STOPS_START };
@@ -302,10 +272,7 @@ window.addEventListener("load", () => {
     }
   });
 
-  if (reduce) {
-   root.style.setProperty("--bbh-intensity", 0.6);
-   gsap.set(".bbh-blob.b5", { "--o": 0.6 });
-  }
+  if (reduce) root.style.setProperty("--bbh-intensity", 0.6);
 
   window.addEventListener("load", () => ScrollTrigger.refresh());
 })();
