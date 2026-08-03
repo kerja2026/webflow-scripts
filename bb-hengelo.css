@@ -16,23 +16,16 @@ body {
     overflow: hidden;
   }
 
+
 /* ============================================================
    MESH GRADIENT BACKGROUND — scroll-driven
    ============================================================ */
 :root{
-  /* ── de vijf merkkleuren — enige plek om te wijzigen ── */
-  --bbh-aubergine: #4E2050;
-  --bbh-plum:      #8C2D6D;
-  --bbh-amber:     #E8B32E;
-  --bbh-navy:      #33455E;
-  --bbh-teal:      #4E7573;
-
-/* startwaarden van de gradient, JS neemt ze bij scroll over */
-  --bbh-c-top:    color-mix(in srgb, var(--bbh-aubergine) 66%, #000);
-  --bbh-c-upper:  var(--bbh-aubergine);
-  --bbh-c-mid:    color-mix(in srgb, var(--bbh-plum) 75%, var(--bbh-aubergine));
-  --bbh-c-lower:  var(--bbh-plum);
-  --bbh-c-bottom: color-mix(in srgb, var(--bbh-amber) 55%, var(--bbh-plum));
+  --bbh-c-top:    #7c1a66;
+  --bbh-c-upper:  #a81c79;
+  --bbh-c-mid:    #c42d6e;
+  --bbh-c-lower:  #de5a55;
+  --bbh-c-bottom: #ee8f4f;
 
   --bbh-intensity: 1;
   --bbh-sat: 1;
@@ -68,45 +61,30 @@ body{ background-color: var(--bbh-c-top); }
 .bbh-blob.light{ mix-blend-mode: screen; }
 .bbh-blob.deep { mix-blend-mode: multiply; }
 
-/* diepte bovenaan */
+/* diep paars — diepte bovenaan */
 .bbh-blob.b1{
   --o:.85; width:80vmax; height:80vmax; top:-28vmax; left:-22vmax;
-  background: radial-gradient(circle at 50% 50%,
-    color-mix(in srgb, var(--bbh-aubergine) 55%, #000) 0%,
-    color-mix(in srgb, var(--bbh-aubergine) 32%, transparent) 42%,
-    transparent 70%);
+  background: radial-gradient(circle at 50% 50%, #4a0f5e 0%, rgba(74,15,94,.55) 42%, rgba(74,15,94,0) 70%);
 }
-/* plum-gloed */
+/* magenta gloed */
 .bbh-blob.b2{
   --o:.7; width:65vmax; height:65vmax; top:2vmax; left:48vw;
-  background: radial-gradient(circle at 50% 50%,
-    color-mix(in srgb, var(--bbh-plum) 60%, #fff) 0%,
-    color-mix(in srgb, var(--bbh-plum) 38%, transparent) 40%,
-    transparent 68%);
+  background: radial-gradient(circle at 50% 50%, #ff2f9e 0%, rgba(255,47,158,.4) 40%, rgba(255,47,158,0) 68%);
 }
-/* amber, komt van links opzetten */
+/* koraal, komt van links opzetten */
 .bbh-blob.b3{
-  --o:.5; width:70vmax; height:70vmax; top:40vh; left:-26vmax;
-  background: radial-gradient(circle at 50% 50%,
-    var(--bbh-amber) 0%,
-    color-mix(in srgb, var(--bbh-amber) 38%, transparent) 40%,
-    transparent 68%);
+  --o:.75; width:70vmax; height:70vmax; top:40vh; left:-26vmax;
+  background: radial-gradient(circle at 50% 50%, #ff6b3d 0%, rgba(255,107,61,.42) 40%, rgba(255,107,61,0) 68%);
 }
-/* amber-bloom, de grote sweep omhoog */
+/* amber, trekt de gradient naar oranje */
 .bbh-blob.b4{
-  --o:.45; width:52vmax; height:52vmax; top:75vh; left:42vw;
-  background: radial-gradient(circle at 50% 50%,
-    color-mix(in srgb, var(--bbh-amber) 78%, #fff) 0%,
-    color-mix(in srgb, var(--bbh-amber) 32%, transparent) 38%,
-    transparent 66%);
+  --o:.55; width:52vmax; height:52vmax; top:75vh; left:42vw;
+  background: radial-gradient(circle at 50% 50%, #ffc23d 0%, rgba(255,194,61,.35) 38%, rgba(255,194,61,0) 66%);
 }
-/* teal, komt pas op na de hero (JS zet --o op 0 bij start) */
+/* violet, drijft door het midden */
 .bbh-blob.b5{
-  --o:.6; width:58vmax; height:58vmax; top:52vh; left:8vw;
-  background: radial-gradient(circle at 50% 50%,
-    color-mix(in srgb, var(--bbh-teal) 65%, #fff) 0%,
-    color-mix(in srgb, var(--bbh-teal) 38%, transparent) 40%,
-    transparent 68%);
+  --o:.6; width:58vmax; height:58vmax; top:26vh; left:14vw;
+  background: radial-gradient(circle at 50% 50%, #8b2be2 0%, rgba(139,43,226,.38) 40%, rgba(139,43,226,0) 68%);
 }
 
 /* korrel — haalt de banding uit de gradient */
