@@ -32,15 +32,17 @@ if (mSection && mTrack) {
   const ENTRANCE_OFFSET = 40;
 
   /* Random volgorde bij elke pageload — Fisher-Yates, in één DOM-write.
+     De cards zitten in #marquee-inner, niet direct in de track.
      Moet vóór de meting van naturalLeft, anders klopt restX niet meer. */
-  const mCards = Array.from(mTrack.children);
+  const mInner = document.getElementById("marquee-inner") || mTrack;
+  const mCards = Array.from(mInner.children);
   for (let i = mCards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [mCards[i], mCards[j]] = [mCards[j], mCards[i]];
   }
   const mFrag = document.createDocumentFragment();
   mCards.forEach((c) => mFrag.appendChild(c));
-  mTrack.appendChild(mFrag);
+  mInner.appendChild(mFrag);
 
   const firstCard = mTrack.firstElementChild;
 
