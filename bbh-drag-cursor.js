@@ -1,16 +1,20 @@
 /* ==========================================================
    BBH — Drag cursor voor de marquee
    Standalone: injecteert zijn eigen CSS, geen dependencies.
+   Boven links binnen de kaarten krimpt de pill weg en komt
+   het normale handje terug.
    ========================================================== */
 (function () {
   'use strict';
 
   var CONFIG = {
-    target: '.marquee_track',   // element dat de drag-cursor krijgt
+    target: '.marquee_track',        // element dat de drag-cursor krijgt
+    links: 'a, [role="link"]',       // hier weer het handje tonen
     label: 'Drag',
-    from: '#5c6f61',            // gradient links
-    to: '#e9a81e',              // gradient rechts
-    ease: 0.2                   // 0.1 = traag/zwaar, 1 = exact op de muis
+    from: '#5c6f61',                 // gradient links
+    to: '#e9a81e',                   // gradient rechts
+    ease: 0.2,                       // 0.1 = traag/zwaar, 1 = exact op de muis
+    handDelay: 180                   // ms — pill krimpt eerst weg, dan het handje
   };
 
   if (window.__bbhDragCursor) return;
@@ -19,6 +23,9 @@
   var CSS = [
     CONFIG.target + ',',
     CONFIG.target + ' * { cursor: none !important; }',
+    /* .bbh-hand wint op specificiteit van de regel hierboven */
+    CONFIG.target + ' .bbh-hand,',
+    CONFIG.target + ' .bbh-hand * { cursor: pointer !important; }',
     '#bbh-drag-cursor {',
     '  position: fixed; top: 0; left: 0; z-index: 9999;',
     '  pointer-events: none; will-change: transform;',
@@ -30,7 +37,7 @@
     '  color: #fff; font-size: 19px; line-height: 1; letter-spacing: .01em;',
     '  white-space: nowrap; opacity: 0;',
     '  transform: translate(-50%, -50%) scale(.5);',
-    '  transition: opacity .25s ease, transform .35s cubic-bezier(.2,.8,.2,1);',
+    '  transition: opacity .2s ease, transform .3s cubic-bezier(.2,.8,.2,1);',
     '}',
     '#bbh-drag-cursor .bbh-drag-cursor__pill.is-visible {',
     '  opacity: 1; transform: translate(-50%, -50%) scale(1);',
@@ -70,7 +77,8 @@
 
     var pill = wrap.firstChild;
     var mx = 0, my = 0, cx = 0, cy = 0;
-    var raf = null, hideTimer = null;
+    var raf = null, hideTimer = null, handTimer = null;
+    var currentLink = null;
 
     function render() {
       wrap.style.transform = 'translate3d(' + cx + 'px,' + cy + 'px,0)';
@@ -83,31 +91,64 @@
       raf = requestAnimationFrame(loop);
     }
 
+    function clearHand() {
+      clearTimeout(handTimer);
+      if (currentLink) currentLink.classList.remove('bbh-hand');
+      currentLink = null;
+    }
+
+    function linkFrom(node) {
+      return node && node.closest ? node.closest(CONFIG.links) : null;
+    }
+
     document.addEventListener('mousemove', function (e) {
       mx = e.clientX;
       my = e.clientY;
     }, { passive: true });
 
     Array.prototype.forEach.call(targets, function (el) {
+
       el.addEventListener('mouseenter', function (e) {
         clearTimeout(hideTimer);
         // meteen op de cursorpositie zetten, anders vliegt hij in beeld
         mx = cx = e.clientX;
         my = cy = e.clientY;
         render();
-        pill.classList.add('is-visible');
+        if (!linkFrom(e.target)) pill.classList.add('is-visible');
         if (!raf) raf = requestAnimationFrame(loop);
       });
 
       el.addEventListener('mouseleave', function () {
+        clearHand();
         pill.classList.remove('is-visible', 'is-down');
         hideTimer = setTimeout(function () {
           if (raf) { cancelAnimationFrame(raf); raf = null; }
         }, 400);
       });
 
+      // link binnen: pill krimpt weg, daarna pas het handje
+      el.addEventListener('mouseover', function (e) {
+        var link = linkFrom(e.target);
+        if (!link || !el.contains(link) || link === currentLink) return;
+        clearHand();
+        currentLink = link;
+        pill.classList.remove('is-visible', 'is-down');
+        handTimer = setTimeout(function () {
+          link.classList.add('bbh-hand');
+        }, CONFIG.handDelay);
+      });
+
+      // link verlaten: handje weg, pill groeit terug
+      el.addEventListener('mouseout', function (e) {
+        if (!currentLink) return;
+        var to = e.relatedTarget;
+        if (to && currentLink.contains(to)) return; // nog steeds binnen de link
+        clearHand();
+        if (to && el.contains(to)) pill.classList.add('is-visible');
+      });
+
       el.addEventListener('mousedown', function () {
-        pill.classList.add('is-down');
+        if (!currentLink) pill.classList.add('is-down');
       });
     });
 
@@ -116,6 +157,7 @@
     });
 
     window.addEventListener('blur', function () {
+      clearHand();
       pill.classList.remove('is-visible', 'is-down');
     });
   }
