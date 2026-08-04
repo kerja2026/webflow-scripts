@@ -8,7 +8,10 @@
   'use strict';
 
   var CONFIG = {
-    target: '.marquee_track',        // element dat de drag-cursor krijgt
+    // LET OP: niet .marquee_track — die wordt getransformeerd door de
+    // marquee-animatie, waardoor zijn hitbox onder de muis wegschuift.
+    // .marquee_inner is 4080px breed en dekt de kaartenstrook altijd.
+    target: '.marquee_inner',        // element dat de drag-cursor krijgt
     links: 'a, [role="link"]',       // hier weer het handje tonen
     label: 'Drag',
     from: '#5c6f61',                 // gradient links
