@@ -30,6 +30,18 @@ const mSection = document.getElementById("marquee-section");
 const mTrack = document.getElementById("marquee-track");
 if (mSection && mTrack) {
   const ENTRANCE_OFFSET = 40;
+
+  /* Random volgorde bij elke pageload — Fisher-Yates, in één DOM-write.
+     Moet vóór de meting van naturalLeft, anders klopt restX niet meer. */
+  const mCards = Array.from(mTrack.children);
+  for (let i = mCards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [mCards[i], mCards[j]] = [mCards[j], mCards[i]];
+  }
+  const mFrag = document.createDocumentFragment();
+  mCards.forEach((c) => mFrag.appendChild(c));
+  mTrack.appendChild(mFrag);
+
   const firstCard = mTrack.firstElementChild;
 
   // Natuurlijke positie vastleggen VOORDAT er enige transform op mTrack staat
