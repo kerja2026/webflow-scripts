@@ -28,13 +28,14 @@ if (hTrack && hSection) {
 /* MARQUEE */
 const mSection = document.getElementById("marquee-section");
 const mTrack = document.getElementById("marquee-track");
+let mInner = null;   // buiten het blok, want de tilt-sectie hieronder heeft 'm nodig
 if (mSection && mTrack) {
   const ENTRANCE_OFFSET = 40;
 
   /* Random volgorde bij elke pageload — Fisher-Yates, in één DOM-write.
      De cards zitten in #marquee-inner, niet direct in de track.
      Moet vóór de meting van naturalLeft, anders klopt restX niet meer. */
-  const mInner = document.getElementById("marquee-inner") || mTrack;
+  mInner = document.getElementById("marquee-inner") || mTrack;
   const mCards = Array.from(mInner.children);
   for (let i = mCards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -54,7 +55,17 @@ if (mSection && mTrack) {
 
   let mDrag;
 
+  /* Entrance in twee lagen. De track doet de hoofdbeweging; de cards lopen
+     daar met een eigen achterstand achteraan die per card iets later wegloopt.
+     Daardoor rekken de onderlinge afstanden tijdens de vlucht uit en trekken
+     ze aan het eind weer samen — het accordeon-effect.
+     De achterstand staat bewust op xPercent en niet op x: de tilt-hover
+     hieronder gebruikt x, en GSAP houdt die twee apart in dezelfde transform. */
+  const ENTRANCE_LAG = 35;        // xPercent achterstand aan de start
+  const ENTRANCE_STAGGER = 0.07;  // seconden tussen twee opeenvolgende cards
+
   gsap.set(mTrack, { x: "100vw" });
+  gsap.set(mCards, { xPercent: ENTRANCE_LAG });
 
   gsap.timeline({
     scrollTrigger: {
@@ -62,11 +73,7 @@ if (mSection && mTrack) {
       start: "top 10%",
       once: true,
       refreshPriority: 1
-    }
-  }).to(mTrack, {
-    x: restX,
-    ease: "power4.out",
-    duration: 2,
+    },
     onComplete: () => {
       mDrag = Draggable.create(mTrack, {
         type: "x",
@@ -76,8 +83,22 @@ if (mSection && mTrack) {
         cursor: "grab",
         activeCursor: "grabbing"
       })[0];
+      /* Pas nu de hovers activeren — tijdens de vlucht zouden ze met de
+         entrance-tween om dezelfde card vechten. */
+      mCards.forEach(bindTilt);
     }
-  });
+  })
+    .to(mTrack, {
+      x: restX,
+      ease: "power4.out",
+      duration: 2
+    }, 0)
+    .to(mCards, {
+      xPercent: 0,
+      ease: "power3.out",
+      duration: 1.3,
+      stagger: ENTRANCE_STAGGER
+    }, 0.1);
 
   ScrollTrigger.addEventListener("refresh", () => {
     if (mDrag) mDrag.applyBounds({ minX: getMaxShift(), maxX: restX });
@@ -85,9 +106,10 @@ if (mSection && mTrack) {
 }
 
 /* CARD TILT */
-document.querySelectorAll("[data-tilt]").forEach((card) => {
-  const matrix = new DOMMatrix(window.getComputedStyle(card).transform);
-  const originalRotation = Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
+function bindTilt(card) {
+  // gsap.getProperty i.p.v. DOMMatrix: GSAP schrijft nu zelf een transform
+  // op de marquee-cards (xPercent), dus laat GSAP de rotatie uitlezen.
+  const originalRotation = Math.round(gsap.getProperty(card, "rotation"));
   card.addEventListener("mouseenter", () => {
     gsap.to(card, { rotation: 0, scale: 1.1, zIndex: 10, ease: "power2.out", duration: 0.4 });
   });
@@ -100,6 +122,13 @@ document.querySelectorAll("[data-tilt]").forEach((card) => {
   card.addEventListener("mouseleave", () => {
     gsap.to(card, { x: 0, y: 0, rotation: originalRotation, scale: 1, zIndex: 1, ease: "elastic.out(1,0.3)", duration: 1 });
   });
+}
+
+/* Cards buiten de marquee binden meteen. De marquee-cards worden pas
+   gebonden als de entrance klaar is — zie de onComplete hierboven. */
+document.querySelectorAll("[data-tilt]").forEach((card) => {
+  if (mInner && mInner.contains(card)) return;
+  bindTilt(card);
 });
 
 /* INFO CARDS — desktop: vanaf rechts, mobiel: van onder naar boven */
