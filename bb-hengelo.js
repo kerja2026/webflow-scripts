@@ -60,9 +60,15 @@ if (mSection && mTrack) {
      Daardoor rekken de onderlinge afstanden tijdens de vlucht uit en trekken
      ze aan het eind weer samen — het accordeon-effect.
      De achterstand staat bewust op xPercent en niet op x: de tilt-hover
-     hieronder gebruikt x, en GSAP houdt die twee apart in dezelfde transform. */
-  const ENTRANCE_LAG = 35;        // xPercent achterstand aan de start
-  const ENTRANCE_STAGGER = 0.07;  // seconden tussen twee opeenvolgende cards
+     hieronder gebruikt x, en GSAP houdt die twee apart in dezelfde transform.
+
+     Timing luistert nauw: de track gebruikt power4.out en heeft na 1s al 94%
+     van zijn 1346px gehad. Lossen de cards hun achterstand dáár in, dan
+     verdrinkt het verschil in de snelheid van de track. Ze moeten het juist
+     doen tijdens de trage laatste seconde, als de track uitglijdt. */
+  const ENTRANCE_LAG = 50;        // xPercent achterstand aan de start
+  const ENTRANCE_STAGGER = 0.08;  // seconden tussen twee opeenvolgende cards
+  const ENTRANCE_SETTLE = 0.5;    // cards beginnen pas als de track begint af te remmen
 
   gsap.set(mTrack, { x: "100vw" });
   gsap.set(mCards, { xPercent: ENTRANCE_LAG });
@@ -95,10 +101,10 @@ if (mSection && mTrack) {
     }, 0)
     .to(mCards, {
       xPercent: 0,
-      ease: "power3.out",
-      duration: 1.3,
+      ease: "power2.out",
+      duration: 1.2,
       stagger: ENTRANCE_STAGGER
-    }, 0.1);
+    }, ENTRANCE_SETTLE);
 
   ScrollTrigger.addEventListener("refresh", () => {
     if (mDrag) mDrag.applyBounds({ minX: getMaxShift(), maxX: restX });
