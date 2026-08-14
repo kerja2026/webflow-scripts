@@ -197,42 +197,78 @@ setTimeout(function () {
 
 /* ─── Promo-modal ──────────────────────────────────────────── */
 (function () {
-  var overlay = document.querySelector('.modal-overlay');
-  var modal = document.querySelector('.modal-wrap');
+  var overlay  = document.querySelector('.modal-overlay');
+  var modal    = document.querySelector('.modal-wrap');
   var closeBtn = document.querySelector('.modal-close');
   var triggered = false;
+
   if (!overlay || !modal) return;
   if (sessionStorage.getItem('modalShown')) return;
-  overlay.style.transition = 'opacity 0.4s ease';
-  modal.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-  overlay.style.backgroundColor = 'rgba(0,0,0,0.4)';
+
+  /* Forceer z-index en klikbaarheid op sluitknop */
+  if (closeBtn) {
+    closeBtn.style.position        = 'absolute';
+    closeBtn.style.zIndex          = '10001';
+    closeBtn.style.cursor          = 'pointer';
+    closeBtn.style.minWidth        = '44px';
+    closeBtn.style.minHeight       = '44px';
+    closeBtn.style.display         = 'flex';
+    closeBtn.style.alignItems      = 'center';
+    closeBtn.style.justifyContent  = 'center';
+    closeBtn.style.pointerEvents   = 'all';
+    closeBtn.style.webkitTapHighlightColor = 'transparent';
+  }
+
+  overlay.style.transition        = 'opacity 0.4s ease';
+  modal.style.transition          = 'opacity 0.4s ease, transform 0.4s ease';
+  overlay.style.backgroundColor   = 'rgba(0,0,0,0.4)';
+  modal.style.zIndex              = '10000';
+  overlay.style.zIndex            = '9999';
+
   function openModal() {
     if (triggered) return;
     triggered = true;
     sessionStorage.setItem('modalShown', 'true');
-    overlay.style.opacity = '0';
-    overlay.style.display = 'block';
-    modal.style.opacity = '0';
-    modal.style.display = 'block';
-    modal.style.transform = 'translate(-50%, -50%) scale(0.9)';
+
+    overlay.style.opacity   = '0';
+    overlay.style.display   = 'block';
+    modal.style.opacity     = '0';
+    modal.style.display     = 'block';
+    modal.style.transform   = 'translate(-50%, -50%) scale(0.9)';
+
     setTimeout(function () {
-      overlay.style.opacity = '1';
-      modal.style.opacity = '1';
-      modal.style.transform = 'translate(-50%, -50%) scale(1)';
+      overlay.style.opacity  = '1';
+      modal.style.opacity    = '1';
+      modal.style.transform  = 'translate(-50%, -50%) scale(1)';
     }, 20);
   }
+
   function closeModal() {
-    overlay.style.opacity = '0';
-    modal.style.opacity = '0';
-    modal.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    overlay.style.opacity  = '0';
+    modal.style.opacity    = '0';
+    modal.style.transform  = 'translate(-50%, -50%) scale(0.9)';
     setTimeout(function () {
       overlay.style.display = 'none';
-      modal.style.display = 'none';
+      modal.style.display   = 'none';
     }, 400);
   }
+
   window.addEventListener('scroll', function () {
     if (window.scrollY >= 700) openModal();
   });
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  /* Sluitknop: zowel click als touchend voor iOS */
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeModal();
+    });
+    closeBtn.addEventListener('touchend', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeModal();
+    });
+  }
+
   overlay.addEventListener('click', closeModal);
 })();
