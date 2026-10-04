@@ -63,6 +63,11 @@
     if (link.target && link.target !== '_self') return;
     if (link.hasAttribute('download')) return;
 
+    /* href="#" of "#iets": menuknoppen, tabs, lightbox en ankers.
+       Webflow zet href="#" op link blocks zonder link, zoals de hamburger. */
+    var hrefAttr = (link.getAttribute('href') || '').trim();
+    if (hrefAttr === '' || hrefAttr.charAt(0) === '#') return;
+
     var url;
     try { url = new URL(link.href, window.location.href); } catch (err) { return; }
 

@@ -47,16 +47,20 @@
 
     var itemWidth = 0;
 
-    /* Kopieën tot de band breder is dan het scherm. Eén kopie was te weinig
-       op brede schermen. Kopieën zijn verborgen voor schermlezers. */
-    function build() {
-      Array.prototype.slice.call(wrapper.querySelectorAll('[data-marquee-clone]'))
-        .forEach(function (c) { c.remove(); });
-
+    /* Kopieën maken we één keer, direct bij het laden. Dat moet vóór de
+       Webflow-interacties starten: daarna kopieer je ook hun tijdelijke
+       beginstaat (bijvoorbeeld opacity 0), en blijven de kopieën onzichtbaar.
+       Daarom nooit opnieuw kopiëren, alleen opnieuw meten.
+       We maken genoeg kopieën voor het breedste scherm van dit apparaat.
+       Kopieën zijn verborgen voor schermlezers. */
+    function measure() {
       itemWidth = original.getBoundingClientRect().width;
-      if (!itemWidth) return;
+    }
 
-      var copies = Math.ceil(window.innerWidth / itemWidth) + 1;
+    measure();
+    if (itemWidth) {
+      var breedste = Math.max(window.innerWidth, window.screen.width || 0, window.screen.height || 0);
+      var copies = Math.max(1, Math.ceil(breedste / itemWidth)) + 1;
       for (var i = 0; i < copies; i++) {
         var clone = original.cloneNode(true);
         clone.setAttribute('aria-hidden', 'true');
@@ -65,10 +69,9 @@
       }
     }
 
-    build();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
-    window.addEventListener('load', build);
-    window.addEventListener('resize', debounce(build, 150));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+    window.addEventListener('load', measure);
+    window.addEventListener('resize', debounce(measure, 150));
 
     /* Reduced motion: statische band, geen beweging */
     if (reduceMotion || !hasGsap) return;
