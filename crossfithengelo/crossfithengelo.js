@@ -31,6 +31,22 @@
   var INTRO_DELAY = 0.7;
   var CARD_TEXT_ACTIVE = '#29421F';
 
+  /* Startpunt voor scroll-animaties.
+     Gewoon 'top 90%', met twee vangnetten:
+     - Staat het element bij het laden al in beeld, dan ligt het startpunt
+       vóór 0 en speelt de animatie direct. (clamp() zette het startpunt
+       precies op 0, en dan wacht ScrollTrigger op de eerste scroll.)
+     - Ligt het startpunt voorbij het einde van de pagina, dan schuift het
+       net daarvoor, zodat ook secties onderaan altijd afspelen. */
+  var startBij = function (el, procent) {
+    return function () {
+      var top = el.getBoundingClientRect().top + window.pageYOffset;
+      var start = top - window.innerHeight * procent / 100;
+      var max = ScrollTrigger.maxScroll(window) - 1;
+      return Math.min(start, max);
+    };
+  };
+
   var qsa = function (sel, root_) {
     return Array.prototype.slice.call((root_ || document).querySelectorAll(sel));
   };
@@ -89,7 +105,7 @@
             stagger: 0.1,
             ease: 'power4.inOut',
             delay: inBeeld ? INTRO_DELAY : 0,
-            scrollTrigger: { trigger: heading, start: 'clamp(top 90%)', once: true },
+            scrollTrigger: { trigger: heading, start: startBij(heading, 90), once: true },
             onComplete: function () { gespeeld = true; }
           });
         }
@@ -229,10 +245,10 @@
       mm.add('(max-width: 767px)', function () { setupParallax(40); });
 
       /* ─── 12. Cards stagger reveal (.anim-stagger) ───
-         clamp() zorgt dat ook secties onderaan de pagina nog afspelen. */
+         startBij() zorgt dat ook secties onderaan de pagina nog afspelen. */
       gsap.utils.toArray('.anim-stagger').forEach(function (parent) {
         gsap.from(parent.children, {
-          scrollTrigger: { trigger: parent, start: 'clamp(top 25%)' },
+          scrollTrigger: { trigger: parent, start: startBij(parent, 25) },
           opacity: 0, y: 36, duration: 1.5, stagger: 0.12, ease: 'power2.out'
         });
       });
@@ -255,7 +271,7 @@
         gsap.fromTo(el,
           { clipPath: 'inset(100% 0 0 0)', y: 100 },
           { clipPath: 'inset(0% 0 0 0)', y: 0, duration: 1.2, ease: 'power3.out',
-            scrollTrigger: { trigger: el, start: 'clamp(top 95%)', toggleActions: 'play none none none' }
+            scrollTrigger: { trigger: el, start: startBij(el, 95), toggleActions: 'play none none none' }
           }
         );
       });

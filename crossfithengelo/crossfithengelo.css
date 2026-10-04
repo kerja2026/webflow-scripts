@@ -142,7 +142,16 @@ body.is-menu-open #CookiebotWidget { display: none; }
 
 /* ─── Marquee ──────────────────────────────────────────────── */
 .scrolling_text_section { overflow: hidden; }
-.scrolling-text-wrapper { display: flex; width: fit-content; will-change: transform; }
+/* In de Designer staat de wrapper op width en max-width 100vw met
+   overflow hidden. Dan knipt hij de tekst af op schermbreedte en schuift
+   die rand mee met de animatie. Hier mag hij zo breed als zijn inhoud;
+   de sectie hierboven knipt horizontaal af. */
+.scrolling-text-wrapper {
+  display: flex;
+  width: max-content;
+  max-width: none;
+  will-change: transform;
+}
 .scrolling-text { white-space: nowrap; flex-shrink: 0; padding-right: 80px; }
 
 /* ─── Cookiebot popup-formaat ──────────────────────────────────
