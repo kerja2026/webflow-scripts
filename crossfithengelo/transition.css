@@ -7,6 +7,14 @@
   pointer-events: none;
 }
 
-/* Cookiebot verborgen tot na de overgang */
-#CybotCookiebotDialog,
-#CybotCookiebotDialogBodyUnderlay { display: none !important; }
+/* Cookiebot onzichtbaar zolang de intro-overgang loopt.
+   .cfh-intro staat op <html> (gezet in de site-head) en wordt weggehaald
+   door transition.js zodra de overgang klaar is, of door de noodrem in de
+   head na 4 seconden. Alleen visibility: Cookiebot houdt zelf de controle
+   over display. Zo kan een dialoog of underlay nooit blijven hangen
+   nadat iemand een keuze heeft gemaakt. */
+.cfh-intro #CybotCookiebotDialog,
+.cfh-intro #CybotCookiebotDialogBodyUnderlay {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

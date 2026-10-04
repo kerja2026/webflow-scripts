@@ -1,12 +1,14 @@
 /* ═══════════════════════════════════════════════════════════
    CROSSFIT HENGELO — stijlen
-   Laden in <head> via jsDelivr.
+   Laden in <head> via jsDelivr. Bevat nu ook de menu-stijlen
+   die eerst als <style>-blok in de site-head stonden.
    ═══════════════════════════════════════════════════════════ */
 
 /* ─── Basis ────────────────────────────────────────────────── */
 
-/* Tap-delay van 300ms voorkomen */
-* { touch-action: manipulation; }
+/* Tap-delay voorkomen: één keer op html is genoeg
+   (was: * { ... } op elk element) */
+html { touch-action: manipulation; }
 
 /* Lenis smooth scroll */
 html.lenis { height: auto; }
@@ -14,9 +16,22 @@ html.lenis { height: auto; }
 .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
 .lenis.lenis-stopped { overflow: hidden; }
 
-/* Animatie-beginstaten */
-.anim-heading { opacity: 0; }
-.anim-mask-section { clip-path: inset(100% 0 0 0); }
+/* ─── Animatie-beginstaten ─────────────────────────────────────
+   Alleen verbergen als JavaScript draait (.w-mod-js zet Webflow
+   zelf op <html>). Zonder JS, zonder GSAP (.no-gsap) of bij
+   prefers-reduced-motion is alles direct zichtbaar.
+   De volgorde van deze vier blokken is belangrijk. */
+.w-mod-js .anim-heading { opacity: 0; }
+.w-mod-js .anim-mask-section { clip-path: inset(100% 0 0 0); }
+
+.no-gsap .anim-heading { opacity: 1; }
+.no-gsap .anim-mask-section { clip-path: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .w-mod-js .anim-heading { opacity: 1; }
+  .w-mod-js .anim-mask-section { clip-path: none; }
+  .nav_section { transition: none; }
+}
 
 /* Parallax */
 .parallax-img { will-change: transform; }
@@ -35,25 +50,127 @@ html.lenis { height: auto; }
 .nav_section { transition: transform 0.6s ease; }
 .navbar--hidden { transform: translateY(-100%); }
 
+/* ─── Menu-overlay ─────────────────────────────────────────────
+   Eén variabele stuurt alle verticale ruimte. */
+.menu-overlay {
+  --menu-gap: clamp(1.5rem, 4vh, 4rem);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Paneel: gelijke ruimte tussen kruis en menu */
+.menu-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--menu-gap);
+  padding-top: var(--menu-gap);
+  padding-bottom: var(--menu-gap);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.menu-close { flex: 0 0 auto; }
+
+/* Wrapper: geen eigen padding */
+.all_menu_wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--menu-gap);
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0;
+}
+
+/* Hoofdlinks vullen de ruimte, gecentreerd */
+.main-menu-links {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Footerblok krimpt nooit */
+.small_main_menu_wrapper {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+/* Typografie schaalt met de schermhoogte */
+.main-navigation {
+  font-size: clamp(1.75rem, 5vh, 4.5rem);
+  line-height: 1.05;
+}
+
+.main_navigation_wrapper + .main_navigation_wrapper {
+  margin-top: clamp(0.25rem, 1.2vh, 1.25rem);
+}
+
+@media (max-height: 700px) {
+  .arrow_wrapper { display: none; }
+}
+
+/* Mobiel: niets krimpt, alles op gelijke afstand */
+@media (max-width: 767px) {
+  .menu-overlay {
+    --menu-gap: clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .all_menu_wrapper,
+  .main-menu-links {
+    flex: 0 0 auto;
+  }
+
+  .main-menu-links {
+    justify-content: flex-start;
+  }
+
+  .main-navigation {
+    font-size: clamp(1.5rem, 6.5vw, 2.25rem);
+    line-height: 1.1;
+  }
+
+  .main_navigation_wrapper + .main_navigation_wrapper {
+    margin-top: 0.75rem;
+  }
+}
+
+body.is-menu-open { overflow: hidden; }
+body.is-menu-open #CookiebotWidget { display: none; }
+
 /* ─── Marquee ──────────────────────────────────────────────── */
 .scrolling_text_section { overflow: hidden; }
 .scrolling-text-wrapper { display: flex; width: fit-content; will-change: transform; }
 .scrolling-text { white-space: nowrap; flex-shrink: 0; padding-right: 80px; }
 
-/* ─── Cookiebot popup-formaat ──────────────────────────────── */
+/* ─── Cookiebot popup-formaat ──────────────────────────────────
+   Alleen maat en scrollgedrag. Nooit display, visibility of
+   opacity overschrijven: dat beheert Cookiebot zelf. Het
+   verbergen tijdens de pagina-overgang staat in transition.css.
+   -webkit-overflow-scrolling is weg (verouderd, kan op iOS
+   scroll-blokkades veroorzaken). */
 #CybotCookiebotDialog {
   max-height: 90vh !important;
+  max-height: 90dvh !important;
   overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain;
 }
 #CybotCookiebotDialogBody {
-  overflow-y: auto !important;
   max-height: 70vh !important;
+  max-height: 70dvh !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
 }
 
-/* ─── Zwevende proefles-knop (alleen aanwezig op home) ─────── */
+/* ─── Zwevende proefles-knop (alleen aanwezig op home) ─────────
+   Positie en zichtbaarheid zijn puur CSS. home.js voegt alleen
+   beweging toe via transform. Valt home.js weg, dan staat de
+   knop er gewoon. */
 #proefles-btn {
   position: fixed;
+  top: calc(50% - 100px);
   right: 60px;
   width: 200px;
   height: 200px;
@@ -62,7 +179,7 @@ html.lenis { height: auto; }
   cursor: pointer;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.6s ease;
+  animation: cfh-fade-in 0.6s ease 1.5s forwards;
 }
 #proefles-btn img {
   width: 100%;
@@ -75,4 +192,7 @@ html.lenis { height: auto; }
     width: 120px;
     height: 120px;
   }
+}
+@keyframes cfh-fade-in {
+  to { opacity: 1; }
 }

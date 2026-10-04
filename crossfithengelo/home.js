@@ -2,133 +2,225 @@
    CROSSFIT HENGELO — Home-pagina
    Alleen op de homepage laden (page footer), NIET site-breed.
    Vereist: GSAP + ScrollTrigger (site-breed in <head> geladen).
-   Let op: video-autoplay staat al in crossfithengelo.js — hier weggelaten.
+   Let op: video-autoplay staat al in crossfithengelo.js.
+   Bij prefers-reduced-motion beweegt er niets. De tekst, de marquee en
+   de proefles-knop blijven gewoon zichtbaar.
    ═══════════════════════════════════════════════════════════ */
-
-/* ─── Hero text mask ───────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function () {
-  var lines = document.querySelectorAll('.line-mask .line-inner');
-  gsap.from(lines, {
-    clipPath: 'inset(0 100% 0 0)',
-    duration: 1,
-    stagger: 0.2,
-    ease: 'power4.inOut',
-    delay: 0.3,
-  });
-});
-
-/* ─── Marquee ──────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function () {
-  var wrapper = document.querySelector('.scrolling-text-wrapper');
-  var original = document.querySelector('.scrolling-text');
-  if (!wrapper || !original) return;
-
-  wrapper.appendChild(original.cloneNode(true));
-
-  var xPos = 0;
-  var currentSpeed = 0;
-  var baseSpeed = -1.5;
-  var targetSpeed = baseSpeed;
-  var itemWidth = original.offsetWidth;
-
-  ScrollTrigger.create({
-    trigger: 'body',
-    start: 'top top',
-    end: 'bottom bottom',
-    onUpdate: function (self) {
-      var vel = self.getVelocity();
-      targetSpeed = gsap.utils.clamp(-30, 30, vel * -0.04);
-    },
-  });
-
-  gsap.ticker.add(function () {
-    currentSpeed += (targetSpeed - currentSpeed) * 0.08;
-    targetSpeed += (baseSpeed - targetSpeed) * 0.03;
-    xPos += currentSpeed;
-    if (xPos <= -itemWidth) xPos += itemWidth;
-    if (xPos >= 0) xPos -= itemWidth;
-    gsap.set(wrapper, { x: xPos });
-  });
-});
-
-/* ─── Zwevende proefles-knop ───────────────────────────────── */
 (function () {
-  var btn = document.getElementById('proefles-btn');
-  if (!btn) return;
-  var img = btn.querySelector('img');
-  const FLOAT_RANGE      = 10;
-  const FLOAT_SPEED      = 0.001;
-  const TILT_RANGE       = 12;
-  const TILT_SPEED       = 0.001;
-  const SCROLL_INFLUENCE = 40;
-  const ATTRACT_RADIUS   = 700;
-  const ATTRACT_STRENGTH = 0.5;
-  const centerY    = window.innerHeight * 0.5 - 100;
-  const centerX    = window.innerWidth - 60;
-  let currentY     = -220;
-  let entered      = false;
-  let startTime    = null;
-  let targetShift  = 0;
-  let currentShift = 0;
-  let lastScrollY  = window.scrollY;
-  // Cursor aantrekking
-  let mouseX = -1000;
-  let mouseY = -1000;
-  let attractX = 0;
-  let attractY = 0;
-  let currentAttractX = 0;
-  let currentAttractY = 0;
-  document.addEventListener('mousemove', function (e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
+  'use strict';
+
+  var hasGsap = typeof gsap !== 'undefined';
+  var hasScrollTrigger = typeof ScrollTrigger !== 'undefined';
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Zelfde wachttijd als in crossfithengelo.js: eerst het overgangs-overlay. */
+  var INTRO_DELAY = 0.7;
+
+  var ready = function (fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  };
+  var debounce = function (fn, ms) {
+    var t;
+    return function () { clearTimeout(t); t = setTimeout(fn, ms); };
+  };
+
+  /* ─── Hero text mask ───────────────────────────────────────── */
+  ready(function () {
+    if (!hasGsap || reduceMotion) return;
+    var lines = document.querySelectorAll('.line-mask .line-inner');
+    if (!lines.length) return;
+    gsap.from(lines, {
+      clipPath: 'inset(0 100% 0 0)',
+      duration: 1,
+      stagger: 0.2,
+      ease: 'power4.inOut',
+      delay: INTRO_DELAY
+    });
   });
-  window.addEventListener('scroll', function () {
-    if (!entered) return;
-    const delta = window.scrollY - lastScrollY;
-    lastScrollY = window.scrollY;
-    targetShift += delta * 0.4;
-    targetShift = Math.max(-SCROLL_INFLUENCE, Math.min(SCROLL_INFLUENCE, targetShift));
-  });
-  function loop(timestamp) {
-    if (!startTime) startTime = timestamp;
-    const t = timestamp - startTime;
-    const floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_RANGE;
-    const tiltAngle   = Math.sin(t * TILT_SPEED)  * TILT_RANGE;
-    if (!entered) {
-      currentY += (centerY - currentY) * 0.07;
-      if (Math.abs(centerY - currentY) < 0.5) {
-        currentY = centerY;
-        entered  = true;
+
+  /* ─── Marquee ──────────────────────────────────────────────── */
+  ready(function () {
+    var wrapper = document.querySelector('.scrolling-text-wrapper');
+    var original = document.querySelector('.scrolling-text');
+    if (!wrapper || !original) return;
+
+    var itemWidth = 0;
+
+    /* Kopieën tot de band breder is dan het scherm. Eén kopie was te weinig
+       op brede schermen. Kopieën zijn verborgen voor schermlezers. */
+    function build() {
+      Array.prototype.slice.call(wrapper.querySelectorAll('[data-marquee-clone]'))
+        .forEach(function (c) { c.remove(); });
+
+      itemWidth = original.getBoundingClientRect().width;
+      if (!itemWidth) return;
+
+      var copies = Math.ceil(window.innerWidth / itemWidth) + 1;
+      for (var i = 0; i < copies; i++) {
+        var clone = original.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        clone.setAttribute('data-marquee-clone', '');
+        wrapper.appendChild(clone);
       }
-    } else {
-      // Scroll shift
-      currentShift += (targetShift - currentShift) * 0.04;
-      targetShift  *= 0.92;
-      currentY = centerY + currentShift;
-      // Cursor aantrekking
-      const btnY = currentY + floatOffset;
-      const dx = mouseX - centerX;
-      const dy = mouseY - btnY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < ATTRACT_RADIUS) {
-        const strength = (1 - dist / ATTRACT_RADIUS) * ATTRACT_STRENGTH;
-        attractX = dx * strength;
-        attractY = dy * strength;
-      } else {
-        attractX = 0;
-        attractY = 0;
-      }
-      // Ease naar attractie, ease terug naar 0
-      currentAttractX += (attractX - currentAttractX) * 0.04;
-      currentAttractY += (attractY - currentAttractY) * 0.04;
     }
-    btn.style.top   = (currentY + floatOffset + currentAttractY) + 'px';
-    btn.style.right = (60 - currentAttractX) + 'px';
-    img.style.transform = `rotate(${tiltAngle}deg)`;
-    requestAnimationFrame(loop);
-  }
-  setTimeout(function () {
-    btn.style.opacity = '1';
-    requestAnimationFrame(loop);
-  }, 1500);
+
+    build();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
+    window.addEventListener('load', build);
+    window.addEventListener('resize', debounce(build, 150));
+
+    /* Reduced motion: statische band, geen beweging */
+    if (reduceMotion || !hasGsap) return;
+
+    var xPos = 0;
+    var currentSpeed = 0;
+    var baseSpeed = -1.5;      /* px per frame bij 60 fps */
+    var targetSpeed = baseSpeed;
+    var inView = true;
+    var setX = gsap.quickSetter(wrapper, 'x', 'px');
+
+    /* Scrollsnelheid stuurt de marquee */
+    if (hasScrollTrigger) {
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        onUpdate: function (self) {
+          targetSpeed = gsap.utils.clamp(-30, 30, self.getVelocity() * -0.04);
+        }
+      });
+    }
+
+    /* Niet rekenen als de band buiten beeld staat */
+    var section = wrapper.closest('.scrolling_text_section') || wrapper;
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+      }).observe(section);
+    }
+
+    /* Snelheid per tijd, niet per frame: gelijk op 60 en 120 Hz schermen */
+    gsap.ticker.add(function (time, deltaTime) {
+      if (!inView || !itemWidth) return;
+      var f = Math.min(deltaTime, 100) / 16.667;
+      currentSpeed += (targetSpeed - currentSpeed) * (1 - Math.pow(1 - 0.08, f));
+      targetSpeed += (baseSpeed - targetSpeed) * (1 - Math.pow(1 - 0.03, f));
+      xPos += currentSpeed * f;
+      if (xPos <= -itemWidth) xPos += itemWidth;
+      if (xPos >= 0) xPos -= itemWidth;
+      setX(xPos);
+    });
+  });
+
+  /* ─── Zwevende proefles-knop ───────────────────────────────────
+     Positie, maat en fade-in staan in crossfithengelo.css. Dit script
+     voegt alleen beweging toe met transform (geen layout per frame).
+     Zonder dit script staat de knop er nog steeds. */
+  ready(function () {
+    var btn = document.getElementById('proefles-btn');
+    if (!btn || reduceMotion) return;
+
+    var img = btn.querySelector('img');
+
+    var FLOAT_RANGE      = 10;
+    var FLOAT_SPEED      = 0.001;
+    var TILT_RANGE       = 12;
+    var TILT_SPEED       = 0.001;
+    var SCROLL_INFLUENCE = 40;
+    var ATTRACT_RADIUS   = 700;
+    var ATTRACT_STRENGTH = 0.5;
+
+    var restCX = 0, restCY = 0, btnTop = 0, btnHeight = 0;
+    var lastTx = 0, lastTy = 0;
+
+    var offY = 0;              /* verticale afstand tot de ruststand */
+    var entered = false;
+    var startTime = null;
+    var lastTime = null;
+    var targetShift = 0;
+    var currentShift = 0;
+    var lastScrollY = window.scrollY;
+    var mouseX = -1000;
+    var mouseY = -1000;
+    var currentAttractX = 0;
+    var currentAttractY = 0;
+
+    /* Het echte midden van de knop, ook na resize of rotatie.
+       De huidige transform rekenen we eruit. */
+    function measure() {
+      var r = btn.getBoundingClientRect();
+      restCX = r.left + r.width / 2 - lastTx;
+      restCY = r.top + r.height / 2 - lastTy;
+      btnTop = r.top - lastTy;
+      btnHeight = r.height;
+    }
+
+    document.addEventListener('mousemove', function (e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    }, { passive: true });
+
+    window.addEventListener('scroll', function () {
+      var delta = window.scrollY - lastScrollY;
+      lastScrollY = window.scrollY;
+      if (!entered) return;
+      targetShift += delta * 0.4;
+      targetShift = Math.max(-SCROLL_INFLUENCE, Math.min(SCROLL_INFLUENCE, targetShift));
+    }, { passive: true });
+
+    window.addEventListener('resize', debounce(measure, 150));
+
+    function loop(timestamp) {
+      if (startTime === null) { startTime = timestamp; lastTime = timestamp; }
+      var dt = Math.min(timestamp - lastTime, 100);
+      lastTime = timestamp;
+      var f = dt / 16.667;   /* 1 bij 60 fps */
+
+      var t = timestamp - startTime;
+      var floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_RANGE;
+      var tiltAngle   = Math.sin(t * TILT_SPEED)  * TILT_RANGE;
+
+      if (!entered) {
+        offY += (0 - offY) * (1 - Math.pow(1 - 0.07, f));
+        if (Math.abs(offY) < 0.5) {
+          offY = 0;
+          entered = true;
+        }
+      } else {
+        /* Scroll shift */
+        currentShift += (targetShift - currentShift) * (1 - Math.pow(1 - 0.04, f));
+        targetShift  *= Math.pow(0.92, f);
+        offY = currentShift;
+
+        /* Cursor aantrekking, gemeten vanaf het echte midden van de knop */
+        var dx = mouseX - restCX;
+        var dy = mouseY - (restCY + offY + floatOffset);
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var attractX = 0;
+        var attractY = 0;
+        if (dist < ATTRACT_RADIUS) {
+          var strength = (1 - dist / ATTRACT_RADIUS) * ATTRACT_STRENGTH;
+          attractX = dx * strength;
+          attractY = dy * strength;
+        }
+        var k = 1 - Math.pow(1 - 0.04, f);
+        currentAttractX += (attractX - currentAttractX) * k;
+        currentAttractY += (attractY - currentAttractY) * k;
+      }
+
+      lastTx = currentAttractX;
+      lastTy = offY + floatOffset + currentAttractY;
+      btn.style.transform = 'translate3d(' + lastTx + 'px,' + lastTy + 'px,0)';
+      if (img) img.style.transform = 'rotate(' + tiltAngle + 'deg)';
+      requestAnimationFrame(loop);
+    }
+
+    /* Zelfde start als voorheen: 1,5 s na het laden, tegelijk met de fade-in */
+    setTimeout(function () {
+      measure();
+      offY = -(btnTop + btnHeight + 20);   /* net boven het scherm */
+      requestAnimationFrame(loop);
+    }, 1500);
+  });
 })();
