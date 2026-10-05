@@ -68,6 +68,36 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .header.is-stuck .nav__logo{transform:scale(.85)}
 .header.is-up .nav__logo{transform:scale(1)}
 
+/* ===== HOOFDNAVIGATIE: hover =====
+   Onder een menulink tekent een dunne lijn zich van links naar
+   rechts, en de tekst wordt iets lichter. Bij het verlaten trekt de
+   lijn zich terug naar rechts. De lijn is een ::after en bestaat dus
+   niet in de Designer; .nav__link staat in het Style-panel op
+   position relative zodat de lijn eraan vastzit.
+   Kleur, dikte en afstand onder de tekst staan hieronder. */
+.nav__link{transition:opacity .35s ease}
+.nav__link::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0.15em;
+  height:1px;
+  background-color:#415442;
+  transform:scaleX(0);
+  transform-origin:right center;
+  transition:transform .55s cubic-bezier(.65,0,.35,1);
+  pointer-events:none;
+}
+.nav__link:hover{opacity:.65}
+.nav__link:hover::after{
+  transform:scaleX(1);
+  transform-origin:left center;
+}
+@media (hover:none){
+  .nav__link::after{display:none}
+}
+
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
    Wanneer het menu omschakelt naar de hamburger staat in het
    Style-panel, bij het tablet-breakpoint. */
