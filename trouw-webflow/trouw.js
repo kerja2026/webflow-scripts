@@ -541,7 +541,7 @@
   var PX = {
     shift: 4,
     zoom: 1.1,
-    frames: '.hero__media, .steps__media, .feature__media, .contract__media'
+    frames: '.hero__media, .steps__media, .feature__media, .contract__media, .sc__media'
   };
 
   if (!reduced) {
