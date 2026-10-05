@@ -122,7 +122,9 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
           mask-position:calc(-1 * var(--cw) - 2 * var(--fade) + var(--p) * (var(--cw) + var(--fade))) 0;
 }
 @media screen and (max-width:767px){
-  .transition__col{--cw:16.6667vw;--fade:3vw}
+  /* Mobiel: vier kolommen van een kwart breed, de rest verborgen */
+  .transition__col{--cw:25vw;--fade:3vw;flex:0 0 25vw;width:25vw}
+  .transition__col:nth-child(n+5){display:none}
 }
 .is-transitioning .transition{pointer-events:auto}
 .is-transitioning .transition__col{--p:1}
