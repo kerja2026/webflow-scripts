@@ -1,0 +1,147 @@
+/* =============================================================
+   PRAKTIJK TROUW — GEDRAG
+   Animaties, transitie, smooth scroll, en de toestanden die alleen
+   het script aanzet. Layout staat in het Style-panel van Webflow.
+   Geladen in de head via jsDelivr.
+   ============================================================= */
+:root{--col:20.25em;--stripe-shift:6.75em}
+
+/* ===== SCROLLBALK: elementen maakt het script aan ===== */
+html{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{width:0;height:0;display:none}
+
+.scrollbar{
+  position:fixed;
+  top:0;
+  right:0.375em;
+  bottom:0;
+  width:0.25em;
+  z-index:120;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .35s ease;
+}
+.scrollbar.is-visible{opacity:1}
+.scrollbar__thumb{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  border-radius:0.125em;
+  background-color:rgba(58,49,40,.3);
+  will-change:transform;
+}
+
+/* ===== SECTIES SCHUIVEN OVER ELKAAR: beginstand animatie =====
+   s-spec doet niet mee: die zet de specialisaties vast, en een
+   vastgezet element werkt niet in een sectie die zelf beweegt. */
+@media screen and (min-width:768px){
+  .js-anim .s-intro,
+  .js-anim .s-praktijk,
+  .js-anim .s-team,
+  .js-anim .s-feature,
+  .js-anim .s-contract,
+  .js-anim .s-rates,
+  .js-anim .s-legal,
+  .js-anim .s-contact{transform:translateY(6em)}
+}
+
+/* ===== STICKY HEADER: toestanden die het script zet ===== */
+.header{
+  transition:
+    background-color .7s ease,
+    box-shadow .7s ease,
+    top .45s cubic-bezier(.2,.7,.2,1);
+}
+.header.is-stuck{
+  background-color:rgba(251,240,221,.94);
+  box-shadow:0 1px 0 0 #e3d8c8;
+}
+.header.is-up{top:0}
+
+/* ===== LOGO: kleiner bij omlaag scrollen ===== */
+.nav__logo{
+  transform-origin:left center;
+  transition:transform .45s cubic-bezier(.2,.7,.2,1);
+}
+.header.is-stuck .nav__logo{transform:scale(.85)}
+.header.is-up .nav__logo{transform:scale(1)}
+
+/* ===== MOBIEL MENU: open-toestand en de veeg =====
+   Wanneer het menu omschakelt naar de hamburger staat in het
+   Style-panel, bij het tablet-breakpoint. */
+.menu{
+  --pw:calc(100vw - 2.5em);
+  --fade:4em;
+  --p:0;
+}
+.menu.is-open{display:block}
+.menu__scrim{opacity:0}
+.menu__panel{
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+  -webkit-mask-size:calc(var(--pw) + 2 * var(--fade)) 100%;
+          mask-size:calc(var(--pw) + 2 * var(--fade)) 100%;
+  -webkit-mask-repeat:no-repeat;
+          mask-repeat:no-repeat;
+  -webkit-mask-position:calc(-1 * var(--pw) - 2 * var(--fade) + var(--p) * (var(--pw) + var(--fade))) 0;
+          mask-position:calc(-1 * var(--pw) - 2 * var(--fade) + var(--p) * (var(--pw) + var(--fade))) 0;
+}
+
+/* ===== INTRO-ANIMATIE: beginstand ===== */
+.js-anim .topbar,
+.js-anim .nav,
+.js-anim .hero__media,
+.js-anim .eyebrow,
+.js-anim h1 + p{opacity:0}
+.js-anim h1{visibility:hidden}
+
+/* ===== BEWEGENDE ACHTERGROND: elementen maakt het script aan ===== */
+.bg__cols{position:absolute;top:0;bottom:0;left:calc(var(--stripe-shift) - var(--col));display:flex}
+.bg__col{position:relative;flex:0 0 var(--col);height:100%;overflow:hidden}
+.bg__grad{position:absolute;top:0;bottom:0;left:-50%;width:150%;will-change:transform}
+
+/* ===== PAGINATRANSITIE =====
+   Bewuste uitzondering: .transition staat in het Style-panel op
+   display none, zodat hij in de Designer niet over de pagina ligt.
+   Live zet deze regel hem aan; het masker maakt de kolommen
+   onzichtbaar tot een transitie start. */
+.transition{display:flex}
+.transition__col{
+  --cw:20.25em;
+  --fade:4em;
+  --p:0;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+  -webkit-mask-size:calc(var(--cw) + 2 * var(--fade)) 100%;
+          mask-size:calc(var(--cw) + 2 * var(--fade)) 100%;
+  -webkit-mask-repeat:no-repeat;
+          mask-repeat:no-repeat;
+  -webkit-mask-position:calc(-1 * var(--cw) - 2 * var(--fade) + var(--p) * (var(--cw) + var(--fade))) 0;
+          mask-position:calc(-1 * var(--cw) - 2 * var(--fade) + var(--p) * (var(--cw) + var(--fade))) 0;
+}
+@media screen and (max-width:767px){
+  .transition__col{--cw:16.6667vw;--fade:3vw}
+}
+.is-transitioning .transition{pointer-events:auto}
+.is-transitioning .transition__col{--p:1}
+
+/* ===== LENIS ===== */
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:hidden}
+html.menu-open,html.menu-open body{overflow:hidden}
+
+@media (prefers-reduced-motion:reduce){
+  .header{transition:none}
+  .nav__logo{transition:none}
+  .header.is-stuck .nav__logo{transform:none}
+  .js-anim .topbar,
+  .js-anim .nav,
+  .js-anim .hero__media,
+  .js-anim .eyebrow,
+  .js-anim h1 + p{opacity:1}
+  .js-anim h1{visibility:visible}
+}

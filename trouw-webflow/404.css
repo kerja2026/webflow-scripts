@@ -1,0 +1,13 @@
+/* =============================================================
+   PRAKTIJK TROUW — 404
+   De 404 heeft een beeldvullende gif. Logo, menu en contactregel
+   staan daar overheen en moeten daarom licht zijn.
+   Alleen geladen op de 404-pagina.
+   ============================================================= */
+.header .nav__logo{filter:brightness(0) invert(1)}
+.header .nav__link,
+.header .topbar__link{color:#f1eae0}
+.s-404 .eyebrow__text{color:#f1eae0}
+.s-404 .eyebrow__dot{background-color:#f1eae0}
+.s-404 .t-h1,
+.s-404 .t-body{color:#f1eae0}
