@@ -476,6 +476,11 @@
 
   var sectionOf = function (el) { return el.closest('section') || el.parentElement; };
 
+  /* De orb (.bg__blob) toont alleen zijn linkerhelft. Zijn rechterrand
+     wordt hier op de dichtstbijzijnde kolomrand gelegd, zodat er nooit
+     een strook tussen orb en kolom zit. Opnieuw bij elke resize. */
+  var bgSnaps = [];
+
   if (!reduced) {
     gsap.utils.toArray('.bg__stripes').forEach(function (stripes) {
       var cs = getComputedStyle(stripes);
@@ -511,6 +516,22 @@
       var colWidth = addCol().offsetWidth || 1;
       var needed = Math.max(BG.columns, Math.ceil(stripes.offsetWidth / colWidth) + 2);
       for (var i = 1; i < needed; i++) addCol();
+
+      var bgLayer = stripes.parentElement;
+      var blobs = bgLayer ? Array.prototype.slice.call(bgLayer.querySelectorAll('.bg__blob')) : [];
+      blobs.forEach(function (blob) {
+        var snap = function () {
+          blob.style.left = '';
+          var half = blob.offsetWidth / 2;
+          var edge = blob.offsetLeft + half;
+          var step = wrap.firstChild ? wrap.firstChild.offsetWidth : 0;
+          if (!step) return;
+          var n = Math.round((edge - wrap.offsetLeft) / step);
+          blob.style.left = (wrap.offsetLeft + n * step - half) + 'px';
+        };
+        snap();
+        bgSnaps.push(snap);
+      });
       gsap.set(stripes, { '--bg-turn': '0deg' });
 
       gsap.timeline({
@@ -619,6 +640,7 @@
   window.addEventListener('resize', function () {
     clearTimeout(rt);
     rt = setTimeout(function () {
+      bgSnaps.forEach(function (fn) { fn(); });
       fitFooter();
       ScrollTrigger.refresh();
     }, 200);
