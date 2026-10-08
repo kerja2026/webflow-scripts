@@ -459,6 +459,8 @@
   }
 
   /* ---------- 9. BEWEGENDE ACHTERGROND, PER SECTIE ----------
+     Een sectie die bij het laden al in beeld is, begint zijn beweging
+     op nul (clamp), zodat de kolommen dan in hun beginstand staan.
      Elke .bg__stripes wordt opgedeeld in kolommen die verschuiven en
      draaien terwijl hun eigen sectie door beeld scrolt. Waar de
      kolommen beginnen, komt uit Background position in het
@@ -490,7 +492,7 @@
       wrap.className = 'bg__cols';
       wrap.style.left = 'calc(' + startX + ' - var(--col))';
       var grads = [];
-      for (var i = 0; i < BG.columns; i++) {
+      var addCol = function () {
         var col = document.createElement('div');
         col.className = 'bg__col';
         var grad = document.createElement('div');
@@ -499,17 +501,23 @@
         col.appendChild(grad);
         wrap.appendChild(col);
         grads.push(grad);
-      }
+        return col;
+      };
 
+      /* Genoeg kolommen voor de volle breedte, ook op een breed scherm:
+         meet een kolom en vul de sectie, met twee extra als marge. */
       stripes.style.backgroundImage = 'none';
       stripes.appendChild(wrap);
+      var colWidth = addCol().offsetWidth || 1;
+      var needed = Math.max(BG.columns, Math.ceil(stripes.offsetWidth / colWidth) + 2);
+      for (var i = 1; i < needed; i++) addCol();
       gsap.set(stripes, { '--bg-turn': '0deg' });
 
       gsap.timeline({
         defaults: { ease: 'none' },
         scrollTrigger: {
           trigger: sectionOf(stripes),
-          start: 'top bottom',
+          start: 'clamp(top bottom)',
           end: 'bottom top',
           scrub: true
         }
@@ -527,7 +535,7 @@
           ease: 'none',
           scrollTrigger: {
             trigger: sectionOf(blob),
-            start: 'top bottom',
+            start: 'clamp(top bottom)',
             end: 'bottom top',
             scrub: true,
             invalidateOnRefresh: true
