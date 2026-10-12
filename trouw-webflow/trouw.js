@@ -1,5 +1,5 @@
 /* =============================================================
-   PRAKTIJK TROUW — SCRIPT
+   PRAKTIJK TROUW — SCRIPTt
    Smooth scroll, scrollbalk, header, mobiel menu, paginatransitie,
    intro, specialisaties, schuivende secties, achtergrond, parallax
    en footer. Geladen met defer, na GSAP, ScrollTrigger, SplitText
