@@ -153,6 +153,102 @@
     if (e.key === 'Escape') closeMenu();
   });
 
+  /* ---------- 4b. SPECIALISATIES-MENU ----------
+     Een klik op "Specialisaties" (.nav__link.is-mega) opent het paneel
+     .mega in de header. Het kader rond de menulinks groeit vanuit zijn
+     eigen midden uit tot het volle paneel: het paneel staat in het
+     Style-panel al op volle grootte, en het script laat eerst alleen
+     het stuk ter grootte van het kader zien (clip-path) en vergroot dat.
+     Daarna komen de kaarten in beeld. Sluiten gaat omgekeerd: opnieuw
+     klikken, buiten het paneel klikken, Escape, of het venster
+     verkleinen. Alleen vanaf 992px, waar het menu zichtbaar is.
+     Opmaak van paneel en kaarten: .mega, .mega__card enz. in het
+     Style-panel. De open-toestand (.header.is-mega) staat in trouw.css.
+     open / close = duur van groeien en krimpen, in seconden
+     radius = afronding van het kader, bottom = afronding onder het paneel */
+  var MEGA = { open: 0.8, close: 0.6, ease: 'power3.inOut', radius: 0.9375, bottom: 1.25 };
+
+  var mega = document.querySelector('.mega');
+  var megaTrigger = document.querySelector('.nav__link.is-mega');
+  var navMenu = document.querySelector('.nav__menu');
+  var megaOpen = false;
+  var closeMega = function () {};
+
+  if (mega && megaTrigger && navMenu && header) {
+    var megaCards = gsap.utils.toArray(mega.querySelectorAll('.mega__card'));
+    var emPx = function (n) { return n * parseFloat(getComputedStyle(mega).fontSize); };
+
+    var closedClip = function () {
+      var p = mega.getBoundingClientRect();
+      var r = navMenu.getBoundingClientRect();
+      var rad = emPx(MEGA.radius);
+      return 'inset(' + (r.top - p.top) + 'px ' + (p.right - r.right) + 'px ' +
+        (p.bottom - r.bottom) + 'px ' + (r.left - p.left) + 'px round ' +
+        rad + 'px ' + rad + 'px ' + rad + 'px ' + rad + 'px)';
+    };
+    var openClip = function () {
+      var b = emPx(MEGA.bottom);
+      return 'inset(0px 0px 0px 0px round 0px 0px ' + b + 'px ' + b + 'px)';
+    };
+
+    megaTrigger.setAttribute('aria-expanded', 'false');
+
+    var openMega = function () {
+      if (megaOpen) return;
+      megaOpen = true;
+      megaTrigger.setAttribute('aria-expanded', 'true');
+      gsap.killTweensOf([mega].concat(megaCards));
+      mega.style.display = 'block';
+      gsap.set(mega, { clipPath: closedClip() });
+      gsap.set(megaCards, { autoAlpha: 0, y: 24 });
+      header.classList.add('is-mega');
+      gsap.to(mega, { clipPath: openClip(), duration: reduced ? 0 : MEGA.open, ease: MEGA.ease });
+      gsap.to(megaCards, {
+        autoAlpha: 1,
+        y: 0,
+        duration: reduced ? 0 : 0.6,
+        ease: 'power3.out',
+        stagger: reduced ? 0 : 0.06,
+        delay: reduced ? 0 : MEGA.open * 0.6
+      });
+    };
+
+    closeMega = function () {
+      if (!megaOpen) return;
+      megaOpen = false;
+      megaTrigger.setAttribute('aria-expanded', 'false');
+      gsap.killTweensOf([mega].concat(megaCards));
+      gsap.to(megaCards, { autoAlpha: 0, y: 12, duration: reduced ? 0 : 0.25, ease: 'power2.in' });
+      gsap.to(mega, {
+        clipPath: closedClip(),
+        duration: reduced ? 0 : MEGA.close,
+        ease: MEGA.ease,
+        delay: reduced ? 0 : 0.1,
+        onComplete: function () {
+          mega.style.display = 'none';
+          header.classList.remove('is-mega');
+        }
+      });
+    };
+
+    /* In de capture-fase, zodat de paginatransitie de klik op
+       "Specialisaties" niet als paginawissel oppakt. */
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.nav__link.is-mega')) {
+        if (getComputedStyle(navMenu).display === 'none') return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (megaOpen) closeMega(); else openMega();
+        return;
+      }
+      if (megaOpen && !e.target.closest('.mega')) closeMega();
+    }, true);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMega();
+    });
+  }
+
   /* ---------- 5. PAGINATRANSITIE ---------- */
   var KEY = 'trouw-transition';
   var overlay = document.querySelector('.transition');
@@ -640,6 +736,7 @@
   window.addEventListener('resize', function () {
     clearTimeout(rt);
     rt = setTimeout(function () {
+      closeMega();
       bgSnaps.forEach(function (fn) { fn(); });
       fitFooter();
       ScrollTrigger.refresh();

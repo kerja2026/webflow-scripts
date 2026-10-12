@@ -98,6 +98,17 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
   .nav__link::after{display:none}
 }
 
+/* ===== SPECIALISATIES-MENU: open-toestand =====
+   Het script zet .is-mega op de header zodra het paneel opent. Het
+   kader rond de menulinks verdwijnt dan, want het paneel neemt zijn
+   plek in, en "Specialisaties" wordt vet. De vetheid is een schaduw in
+   de tekstkleur in plaats van een zwaardere letter, zodat de andere
+   links niet verspringen. Opmaak van paneel en kaarten staat in het
+   Style-panel (.mega, .mega__card enz.). */
+.header.is-mega .nav__menu{background-image:none}
+.header.is-mega .nav__link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
+.mega{will-change:clip-path}
+
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
    Wanneer het menu omschakelt naar de hamburger staat in het
    Style-panel, bij het tablet-breakpoint. */
