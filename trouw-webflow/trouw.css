@@ -108,6 +108,20 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .header.is-mega .nav__menu{background-image:none}
 .header.is-mega .nav__link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
 .mega{will-change:clip-path}
+
+/* Diapositief zolang het paneel open is: het paneel is groen, dus
+   menulinks, contactregel en logo worden licht, en de donkere knop
+   wisselt met de lichte (.nav__cta-alt, in de Designer verborgen).
+   Het logo wordt één kleur beige via een filter. */
+.nav__link,
+.topbar__link{transition:color .4s ease,opacity .35s ease}
+.nav__logo img{transition:filter .4s ease}
+.header.is-mega .nav__link,
+.header.is-mega .topbar__link{color:#f1eae0}
+.header.is-mega .nav__link::after{background-color:#f1eae0}
+.header.is-mega .nav__logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
+.header.is-mega .nav__cta > .btn_dark{display:none}
+.header.is-mega .nav__cta-alt{display:flex}
 /* De waas: oudere Safari leest alleen de variant met -webkit-.
    Het Style-panel kan die niet opslaan; de waarde moet gelijk zijn
    aan de backdrop-filter op .mega__scrim. */
