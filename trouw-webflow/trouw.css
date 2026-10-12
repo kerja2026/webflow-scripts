@@ -108,6 +108,10 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .header.is-mega .nav__menu{background-image:none}
 .header.is-mega .nav__link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
 .mega{will-change:clip-path}
+/* Scrollslot voor het uitklapmenu: alleen op html. Op body maakt
+   overflow hidden de body tot scrollvlak, en springt de sticky header
+   op een gescrolde pagina buiten beeld. */
+html.mega-open{overflow:hidden}
 
 /* Diapositief zolang het paneel open is: het paneel is groen, dus
    menulinks, contactregel en logo worden licht, en de donkere knop

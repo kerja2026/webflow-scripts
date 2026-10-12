@@ -162,7 +162,8 @@
      Daarna komen de kaarten in beeld. Sluiten gaat omgekeerd: opnieuw
      klikken, buiten het paneel klikken, Escape, of het venster
      verkleinen. Alleen vanaf 992px, waar het menu zichtbaar is.
-     Zolang het paneel open is, staat de pagina op slot en ligt er een
+     Zolang het paneel open is, staat de pagina op slot (.mega-open,
+     alleen op html: op body zou de sticky header wegspringen) en ligt er een
      waas over (.mega__scrim): kleur en vervaging in het Style-panel.
      Klikken op de waas sluit het paneel.
      Opmaak van paneel en kaarten: .mega, .mega__card enz. in het
@@ -206,7 +207,7 @@
       gsap.set(mega, { clipPath: closedClip() });
       gsap.set(megaCards, { autoAlpha: 0, y: 24 });
       header.classList.add('is-mega');
-      html.classList.add('menu-open');
+      html.classList.add('mega-open');
       if (lenis) lenis.stop();
       if (megaScrim) {
         gsap.killTweensOf(megaScrim);
@@ -248,7 +249,7 @@
         onComplete: function () {
           mega.style.display = 'none';
           header.classList.remove('is-mega');
-          html.classList.remove('menu-open');
+          html.classList.remove('mega-open');
           if (lenis) lenis.start();
         }
       });
