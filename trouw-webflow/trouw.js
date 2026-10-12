@@ -162,6 +162,9 @@
      Daarna komen de kaarten in beeld. Sluiten gaat omgekeerd: opnieuw
      klikken, buiten het paneel klikken, Escape, of het venster
      verkleinen. Alleen vanaf 992px, waar het menu zichtbaar is.
+     Zolang het paneel open is, staat de pagina op slot en ligt er een
+     waas over (.mega__scrim): kleur en vervaging in het Style-panel.
+     Klikken op de waas sluit het paneel.
      Opmaak van paneel en kaarten: .mega, .mega__card enz. in het
      Style-panel. De open-toestand (.header.is-mega) staat in trouw.css.
      open / close = duur van groeien en krimpen, in seconden
@@ -171,6 +174,7 @@
   var mega = document.querySelector('.mega');
   var megaTrigger = document.querySelector('.nav__link.is-mega');
   var navMenu = document.querySelector('.nav__menu');
+  var megaScrim = document.querySelector('.mega__scrim');
   var megaOpen = false;
   var closeMega = function () {};
 
@@ -202,6 +206,13 @@
       gsap.set(mega, { clipPath: closedClip() });
       gsap.set(megaCards, { autoAlpha: 0, y: 24 });
       header.classList.add('is-mega');
+      html.classList.add('menu-open');
+      if (lenis) lenis.stop();
+      if (megaScrim) {
+        gsap.killTweensOf(megaScrim);
+        megaScrim.style.display = 'block';
+        gsap.fromTo(megaScrim, { autoAlpha: 0 }, { autoAlpha: 1, duration: reduced ? 0 : MEGA.open, ease: 'power2.out' });
+      }
       gsap.to(mega, { clipPath: openClip(), duration: reduced ? 0 : MEGA.open, ease: MEGA.ease });
       gsap.to(megaCards, {
         autoAlpha: 1,
@@ -219,6 +230,16 @@
       megaTrigger.setAttribute('aria-expanded', 'false');
       gsap.killTweensOf([mega].concat(megaCards));
       gsap.to(megaCards, { autoAlpha: 0, y: 12, duration: reduced ? 0 : 0.25, ease: 'power2.in' });
+      if (megaScrim) {
+        gsap.killTweensOf(megaScrim);
+        gsap.to(megaScrim, {
+          autoAlpha: 0,
+          duration: reduced ? 0 : MEGA.close,
+          delay: reduced ? 0 : 0.1,
+          ease: 'power2.inOut',
+          onComplete: function () { megaScrim.style.display = 'none'; }
+        });
+      }
       gsap.to(mega, {
         clipPath: closedClip(),
         duration: reduced ? 0 : MEGA.close,
@@ -227,6 +248,8 @@
         onComplete: function () {
           mega.style.display = 'none';
           header.classList.remove('is-mega');
+          html.classList.remove('menu-open');
+          if (lenis) lenis.start();
         }
       });
     };

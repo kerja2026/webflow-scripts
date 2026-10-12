@@ -108,6 +108,10 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .header.is-mega .nav__menu{background-image:none}
 .header.is-mega .nav__link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
 .mega{will-change:clip-path}
+/* De waas: oudere Safari leest alleen de variant met -webkit-.
+   Het Style-panel kan die niet opslaan; de waarde moet gelijk zijn
+   aan de backdrop-filter op .mega__scrim. */
+.mega__scrim{-webkit-backdrop-filter:blur(6px)}
 
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
    Wanneer het menu omschakelt naar de hamburger staat in het
