@@ -138,9 +138,17 @@ html.mega-open{overflow:hidden}
   clip-path:inset(0 0 0 0 round 1.25em);
   transition:clip-path .5s cubic-bezier(.65,0,.35,1);
 }
+/* De omschrijving staat in rust 5px hoger, achter de foto, en schuift
+   bij hover in hetzelfde tempo mee naar beneden. */
+.mega__desc{
+  transform:translateY(-5px);
+  transition:transform .5s cubic-bezier(.65,0,.35,1);
+}
 @media (hover:hover){
   .mega__card:hover .mega__img,
   .mega__card:focus-visible .mega__img{clip-path:inset(0 0 4.75em 0 round 1.25em)}
+  .mega__card:hover .mega__desc,
+  .mega__card:focus-visible .mega__desc{transform:translateY(0)}
 }
 
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
