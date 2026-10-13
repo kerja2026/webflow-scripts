@@ -155,22 +155,34 @@
 
   /* ---------- 4b. SPECIALISATIES-MENU ----------
      Een klik op "Specialisaties" (.nav__link.is-mega) opent het paneel
-     .mega in de header. Het kader rond de menulinks groeit vanuit zijn
-     eigen midden uit tot het volle paneel: het paneel staat in het
-     Style-panel al op volle grootte, en het script laat eerst alleen
-     het stuk ter grootte van het kader zien (clip-path) en vergroot dat.
-     Daarna komen de kaarten in beeld. Sluiten gaat omgekeerd: opnieuw
-     klikken, buiten het paneel klikken, Escape, of het venster
-     verkleinen. Alleen vanaf 992px, waar het menu zichtbaar is.
+     .mega in de header. De opbouw gaat in vaste volgorde:
+
+       1. Het beige kader rond de menulinks groeit vanuit zijn midden uit
+          tot het paneel, en verkleurt tegelijk van beige naar groen.
+          (Het paneel is groen; de beige laag .mega__beige erover
+          vervaagt. Het groeien is een clip-path op het paneel.)
+       2. Pas als het paneel helemaal open is, verkleuren logo,
+          menulinks, contactregel en knop naar licht (.is-mega-light
+          op de header; de kleuren staan in trouw.css).
+       3. De specialisaties verschijnen kort na elkaar tijdens het
+          laatste deel van het uitgroeien.
+
+     Sluiten gaat omgekeerd: kaarten weg, kleuren terug naar donker,
+     dan krimpt het paneel terug naar het kader en wordt het weer beige.
+     Sluiten kan door opnieuw te klikken, buiten het paneel of op de
+     waas te klikken, met Escape, of door het venster te verkleinen.
+
      Zolang het paneel open is, staat de pagina op slot (.mega-open,
-     alleen op html: op body zou de sticky header wegspringen) en ligt er een
-     waas over (.mega__scrim): kleur en vervaging in het Style-panel.
-     Klikken op de waas sluit het paneel.
-     Opmaak van paneel en kaarten: .mega, .mega__card enz. in het
-     Style-panel. De open-toestand (.header.is-mega) staat in trouw.css.
-     open / close = duur van groeien en krimpen, in seconden
-     radius = afronding van het kader, bottom = afronding onder het paneel */
-  var MEGA = { open: 0.8, close: 0.6, ease: 'power3.inOut', radius: 0.9375, bottom: 1.25 };
+     alleen op html: op body zou de sticky header wegspringen) en ligt
+     er een waas over de pagina (.mega__scrim, kleur in het
+     Style-panel). Alleen vanaf 992px, waar het menu zichtbaar is.
+
+     open   = duur van uitgroeien en verkleuren naar groen
+     close  = duur van krimpen en verkleuren naar beige
+     colors = duur van het verkleuren van logo, links en knop
+              (gelijk houden aan de transition in trouw.css)
+     radius = afronding van het kader, round = afronding van het paneel */
+  var MEGA = { open: 0.8, close: 0.6, colors: 0.4, ease: 'power3.inOut', radius: 0.9375, round: 1.25 };
 
   var mega = document.querySelector('.mega');
   var megaTrigger = document.querySelector('.nav__link.is-mega');
@@ -181,7 +193,10 @@
 
   if (mega && megaTrigger && navMenu && header) {
     var megaCards = gsap.utils.toArray(mega.querySelectorAll('.mega__card'));
+    var megaBeige = mega.querySelector('.mega__beige');
+    var megaTl = null;
     var emPx = function (n) { return n * parseFloat(getComputedStyle(mega).fontSize); };
+    var dur = function (n) { return reduced ? 0 : n; };
 
     var closedClip = function () {
       var p = mega.getBoundingClientRect();
@@ -192,8 +207,8 @@
         rad + 'px ' + rad + 'px ' + rad + 'px ' + rad + 'px)';
     };
     var openClip = function () {
-      var b = emPx(MEGA.bottom);
-      return 'inset(0px 0px 0px 0px round 0px 0px ' + b + 'px ' + b + 'px)';
+      var b = emPx(MEGA.round);
+      return 'inset(0px 0px 0px 0px round ' + b + 'px ' + b + 'px ' + b + 'px ' + b + 'px)';
     };
 
     megaTrigger.setAttribute('aria-expanded', 'false');
@@ -202,57 +217,51 @@
       if (megaOpen) return;
       megaOpen = true;
       megaTrigger.setAttribute('aria-expanded', 'true');
-      gsap.killTweensOf([mega].concat(megaCards));
+      if (megaTl) megaTl.kill();
+
       mega.style.display = 'block';
       gsap.set(mega, { clipPath: closedClip() });
+      if (megaBeige) gsap.set(megaBeige, { autoAlpha: 1 });
       gsap.set(megaCards, { autoAlpha: 0, y: 24 });
       header.classList.add('is-mega');
       html.classList.add('mega-open');
       if (lenis) lenis.stop();
-      if (megaScrim) {
-        gsap.killTweensOf(megaScrim);
-        megaScrim.style.display = 'block';
-        gsap.fromTo(megaScrim, { autoAlpha: 0 }, { autoAlpha: 1, duration: reduced ? 0 : MEGA.open, ease: 'power2.out' });
-      }
-      gsap.to(mega, { clipPath: openClip(), duration: reduced ? 0 : MEGA.open, ease: MEGA.ease });
-      gsap.to(megaCards, {
-        autoAlpha: 1,
-        y: 0,
-        duration: reduced ? 0 : 0.6,
-        ease: 'power3.out',
-        stagger: reduced ? 0 : 0.06,
-        delay: reduced ? 0 : MEGA.open * 0.6
-      });
+      if (megaScrim) { megaScrim.style.display = 'block'; gsap.set(megaScrim, { autoAlpha: 0 }); }
+
+      megaTl = gsap.timeline();
+      /* 1. uitgroeien en van beige naar groen */
+      megaTl.to(mega, { clipPath: openClip(), duration: dur(MEGA.open), ease: MEGA.ease }, 0);
+      if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 0, duration: dur(MEGA.open), ease: 'power1.inOut' }, 0);
+      if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: dur(MEGA.open), ease: 'power2.out' }, 0);
+      /* 3. de specialisaties, tijdens het laatste deel van het uitgroeien */
+      megaTl.to(megaCards, { autoAlpha: 1, y: 0, duration: dur(0.6), ease: 'power3.out', stagger: dur(0.06) }, dur(MEGA.open * 0.6));
+      /* 2. pas als het paneel open is: logo, links en knop naar licht */
+      megaTl.call(function () { header.classList.add('is-mega-light'); }, null, dur(MEGA.open));
     };
 
     closeMega = function () {
       if (!megaOpen) return;
       megaOpen = false;
       megaTrigger.setAttribute('aria-expanded', 'false');
-      gsap.killTweensOf([mega].concat(megaCards));
-      gsap.to(megaCards, { autoAlpha: 0, y: 12, duration: reduced ? 0 : 0.25, ease: 'power2.in' });
-      if (megaScrim) {
-        gsap.killTweensOf(megaScrim);
-        gsap.to(megaScrim, {
-          autoAlpha: 0,
-          duration: reduced ? 0 : MEGA.close,
-          delay: reduced ? 0 : 0.1,
-          ease: 'power2.inOut',
-          onComplete: function () { megaScrim.style.display = 'none'; }
-        });
-      }
-      gsap.to(mega, {
-        clipPath: closedClip(),
-        duration: reduced ? 0 : MEGA.close,
-        ease: MEGA.ease,
-        delay: reduced ? 0 : 0.1,
+      if (megaTl) megaTl.kill();
+
+      var shrinkAt = dur(MEGA.colors);
+      megaTl = gsap.timeline({
         onComplete: function () {
           mega.style.display = 'none';
+          if (megaScrim) megaScrim.style.display = 'none';
           header.classList.remove('is-mega');
           html.classList.remove('mega-open');
           if (lenis) lenis.start();
         }
       });
+      /* kaarten weg, en tegelijk de kleuren terug naar donker */
+      megaTl.to(megaCards, { autoAlpha: 0, y: 12, duration: dur(0.25), ease: 'power2.in' }, 0);
+      megaTl.call(function () { header.classList.remove('is-mega-light'); }, null, 0);
+      /* daarna krimpen en van groen naar beige */
+      megaTl.to(mega, { clipPath: closedClip(), duration: dur(MEGA.close), ease: MEGA.ease }, shrinkAt);
+      if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 1, duration: dur(MEGA.close), ease: 'power1.inOut' }, shrinkAt);
+      if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: dur(MEGA.close), ease: 'power2.inOut' }, shrinkAt);
     };
 
     /* In de capture-fase, zodat de paginatransitie de klik op
