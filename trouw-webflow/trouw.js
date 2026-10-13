@@ -177,12 +177,14 @@
      er een waas over de pagina (.mega__scrim, kleur in het
      Style-panel). Alleen vanaf 992px, waar het menu zichtbaar is.
 
-     open   = duur van uitgroeien en verkleuren naar groen
-     close  = duur van krimpen en verkleuren naar beige
+     open      = duur van uitgroeien en verkleuren naar groen
+     close     = duur van krimpen en verkleuren naar beige
+     easeOpen  = verloop bij openen: snel weg, zacht landen
+     easeClose = verloop bij sluiten: rustig begin en eind
      colors = duur van het verkleuren van logo, links en knop
               (gelijk houden aan de transition in trouw.css)
      radius = afronding van het kader, round = afronding van het paneel */
-  var MEGA = { open: 0.8, close: 0.6, colors: 0.4, ease: 'power3.inOut', radius: 0.9375, round: 1.25 };
+  var MEGA = { open: 0.55, close: 0.45, colors: 0.4, easeOpen: 'expo.out', easeClose: 'power3.inOut', radius: 0.9375, round: 0.5 };
 
   var mega = document.querySelector('.mega');
   var megaTrigger = document.querySelector('.nav__link.is-mega');
@@ -230,8 +232,8 @@
 
       megaTl = gsap.timeline();
       /* 1. uitgroeien en van beige naar groen */
-      megaTl.to(mega, { clipPath: openClip(), duration: dur(MEGA.open), ease: MEGA.ease }, 0);
-      if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 0, duration: dur(MEGA.open), ease: 'power1.inOut' }, 0);
+      megaTl.to(mega, { clipPath: openClip(), duration: dur(MEGA.open), ease: MEGA.easeOpen }, 0);
+      if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 0, duration: dur(MEGA.open), ease: 'power2.out' }, 0);
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: dur(MEGA.open), ease: 'power2.out' }, 0);
       /* 3. de specialisaties, tijdens het laatste deel van het uitgroeien */
       megaTl.to(megaCards, { autoAlpha: 1, y: 0, duration: dur(0.6), ease: 'power3.out', stagger: dur(0.06) }, dur(MEGA.open * 0.6));
@@ -259,7 +261,7 @@
       megaTl.to(megaCards, { autoAlpha: 0, y: 12, duration: dur(0.25), ease: 'power2.in' }, 0);
       megaTl.call(function () { header.classList.remove('is-mega-light'); }, null, 0);
       /* daarna krimpen en van groen naar beige */
-      megaTl.to(mega, { clipPath: closedClip(), duration: dur(MEGA.close), ease: MEGA.ease }, shrinkAt);
+      megaTl.to(mega, { clipPath: closedClip(), duration: dur(MEGA.close), ease: MEGA.easeClose }, shrinkAt);
       if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 1, duration: dur(MEGA.close), ease: 'power1.inOut' }, shrinkAt);
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: dur(MEGA.close), ease: 'power2.inOut' }, shrinkAt);
     };
