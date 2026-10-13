@@ -136,13 +136,13 @@ html.mega-open{overflow:hidden}
    drie regels omschrijving. Opmaak in het Style-panel. */
 .mega__img{
   clip-path:inset(0 0 0 0 round 0.5em);
-  transition:clip-path .25s cubic-bezier(.65,0,.35,1);
+  transition:clip-path .25s cubic-bezier(.22,1,.36,1);
 }
 /* De omschrijving staat in rust 5px hoger, achter de foto, en schuift
    bij hover in hetzelfde tempo mee naar beneden. */
 .mega__desc{
   transform:translateY(-5px);
-  transition:transform .25s cubic-bezier(.65,0,.35,1);
+  transition:transform .25s cubic-bezier(.22,1,.36,1);
 }
 @media (hover:hover){
   .mega__card:hover .mega__img,
