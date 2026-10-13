@@ -128,6 +128,21 @@ html.mega-open{overflow:hidden}
 .header.is-mega-light .nav__cta > .btn_dark{opacity:0;pointer-events:none}
 .header.is-mega-light .nav__cta-alt{opacity:1;pointer-events:auto}
 
+/* ===== SPECIALISATIES-MENU: kaart bij hover =====
+   De naam staat boven de foto. Bij hover schuift de onderrand van de
+   foto omhoog, met de afgeronde hoeken mee, en wordt de omschrijving
+   (.mega__desc) eronder zichtbaar. De foto wordt afgesneden, niet
+   vervormd. reveal = hoeveel de foto omhoog schuift; ruim genoeg voor
+   drie regels omschrijving. Opmaak in het Style-panel. */
+.mega__img{
+  clip-path:inset(0 0 0 0 round 1.25em);
+  transition:clip-path .5s cubic-bezier(.65,0,.35,1);
+}
+@media (hover:hover){
+  .mega__card:hover .mega__img,
+  .mega__card:focus-visible .mega__img{clip-path:inset(0 0 4.75em 0 round 1.25em)}
+}
+
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
    Wanneer het menu omschakelt naar de hamburger staat in het
    Style-panel, bij het tablet-breakpoint. */
