@@ -1,9 +1,21 @@
 /* =============================================================
-   PRAKTIJK TROUW — GEDRAG1
+   PRAKTIJK TROUW — GEDRAG
    Animaties, transitie, smooth scroll, en de toestanden die alleen
    het script aanzet. Layout staat in het Style-panel van Webflow.
    Geladen in de head via jsDelivr.
    ============================================================= */
+/* ===== BASIS =====
+   De Osmo-schaling staat in het Style-panel: font-size op de body per
+   breakpoint, max-width op .l-container. Hier alleen wat het
+   Style-panel niet kan. */
+html{background:#faf8f4}
+html,body{margin:0;padding:0;width:100%;max-width:100%}
+body{overflow-wrap:break-word;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+button,input,select,textarea{font-family:inherit}
+img{max-width:100%;display:block}
+/* Het keuzerondje in het formulier heeft in Webflow geen eigen class. */
+.cradio input[type="radio"]{margin:0;width:1em;height:1em;flex:0 0 auto}
+
 :root{--col:20.25em;--stripe-shift:6.75em}
 
 /* ===== SCROLLBALK: elementen maakt het script aan ===== */
