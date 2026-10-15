@@ -132,6 +132,11 @@ html.mega-open{overflow:hidden}
 .nav__cta > .btn_dark,
 .nav__cta-alt{transition:opacity .4s ease}
 
+/* Tekst op de kaarten: donker op het beige, licht zodra het paneel
+   groen wordt (.is-mega-green, gezet door het script in stap 3). */
+.mega__card{color:#3a3128;transition:color .5s ease}
+.header.is-mega-green .mega__card{color:#f1eae0}
+
 .header.is-mega-light .nav__link,
 .header.is-mega-light .topbar__link{color:#f1eae0}
 .header.is-mega-light .nav__link::after{background-color:#f1eae0}
