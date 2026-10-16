@@ -290,7 +290,7 @@
        pull   = hoe sterk een muisbeweging het beeld meetrekt
        settle = hoe snel het terugglijdt bij stilstand (lager is sneller)
        lag    = hoe zacht het beeld volgt, in seconden */
-    var FOLLOW = { shift: 8, zoom: 1.07, pull: 0.25, settle: 0.92, lag: 0.5 };
+    var FOLLOW = { shift: 8, zoom: 1.07, pull: 0.15, settle: 0.5, lag: 0.5 };
     if (!reduced && window.matchMedia('(hover: hover)').matches) {
       var clampShift = gsap.utils.clamp(-FOLLOW.shift, FOLLOW.shift);
       var followers = [];
