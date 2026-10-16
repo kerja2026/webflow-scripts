@@ -277,6 +277,29 @@
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: at(0.45), ease: 'power2.inOut' }, at(0.75));
     };
 
+    /* Het beeld in een kaart beweegt licht mee met de muis, binnen
+       het vaste kader .mega__photo. Het beeld is een fractie
+       ingezoomd, zodat er aan de randen nooit een gat ontstaat.
+       Alleen met een muis.
+       shift = maximale verschuiving naar elke kant, in pixels
+       zoom  = hoeveel het beeld is ingezoomd (moet ruimte geven voor shift)
+       lag   = hoe zacht het beeld de muis volgt, in seconden */
+    var FOLLOW = { shift: 8, zoom: 1.07, lag: 0.6 };
+    if (!reduced && window.matchMedia('(hover: hover)').matches) {
+      megaCards.forEach(function (card) {
+        var img = card.querySelector('.mega__img');
+        if (!img) return;
+        gsap.set(img, { scale: FOLLOW.zoom });
+        var xTo = gsap.quickTo(img, 'x', { duration: FOLLOW.lag, ease: 'power3.out' });
+        card.addEventListener('mousemove', function (e) {
+          var r = card.getBoundingClientRect();
+          var rel = (e.clientX - r.left) / r.width - 0.5;
+          xTo(rel * 2 * FOLLOW.shift);
+        });
+        card.addEventListener('mouseleave', function () { xTo(0); });
+      });
+    }
+
     /* In de capture-fase, zodat de paginatransitie de klik op
        "Specialisaties" niet als paginawissel oppakt. */
     document.addEventListener('click', function (e) {

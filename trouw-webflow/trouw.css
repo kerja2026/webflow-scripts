@@ -146,12 +146,13 @@ html.mega-open{overflow:hidden}
 .header.is-mega-light .nav__cta-alt{opacity:1;pointer-events:auto}
 
 /* ===== SPECIALISATIES-MENU: kaart bij hover =====
-   De naam staat boven de foto. Bij hover schuift de onderrand van de
-   foto omhoog, met de afgeronde hoeken mee, en wordt de omschrijving
-   (.mega__desc) eronder zichtbaar. De foto wordt afgesneden, niet
-   vervormd. reveal = hoeveel de foto omhoog schuift; ruim genoeg voor
-   drie regels omschrijving. Opmaak in het Style-panel. */
-.mega__img{
+   De naam staat boven de foto. Bij hover schuift de onderrand van het
+   fotokader (.mega__photo) omhoog, met de afgeronde hoeken mee, en
+   wordt de omschrijving (.mega__desc) eronder zichtbaar. Het beeld
+   (.mega__img) beweegt binnen het kader licht mee met de muis; dat
+   doet trouw.js. 4.75em = hoeveel het kader omhoog schuift, ruim
+   genoeg voor drie regels omschrijving. Opmaak in het Style-panel. */
+.mega__photo{
   clip-path:inset(0 0 0 0 round 0.5em);
   transition:clip-path .25s cubic-bezier(.22,1,.36,1);
 }
@@ -162,8 +163,8 @@ html.mega-open{overflow:hidden}
   transition:transform .25s cubic-bezier(.22,1,.36,1);
 }
 @media (hover:hover){
-  .mega__card:hover .mega__img,
-  .mega__card:focus-visible .mega__img{clip-path:inset(0 0 4.75em 0 round 1.25em)}
+  .mega__card:hover .mega__photo,
+  .mega__card:focus-visible .mega__photo{clip-path:inset(0 0 4.75em 0 round 0.5em)}
   .mega__card:hover .mega__desc,
   .mega__card:focus-visible .mega__desc{transform:translateY(0)}
 }
