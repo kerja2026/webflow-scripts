@@ -161,7 +161,8 @@
        1. Het beige kader rond de menulinks groeit vanuit zijn midden uit
           tot het volle paneel, en blijft daarbij beige.
           (Het groeien is een clip-path op het paneel.)
-       2. De specialisaties verschijnen kort na elkaar van onderaf.
+       2. De specialisaties verschijnen kort na elkaar: elke kaart hangt
+          aan zijn bovenrand en kantelt subtiel omlaag tot hij recht staat.
        3. Het paneel verkleurt van beige naar groen: de beige laag
           .mega__beige vervaagt, en de tekst op de kaarten gaat mee van
           donker naar licht (.is-mega-green op de header, kleuren in
@@ -181,12 +182,13 @@
      Tijden in seconden, vanaf de klik:
      grow    = duur van het uitgroeien
      cardsAt = start van de kaarten, each = vertraging per kaart
+     tilt    = hoeveel graden een kaart begint gekanteld, perspective = diepte
      greenAt = start van beige naar groen, green = duur daarvan
      lightAt = start van logo, links en knop naar licht
                (de duur daarvan, .4s, staat in trouw.css)
      radius  = afronding van het kader, round = afronding van het paneel */
   var MEGA = {
-    grow: 0.5, cardsAt: 0.35, cards: 0.6, each: 0.06,
+    grow: 0.5, cardsAt: 0.35, cards: 0.6, each: 0.06, tilt: 20, perspective: 1000,
     greenAt: 0.75, green: 0.5, lightAt: 1.1,
     easeOpen: 'expo.out', easeClose: 'power3.inOut',
     radius: 0.9375, round: 0.5
@@ -231,7 +233,7 @@
       mega.style.display = 'block';
       gsap.set(mega, { clipPath: closedClip() });
       if (megaBeige) gsap.set(megaBeige, { autoAlpha: 1 });
-      gsap.set(megaCards, { autoAlpha: 0, y: 24 });
+      gsap.set(megaCards, { autoAlpha: 0, rotationX: -MEGA.tilt, transformOrigin: '50% 0%', transformPerspective: MEGA.perspective });
       setClass('is-mega', true);
       html.classList.add('mega-open');
       if (lenis) lenis.stop();
@@ -242,7 +244,7 @@
       megaTl.to(mega, { clipPath: openClip(), duration: at(MEGA.grow), ease: MEGA.easeOpen }, 0);
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: at(MEGA.grow), ease: 'power2.out' }, 0);
       /* 2. de specialisaties */
-      megaTl.to(megaCards, { autoAlpha: 1, y: 0, duration: at(MEGA.cards), ease: 'power3.out', stagger: at(MEGA.each) }, at(MEGA.cardsAt));
+      megaTl.to(megaCards, { autoAlpha: 1, rotationX: 0, duration: at(MEGA.cards), ease: 'power3.out', stagger: at(MEGA.each) }, at(MEGA.cardsAt));
       /* 3. van beige naar groen, tekst op de kaarten mee naar licht */
       if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 0, duration: at(MEGA.green), ease: 'power1.inOut' }, at(MEGA.greenAt));
       megaTl.call(function () { setClass('is-mega-green', true); }, null, at(MEGA.greenAt));
@@ -271,7 +273,7 @@
       megaTl.call(function () { setClass('is-mega-green', false); }, null, at(0.25));
       if (megaBeige) megaTl.to(megaBeige, { autoAlpha: 1, duration: at(0.4), ease: 'power1.inOut' }, at(0.25));
       /* 2. kaarten weg */
-      megaTl.to(megaCards.slice().reverse(), { autoAlpha: 0, y: 12, duration: at(0.25), ease: 'power2.in', stagger: at(0.03) }, at(0.5));
+      megaTl.to(megaCards.slice().reverse(), { autoAlpha: 0, rotationX: -MEGA.tilt * 0.6, duration: at(0.25), ease: 'power2.in', stagger: at(0.03) }, at(0.5));
       /* 1. krimpen naar het kader */
       megaTl.to(mega, { clipPath: closedClip(), duration: at(0.45), ease: MEGA.easeClose }, at(0.75));
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: at(0.45), ease: 'power2.inOut' }, at(0.75));
