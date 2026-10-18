@@ -447,14 +447,22 @@
      kaart komt iets lager binnen en schuift tijdens het scrollen naar
      zijn plek. Geen overlap.
      mobileShift = hoeveel lager een kaart binnenkomt
-     mobileEnd   = waar in het scherm hij op zijn plek ligt */
+     mobileEnd   = waar in het scherm hij op zijn plek ligt
+
+     Kantelen (vanaf 768px): foto's en tekst draaien om hun bovenrand.
+     Wat binnenkomt staat eerst met de onderkant naar achteren
+     gekanteld en kantelt omlaag tot het recht staat; tekst die vertrekt
+     kantelt een fractie de andere kant op.
+     tilt        = hoeveel graden, perspective = diepte (lager is sterker) */
   var SPEC = {
     cardEase: 'power2.out',
     duration: 0.8,
     each: 0.05,
     ease: 'power2.inOut',
     mobileShift: '3em',
-    mobileEnd: 'top 70%'
+    mobileEnd: 'top 70%',
+    tilt: 20,
+    perspective: 1000
   };
 
   var specMobile = window.matchMedia('(max-width: 767px)').matches;
@@ -504,6 +512,7 @@
     });
 
     var place = function (k) { return k === current ? 0 : (k < current ? -110 : 110); };
+    var tiltFor = function (k) { return k === current ? 0 : (k < current ? SPEC.tilt * 0.5 : -SPEC.tilt); };
 
     var markActive = function (next) {
       specTexts.forEach(function (block, k) {
@@ -515,7 +524,12 @@
     specTexts.forEach(function (block, k) {
       block.style.transition = 'none';
       gsap.set(block, { autoAlpha: 1 });
-      gsap.set(parts[k], { yPercent: place(k) });
+      gsap.set(parts[k], {
+        yPercent: place(k),
+        rotationX: tiltFor(k),
+        transformOrigin: '50% 0%',
+        transformPerspective: SPEC.perspective
+      });
     });
     markActive(current);
 
@@ -533,6 +547,7 @@
           var list = down ? parts[k] : parts[k].slice().reverse();
           gsap.to(list, {
             yPercent: target,
+            rotationX: tiltFor(k),
             duration: SPEC.duration,
             ease: SPEC.ease,
             stagger: SPEC.each,
@@ -561,8 +576,13 @@
 
       specCards.slice(1).forEach(function (card) {
         specTl.fromTo(card,
-          { y: function () { return window.innerHeight; } },
-          { y: 0, ease: SPEC.cardEase, duration: 1, immediateRender: true }
+          {
+            y: function () { return window.innerHeight; },
+            rotationX: -SPEC.tilt,
+            transformOrigin: '50% 0%',
+            transformPerspective: SPEC.perspective
+          },
+          { y: 0, rotationX: 0, ease: SPEC.cardEase, duration: 1, immediateRender: true }
         );
         specTl.set(card, { autoAlpha: 1 }, '<');
       });
