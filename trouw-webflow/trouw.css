@@ -148,9 +148,8 @@ html.mega-open{overflow:hidden}
 /* ===== SPECIALISATIES-MENU: kaart bij hover =====
    De naam staat boven de foto. Bij hover schuift de onderrand van het
    fotokader (.mega__photo) omhoog, met de afgeronde hoeken mee, en
-   wordt de omschrijving (.mega__desc) eronder zichtbaar. Het beeld
-   (.mega__img) beweegt binnen het kader licht mee met de muis; dat
-   doet trouw.js. 4.75em = hoeveel het kader omhoog schuift, ruim
+   wordt de omschrijving (.mega__desc) eronder zichtbaar.
+   4.75em = hoeveel het kader omhoog schuift, ruim
    genoeg voor drie regels omschrijving. Opmaak in het Style-panel. */
 .mega__photo{
   clip-path:inset(0 0 0 0 round 0.5em);

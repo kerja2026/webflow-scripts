@@ -279,61 +279,6 @@
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: at(0.45), ease: 'power2.inOut' }, at(0.75));
     };
 
-    /* Het beeld in een kaart wordt licht meegetrokken door de muis,
-       binnen het vaste kader .mega__photo, in alle richtingen. Het
-       reageert op de beweging van de muis, niet op de plek: bij
-       binnenkomst gebeurt er niets, beweeg je naar links dan schuift
-       het beeld een fractie naar links. Hou je stil, dan glijdt het
-       rustig terug naar het midden. Het beeld is een fractie
-       ingezoomd, zodat er aan de randen nooit een gat ontstaat.
-       Alleen met een muis.
-       shift  = maximale verschuiving naar elke kant, in pixels
-       zoom   = hoeveel het beeld is ingezoomd (moet ruimte geven voor shift)
-       pull   = hoe sterk een muisbeweging het beeld meetrekt
-       settle = hoe snel het terugglijdt bij stilstand (lager is sneller)
-       lag    = hoe zacht het beeld volgt, in seconden */
-    var FOLLOW = { shift: 8, zoom: 1.07, pull: 0.15, settle: 0.5, lag: 0.5 };
-    if (!reduced && window.matchMedia('(hover: hover)').matches) {
-      var clampShift = gsap.utils.clamp(-FOLLOW.shift, FOLLOW.shift);
-      var followers = [];
-
-      megaCards.forEach(function (card) {
-        var img = card.querySelector('.mega__img');
-        if (!img) return;
-        gsap.set(img, { scale: FOLLOW.zoom });
-        var f = {
-          x: 0, y: 0, lx: null, ly: null,
-          xTo: gsap.quickTo(img, 'x', { duration: FOLLOW.lag, ease: 'power3.out' }),
-          yTo: gsap.quickTo(img, 'y', { duration: FOLLOW.lag, ease: 'power3.out' })
-        };
-        followers.push(f);
-
-        card.addEventListener('mouseenter', function (ev) { f.lx = ev.clientX; f.ly = ev.clientY; });
-        card.addEventListener('mousemove', function (ev) {
-          if (f.lx === null) { f.lx = ev.clientX; f.ly = ev.clientY; return; }
-          f.x = clampShift(f.x + (ev.clientX - f.lx) * FOLLOW.pull);
-          f.y = clampShift(f.y + (ev.clientY - f.ly) * FOLLOW.pull);
-          f.lx = ev.clientX; f.ly = ev.clientY;
-          f.xTo(f.x); f.yTo(f.y);
-        });
-        card.addEventListener('mouseleave', function () {
-          f.lx = f.ly = null; f.x = 0; f.y = 0;
-          f.xTo(0); f.yTo(0);
-        });
-      });
-
-      /* Terugglijden naar het midden, onafhankelijk van de framerate. */
-      gsap.ticker.add(function () {
-        if (!megaOpen) return;
-        var k = Math.pow(FOLLOW.settle, gsap.ticker.deltaRatio());
-        followers.forEach(function (f) {
-          if (Math.abs(f.x) < 0.05 && Math.abs(f.y) < 0.05) return;
-          f.x *= k; f.y *= k;
-          f.xTo(f.x); f.yTo(f.y);
-        });
-      });
-    }
-
     /* In de capture-fase, zodat de paginatransitie de klik op
        "Specialisaties" niet als paginawissel oppakt. */
     document.addEventListener('click', function (e) {
