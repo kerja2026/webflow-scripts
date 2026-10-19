@@ -17,7 +17,7 @@
 
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var lenis = null;
-  var header = document.querySelector('.header');
+  var header = document.querySelector('.navbar_component');
   var exists = function (sel) { return document.querySelector(sel) !== null; };
 
   var stuckHeight = function () {
@@ -108,9 +108,9 @@
   /* ---------- 4. MOBIEL MENU ---------- */
   var MENU = { duration: 0.7, ease: 'power2.inOut', shift: 20 };
 
-  var menu = document.querySelector('.menu');
-  var panel = menu ? menu.querySelector('.menu__panel') : null;
-  var scrim = menu ? menu.querySelector('.menu__scrim') : null;
+  var menu = document.querySelector('.mobile-menu_component');
+  var panel = menu ? menu.querySelector('.mobile-menu_panel') : null;
+  var scrim = menu ? menu.querySelector('.mobile-menu_scrim') : null;
   var menuOpen = false;
 
   var openMenu = function () {
@@ -144,9 +144,9 @@
   };
 
   document.addEventListener('click', function (e) {
-    if (e.target.closest('.nav__toggle')) { e.preventDefault(); openMenu(); return; }
-    if (e.target.closest('.menu__close') || e.target.closest('.menu__scrim')) { e.preventDefault(); closeMenu(); return; }
-    if (menuOpen && e.target.closest('.menu__link')) closeMenu();
+    if (e.target.closest('.navbar_toggle')) { e.preventDefault(); openMenu(); return; }
+    if (e.target.closest('.mobile-menu_close') || e.target.closest('.mobile-menu_scrim')) { e.preventDefault(); closeMenu(); return; }
+    if (menuOpen && e.target.closest('.mobile-menu_link')) closeMenu();
   });
 
   document.addEventListener('keydown', function (e) {
@@ -154,8 +154,8 @@
   });
 
   /* ---------- 4b. SPECIALISATIES-MENU ----------
-     Een klik op "Specialisaties" (.nav__link.is-mega) opent het paneel
-     .mega in de header. De opbouw gaat in vaste volgorde, met een
+     Een klik op "Specialisaties" (.navbar_link.is-mega) opent het paneel
+     .mega-menu_component in de header. De opbouw gaat in vaste volgorde, met een
      kleine overlap zodat het geheel rond de 1,5 seconde blijft:
 
        1. Het beige kader rond de menulinks groeit vanuit zijn midden uit
@@ -164,7 +164,7 @@
        2. De specialisaties verschijnen kort na elkaar: elke kaart hangt
           aan zijn bovenrand en kantelt subtiel omlaag tot hij recht staat.
        3. Het paneel verkleurt van beige naar groen: de beige laag
-          .mega__beige vervaagt, en de tekst op de kaarten gaat mee van
+          .mega-menu_beige vervaagt, en de tekst op de kaarten gaat mee van
           donker naar licht (.is-mega-green op de header, kleuren in
           trouw.css).
        4. Logo, menulinks, contactregel en knop verkleuren naar licht
@@ -176,7 +176,7 @@
 
      Zolang het paneel open is, staat de pagina op slot (.mega-open,
      alleen op html: op body zou de sticky header wegspringen) en ligt
-     er een waas over de pagina (.mega__scrim, kleur in het
+     er een waas over de pagina (.mega-menu_scrim, kleur in het
      Style-panel). Alleen vanaf 992px, waar het menu zichtbaar is.
 
      Tijden in seconden, vanaf de klik:
@@ -194,16 +194,16 @@
     radius: 0.9375, round: 0.5
   };
 
-  var mega = document.querySelector('.mega');
-  var megaTrigger = document.querySelector('.nav__link.is-mega');
-  var navMenu = document.querySelector('.nav__menu');
-  var megaScrim = document.querySelector('.mega__scrim');
+  var mega = document.querySelector('.mega-menu_component');
+  var megaTrigger = document.querySelector('.navbar_link.is-mega');
+  var navMenu = document.querySelector('.navbar_menu');
+  var megaScrim = document.querySelector('.mega-menu_scrim');
   var megaOpen = false;
   var closeMega = function () {};
 
   if (mega && megaTrigger && navMenu && header) {
-    var megaCards = gsap.utils.toArray(mega.querySelectorAll('.mega__card'));
-    var megaBeige = mega.querySelector('.mega__beige');
+    var megaCards = gsap.utils.toArray(mega.querySelectorAll('.mega-menu_card'));
+    var megaBeige = mega.querySelector('.mega-menu_beige');
     var megaTl = null;
     var emPx = function (n) { return n * parseFloat(getComputedStyle(mega).fontSize); };
     var at = function (n) { return reduced ? 0 : n; };
@@ -282,14 +282,14 @@
     /* In de capture-fase, zodat de paginatransitie de klik op
        "Specialisaties" niet als paginawissel oppakt. */
     document.addEventListener('click', function (e) {
-      if (e.target.closest('.nav__link.is-mega')) {
+      if (e.target.closest('.navbar_link.is-mega')) {
         if (getComputedStyle(navMenu).display === 'none') return;
         e.preventDefault();
         e.stopPropagation();
         if (megaOpen) closeMega(); else openMega();
         return;
       }
-      if (megaOpen && !e.target.closest('.mega')) closeMega();
+      if (megaOpen && !e.target.closest('.mega-menu_component')) closeMega();
     }, true);
 
     document.addEventListener('keydown', function (e) {
@@ -299,9 +299,9 @@
 
   /* ---------- 5. PAGINATRANSITIE ---------- */
   var KEY = 'trouw-transition';
-  var overlay = document.querySelector('.transition');
-  var cols = overlay ? gsap.utils.toArray('.transition__col') : [];
-  var pageWrap = document.querySelector('.l-page');
+  var overlay = document.querySelector('.transition_component');
+  var cols = overlay ? gsap.utils.toArray('.transition_column') : [];
+  var pageWrap = document.querySelector('.page-wrapper');
   var busy = false;
 
   var TR = {
@@ -410,10 +410,10 @@
     if (location.hash) scrollToHash(location.hash);
 
     var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    tl.to('.topbar', { opacity: 1, duration: .6 })
-      .to('.nav',    { opacity: 1, duration: .6 }, '-=.45');
+    tl.to('.navbar_topbar', { opacity: 1, duration: .6 })
+      .to('.navbar_container',    { opacity: 1, duration: .6 }, '-=.45');
 
-    if (exists('.eyebrow')) tl.to('.eyebrow', { opacity: 1, duration: .6 }, '-=.3');
+    if (exists('.eyebrow_wrapper')) tl.to('.eyebrow_wrapper', { opacity: 1, duration: .6 }, '-=.3');
 
     var title = document.querySelector('h1');
     if (!title) return;
@@ -432,18 +432,18 @@
 
     tl.from(split.words, { yPercent: 110, opacity: 0, duration: 1, stagger: 0.06 }, '-=.3');
 
-    if (exists('.hero__media')) tl.to('.hero__media', { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=.7');
+    if (exists('.home-hero_media')) tl.to('.home-hero_media', { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=.7');
     if (exists('h1 + p'))       tl.to('h1 + p',       { opacity: 1, duration: .8 }, '-=.6');
   });
 
   /* ---------- 7. SPECIALISATIES ----------
-     Vanaf 768px: .spec ligt vast (sticky in het Style-panel) binnen
-     .spec__track. De foto's schuiven van onderaf over elkaar, en
+     Vanaf 768px: .spec_component ligt vast (sticky in het Style-panel) binnen
+     .spec_track. De foto's schuiven van onderaf over elkaar, en
      nummer, titel, tekst en knop schuiven door een eigen onzichtbaar
-     kader. LET OP: de Gap van .spec__text en .spec__text.is-active
+     kader. LET OP: de Gap van .spec_text en .spec_text.is-active
      moet gelijk zijn, anders verspringt de tekst.
 
-     Op mobiel staat .spec-m: vijf kaarten gewoon onder elkaar. Elke
+     Op mobiel staat .spec-mobile_component: vijf kaarten gewoon onder elkaar. Elke
      kaart komt iets lager binnen en schuift tijdens het scrollen naar
      zijn plek. Geen overlap.
      mobileShift = hoeveel lager een kaart binnenkomt
@@ -469,7 +469,7 @@
 
   /* --- mobiel --- */
   if (specMobile && !reduced) {
-    gsap.utils.toArray('.spec-m__card').forEach(function (card) {
+    gsap.utils.toArray('.spec-mobile_card').forEach(function (card) {
       gsap.fromTo(card,
         { y: SPEC.mobileShift },
         {
@@ -488,11 +488,11 @@
   }
 
   /* --- vanaf 768px --- */
-  var specTrack = document.querySelector('.spec__track');
-  var spec = document.querySelector('.spec');
+  var specTrack = document.querySelector('.spec_track');
+  var spec = document.querySelector('.spec_component');
   if (!specMobile && specTrack && spec && !reduced) {
-    var specCards = gsap.utils.toArray('.spec__card');
-    var specTexts = gsap.utils.toArray('.spec__text');
+    var specCards = gsap.utils.toArray('.spec_card');
+    var specTexts = gsap.utils.toArray('.spec_text');
     var specSteps = specCards.length - 1;
 
     var stickTop = function () { return parseFloat(getComputedStyle(spec).top) || 0; };
@@ -595,7 +595,7 @@
      -1.25em) in het Style-panel. Alleen vanaf 768px. */
   var SLIDE = {
     shift: '6em',
-    sections: '.s-intro, .s-praktijk, .s-team, .s-feature, .s-contract, .s-rates, .s-legal, .s-contact',
+    sections: '.section_intro, .section_praktijk, .section_team, .section_feature, .section_contract, .section_rates, .section_legal, .section_contact',
     start: 'top bottom',
     end: 'top 40%'
   };
@@ -625,10 +625,10 @@
   /* ---------- 9. BEWEGENDE ACHTERGROND, PER SECTIE ----------
      Een sectie die bij het laden al in beeld is, begint zijn beweging
      op nul (clamp), zodat de kolommen dan in hun beginstand staan.
-     Elke .bg__stripes wordt opgedeeld in kolommen die verschuiven en
+     Elke .background_stripes wordt opgedeeld in kolommen die verschuiven en
      draaien terwijl hun eigen sectie door beeld scrolt. Waar de
      kolommen beginnen, komt uit Background position in het
-     Style-panel. Elke orb (.bg__blob en .bg__orb) zakt en groeit
+     Style-panel. Elke orb (.background_blob en .background_orb) zakt en groeit
      licht mee. */
   var BG = {
     columns: 8,
@@ -640,13 +640,13 @@
 
   var sectionOf = function (el) { return el.closest('section') || el.parentElement; };
 
-  /* De orb (.bg__blob) toont alleen zijn linkerhelft. Zijn rechterrand
+  /* De orb (.background_blob) toont alleen zijn linkerhelft. Zijn rechterrand
      wordt hier op de dichtstbijzijnde kolomrand gelegd, zodat er nooit
      een strook tussen orb en kolom zit. Opnieuw bij elke resize. */
   var bgSnaps = [];
 
   if (!reduced) {
-    gsap.utils.toArray('.bg__stripes').forEach(function (stripes) {
+    gsap.utils.toArray('.background_stripes').forEach(function (stripes) {
       var cs = getComputedStyle(stripes);
       var gradient = cs.backgroundImage;
       if (!gradient || gradient === 'none') return;
@@ -682,7 +682,7 @@
       for (var i = 1; i < needed; i++) addCol();
 
       var bgLayer = stripes.parentElement;
-      var blobs = bgLayer ? Array.prototype.slice.call(bgLayer.querySelectorAll('.bg__blob')) : [];
+      var blobs = bgLayer ? Array.prototype.slice.call(bgLayer.querySelectorAll('.background_blob')) : [];
       blobs.forEach(function (blob) {
         var snap = function () {
           blob.style.left = '';
@@ -711,7 +711,7 @@
         .to(stripes, { '--bg-turn': BG.turn + 'deg' }, 0);
     });
 
-    gsap.utils.toArray('.bg__blob, .bg__orb').forEach(function (blob) {
+    gsap.utils.toArray('.background_blob, .background_orb').forEach(function (blob) {
       gsap.fromTo(blob,
         { yPercent: -BG.orbShift, scale: 1 },
         {
@@ -734,7 +734,7 @@
   var PX = {
     shift: 4,
     zoom: 1.1,
-    frames: '.hero__media, .steps__media, .feature__media, .contract__media, .sc__media, .sp-hero__media, .sp-item__media, .sp-other__media'
+    frames: '.home-hero_media, .steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
   };
 
   if (!reduced) {
@@ -761,13 +761,13 @@
   }
 
   /* ---------- 11. FOOTER ----------
-     De footer (.ft) ligt vast onderin het scherm. De pagina krijgt
+     De footer (.footer_component) ligt vast onderin het scherm. De pagina krijgt
      onderaan net zoveel ruimte als de footer hoog is. Alleen de
      inhoud van de footer schuift licht mee. */
   var FOOTER = { shift: 20 };
 
-  var siteFooter = document.querySelector('.ft');
-  var footerInner = siteFooter ? siteFooter.querySelector('.l-container') : null;
+  var siteFooter = document.querySelector('.footer_component');
+  var footerInner = siteFooter ? siteFooter.querySelector('.padding-global') : null;
 
   var fitFooter = function () {
     if (!pageWrap || !siteFooter) return;

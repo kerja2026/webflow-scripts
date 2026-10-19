@@ -6,7 +6,7 @@
    ============================================================= */
 /* ===== BASIS =====
    De Osmo-schaling staat in het Style-panel: font-size op de body per
-   breakpoint, max-width op .l-container. Hier alleen wat het
+   breakpoint, max-width op .padding-global. Hier alleen wat het
    Style-panel niet kan. */
 html{background:#faf8f4}
 html,body{margin:0;padding:0;width:100%;max-width:100%}
@@ -14,7 +14,7 @@ body{overflow-wrap:break-word;-webkit-font-smoothing:antialiased;-moz-osx-font-s
 button,input,select,textarea{font-family:inherit}
 img{max-width:100%;display:block}
 /* Het keuzerondje in het formulier heeft in Webflow geen eigen class. */
-.cradio input[type="radio"]{margin:0;width:1em;height:1em;flex:0 0 auto}
+.contact-form_radio input[type="radio"]{margin:0;width:1em;height:1em;flex:0 0 auto}
 
 :root{--col:20.25em;--stripe-shift:6.75em}
 
@@ -49,46 +49,46 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
    s-spec doet niet mee: die zet de specialisaties vast, en een
    vastgezet element werkt niet in een sectie die zelf beweegt. */
 @media screen and (min-width:768px){
-  .js-anim .s-intro,
-  .js-anim .s-praktijk,
-  .js-anim .s-team,
-  .js-anim .s-feature,
-  .js-anim .s-contract,
-  .js-anim .s-rates,
-  .js-anim .s-legal,
-  .js-anim .s-contact{transform:translateY(6em)}
+  .js-anim .section_intro,
+  .js-anim .section_praktijk,
+  .js-anim .section_team,
+  .js-anim .section_feature,
+  .js-anim .section_contract,
+  .js-anim .section_rates,
+  .js-anim .section_legal,
+  .js-anim .section_contact{transform:translateY(6em)}
 }
 
 /* ===== STICKY HEADER: toestanden die het script zet ===== */
-.header{
+.navbar_component{
   transition:
     background-color .7s ease,
     box-shadow .7s ease,
     top .45s cubic-bezier(.2,.7,.2,1);
 }
-.header.is-stuck{
+.navbar_component.is-stuck{
   background-color:rgba(251,240,221,.94);
   box-shadow:0 1px 0 0 #e3d8c8;
 }
-.header.is-up{top:0}
+.navbar_component.is-up{top:0}
 
 /* ===== LOGO: kleiner bij omlaag scrollen ===== */
-.nav__logo{
+.navbar_logo{
   transform-origin:left center;
   transition:transform .45s cubic-bezier(.2,.7,.2,1);
 }
-.header.is-stuck .nav__logo{transform:scale(.85)}
-.header.is-up .nav__logo{transform:scale(1)}
+.navbar_component.is-stuck .navbar_logo{transform:scale(.85)}
+.navbar_component.is-up .navbar_logo{transform:scale(1)}
 
 /* ===== HOOFDNAVIGATIE: hover =====
    Onder een menulink tekent een dunne lijn zich van links naar
    rechts, en de tekst wordt iets lichter. Bij het verlaten trekt de
    lijn zich terug naar rechts. De lijn is een ::after en bestaat dus
-   niet in de Designer; .nav__link staat in het Style-panel op
+   niet in de Designer; .navbar_link staat in het Style-panel op
    position relative zodat de lijn eraan vastzit.
    Kleur, dikte en afstand onder de tekst staan hieronder. */
-.nav__link{transition:opacity .35s ease}
-.nav__link::after{
+.navbar_link{transition:opacity .35s ease}
+.navbar_link::after{
   content:"";
   position:absolute;
   left:0;
@@ -101,13 +101,13 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
   transition:transform .55s cubic-bezier(.65,0,.35,1);
   pointer-events:none;
 }
-.nav__link:hover{opacity:.65}
-.nav__link:hover::after{
+.navbar_link:hover{opacity:.65}
+.navbar_link:hover::after{
   transform:scaleX(1);
   transform-origin:left center;
 }
 @media (hover:none){
-  .nav__link::after{display:none}
+  .navbar_link::after{display:none}
 }
 
 /* ===== SPECIALISATIES-MENU =====
@@ -118,67 +118,67 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
                    contactregel en knop verkleuren naar licht.
    De duur van het verkleuren (.4s) moet gelijk zijn aan MEGA.colors in
    trouw.js. Opmaak van paneel, kaarten en waas staat in het
-   Style-panel (.mega, .mega__beige, .mega__card, .mega__scrim). */
-.header.is-mega .nav__menu{background-image:none}
-.mega{will-change:clip-path}
+   Style-panel (.mega-menu_component, .mega-menu_beige, .mega-menu_card, .mega-menu_scrim). */
+.navbar_component.is-mega .navbar_menu{background-image:none}
+.mega-menu_component{will-change:clip-path}
 /* Scrollslot: alleen op html. Op body maakt overflow hidden de body
    tot scrollvlak, en springt de sticky header buiten beeld. */
 html.mega-open{overflow:hidden}
 
-.nav__link,
-.topbar__link{transition:color .4s ease,opacity .35s ease,text-shadow .4s ease}
-.nav__link::after{transition:transform .55s cubic-bezier(.65,0,.35,1),background-color .4s ease}
-.nav__logo img{transition:filter .4s ease}
-.nav__cta > .btn_dark,
-.nav__cta-alt{transition:opacity .4s ease}
+.navbar_link,
+.navbar_topbar-link{transition:color .4s ease,opacity .35s ease,text-shadow .4s ease}
+.navbar_link::after{transition:transform .55s cubic-bezier(.65,0,.35,1),background-color .4s ease}
+.navbar_logo img{transition:filter .4s ease}
+.navbar_cta > .button_dark,
+.navbar_cta-alt{transition:opacity .4s ease}
 
 /* Tekst op de kaarten: donker op het beige, licht zodra het paneel
    groen wordt (.is-mega-green, gezet door het script in stap 3). */
-.mega__card{color:#3a3128;transition:color .5s ease}
-.header.is-mega-green .mega__card{color:#f1eae0}
+.mega-menu_card{color:#3a3128;transition:color .5s ease}
+.navbar_component.is-mega-green .mega-menu_card{color:#f1eae0}
 
-.header.is-mega-light .nav__link,
-.header.is-mega-light .topbar__link{color:#f1eae0}
-.header.is-mega-light .nav__link::after{background-color:#f1eae0}
-.header.is-mega-light .nav__link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
-.header.is-mega-light .nav__logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
-.header.is-mega-light .nav__cta > .btn_dark{opacity:0;pointer-events:none}
-.header.is-mega-light .nav__cta-alt{opacity:1;pointer-events:auto}
+.navbar_component.is-mega-light .navbar_link,
+.navbar_component.is-mega-light .navbar_topbar-link{color:#f1eae0}
+.navbar_component.is-mega-light .navbar_link::after{background-color:#f1eae0}
+.navbar_component.is-mega-light .navbar_link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
+.navbar_component.is-mega-light .navbar_logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
+.navbar_component.is-mega-light .navbar_cta > .button_dark{opacity:0;pointer-events:none}
+.navbar_component.is-mega-light .navbar_cta-alt{opacity:1;pointer-events:auto}
 
 /* ===== SPECIALISATIES-MENU: kaart bij hover =====
    De naam staat boven de foto. Bij hover schuift de onderrand van het
-   fotokader (.mega__photo) omhoog, met de afgeronde hoeken mee, en
-   wordt de omschrijving (.mega__desc) eronder zichtbaar.
+   fotokader (.mega-menu_photo) omhoog, met de afgeronde hoeken mee, en
+   wordt de omschrijving (.mega-menu_desc) eronder zichtbaar.
    4.75em = hoeveel het kader omhoog schuift, ruim
    genoeg voor drie regels omschrijving. Opmaak in het Style-panel. */
-.mega__photo{
+.mega-menu_photo{
   clip-path:inset(0 0 0 0 round 0.5em);
   transition:clip-path .25s cubic-bezier(.22,1,.36,1);
 }
 /* De omschrijving staat in rust 5px hoger, achter de foto, en schuift
    bij hover in hetzelfde tempo mee naar beneden. */
-.mega__desc{
+.mega-menu_desc{
   transform:translateY(-5px);
   transition:transform .25s cubic-bezier(.22,1,.36,1);
 }
 @media (hover:hover){
-  .mega__card:hover .mega__photo,
-  .mega__card:focus-visible .mega__photo{clip-path:inset(0 0 4.75em 0 round 0.5em)}
-  .mega__card:hover .mega__desc,
-  .mega__card:focus-visible .mega__desc{transform:translateY(0)}
+  .mega-menu_card:hover .mega-menu_photo,
+  .mega-menu_card:focus-visible .mega-menu_photo{clip-path:inset(0 0 4.75em 0 round 0.5em)}
+  .mega-menu_card:hover .mega-menu_desc,
+  .mega-menu_card:focus-visible .mega-menu_desc{transform:translateY(0)}
 }
 
 /* ===== MOBIEL MENU: open-toestand en de veeg =====
    Wanneer het menu omschakelt naar de hamburger staat in het
    Style-panel, bij het tablet-breakpoint. */
-.menu{
+.mobile-menu_component{
   --pw:calc(100vw - 2.5em);
   --fade:4em;
   --p:0;
 }
-.menu.is-open{display:block}
-.menu__scrim{opacity:0}
-.menu__panel{
+.mobile-menu_component.is-open{display:block}
+.mobile-menu_scrim{opacity:0}
+.mobile-menu_panel{
   -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
           mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
   -webkit-mask-size:calc(var(--pw) + 2 * var(--fade)) 100%;
@@ -190,10 +190,10 @@ html.mega-open{overflow:hidden}
 }
 
 /* ===== INTRO-ANIMATIE: beginstand ===== */
-.js-anim .topbar,
-.js-anim .nav,
-.js-anim .hero__media,
-.js-anim .eyebrow,
+.js-anim .navbar_topbar,
+.js-anim .navbar_container,
+.js-anim .home-hero_media,
+.js-anim .eyebrow_wrapper,
 .js-anim h1 + p{opacity:0}
 .js-anim h1{visibility:hidden}
 
@@ -203,12 +203,12 @@ html.mega-open{overflow:hidden}
 .bg__grad{position:absolute;top:0;bottom:0;left:-50%;width:150%;will-change:transform}
 
 /* ===== PAGINATRANSITIE =====
-   Bewuste uitzondering: .transition staat in het Style-panel op
+   Bewuste uitzondering: .transition_component staat in het Style-panel op
    display none, zodat hij in de Designer niet over de pagina ligt.
    Live zet deze regel hem aan; het masker maakt de kolommen
    onzichtbaar tot een transitie start. */
-.transition{display:flex}
-.transition__col{
+.transition_component{display:flex}
+.transition_column{
   --cw:20.25em;
   --fade:4em;
   --p:0;
@@ -223,11 +223,11 @@ html.mega-open{overflow:hidden}
 }
 @media screen and (max-width:767px){
   /* Mobiel: vier kolommen van een kwart breed, de rest verborgen */
-  .transition__col{--cw:25vw;--fade:3vw;flex:0 0 25vw;width:25vw}
-  .transition__col:nth-child(n+5){display:none}
+  .transition_column{--cw:25vw;--fade:3vw;flex:0 0 25vw;width:25vw}
+  .transition_column:nth-child(n+5){display:none}
 }
-.is-transitioning .transition{pointer-events:auto}
-.is-transitioning .transition__col{--p:1}
+.is-transitioning .transition_component{pointer-events:auto}
+.is-transitioning .transition_column{--p:1}
 
 /* ===== LENIS ===== */
 html.lenis,html.lenis body{height:auto}
@@ -237,13 +237,13 @@ html.lenis,html.lenis body{height:auto}
 html.menu-open,html.menu-open body{overflow:hidden}
 
 @media (prefers-reduced-motion:reduce){
-  .header{transition:none}
-  .nav__logo{transition:none}
-  .header.is-stuck .nav__logo{transform:none}
-  .js-anim .topbar,
-  .js-anim .nav,
-  .js-anim .hero__media,
-  .js-anim .eyebrow,
+  .navbar_component{transition:none}
+  .navbar_logo{transition:none}
+  .navbar_component.is-stuck .navbar_logo{transform:none}
+  .js-anim .navbar_topbar,
+  .js-anim .navbar_container,
+  .js-anim .home-hero_media,
+  .js-anim .eyebrow_wrapper,
   .js-anim h1 + p{opacity:1}
   .js-anim h1{visibility:visible}
 }
