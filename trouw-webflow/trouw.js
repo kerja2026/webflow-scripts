@@ -1,7 +1,7 @@
 /* =============================================================
    PRAKTIJK TROUW — SCRIPTt
    Smooth scroll, scrollbalk, header, mobiel menu, paginatransitie,
-   intro, specialisaties, schuivende secties, achtergrond, parallax
+   preloader, intro, specialisaties, schuivende secties, achtergrond, parallax
    en footer. Geladen met defer, na GSAP, ScrollTrigger, SplitText
    en Lenis.
    ============================================================= */
@@ -10,7 +10,7 @@
   var html = document.documentElement;
 
   if (!window.gsap || !window.ScrollTrigger) {
-    html.classList.remove('js-anim', 'is-transitioning');
+    html.classList.remove('js-anim', 'is-transitioning', 'is-preloading');
     return;
   }
   gsap.registerPlugin(ScrollTrigger, SplitText);
@@ -393,16 +393,100 @@
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
     busy = false;
-    html.classList.remove('is-transitioning', 'menu-open');
+    html.classList.remove('is-transitioning', 'is-preloading', 'menu-open');
     if (overlay) overlay.style.pointerEvents = 'none';
     gsap.set(cols, { '--p': 0 });
     if (pageWrap) gsap.set(pageWrap, { clearProps: 'transform' });
     if (lenis) lenis.start();
   });
 
+  /* ---------- 5b. PRELOADER ----------
+     Bij het eerste bezoek in een sessie dekken de kolommen de pagina af,
+     met in het midden het lichte logo en daaronder het percentage. Het
+     percentage volgt wat er echt binnenkomt: de lettertypen en de foto's
+     die direct laden (lazy foto's verder op de pagina tellen niet mee).
+     Het loopt vloeiend op, blijft onder de 90% tot alles er is, en duurt
+     minimaal PL.min seconden. Daarna: logo en percentage vervagen, en de
+     kolommen verdwijnen zoals bij binnenkomst na een paginatransitie.
+
+     min    = minimale duur in seconden
+     hold   = hoe lang 100% blijft staan
+     fade   = vervagen van logo en percentage
+     follow = hoe snel het getal de werkelijke voortgang volgt (0 tot 1) */
+  var PL = { min: 1.2, hold: 0.3, fade: 0.4, follow: 0.08 };
+
+  var runPreloader = function () {
+    return new Promise(function (resolve) {
+      var loader = overlay ? overlay.querySelector('.transition_loader') : null;
+      var label = loader ? loader.querySelector('.transition_percent') : null;
+      if (!overlay || !loader) { html.classList.remove('is-preloading'); resolve(); return; }
+
+      var finish = function () {
+        gsap.set(cols, { '--p': 1 });
+        gsap.to(loader, {
+          autoAlpha: 0,
+          duration: reduced ? 0 : PL.fade,
+          ease: 'power2.out',
+          onComplete: function () {
+            html.classList.remove('is-preloading');
+            overlay.style.pointerEvents = 'none';
+            gsap.set(loader, { clearProps: 'opacity,visibility' });
+            if (reduced) { gsap.set(cols, { '--p': 0 }); resolve(); return; }
+            if (pageWrap) {
+              gsap.fromTo(pageWrap,
+                { x: -TR.shift },
+                { x: 0, duration: TR.outDuration, ease: TR.ease, clearProps: 'transform' }
+              );
+            }
+            gsap.to(cols, { '--p': 2, duration: TR.outDuration, ease: TR.ease, onComplete: resolve });
+          }
+        });
+      };
+
+      if (reduced) { pageReady.then(finish); return; }
+
+      /* Wat er geladen moet worden */
+      var imgs = Array.prototype.filter.call(document.images, function (img) {
+        return img.getAttribute('loading') !== 'lazy' && !overlay.contains(img);
+      });
+      var total = imgs.length + 1;
+      var done = 0;
+      var tick = function () { done++; };
+      imgs.forEach(function (img) {
+        if (img.complete) { tick(); return; }
+        img.addEventListener('load', tick, { once: true });
+        img.addEventListener('error', tick, { once: true });
+      });
+      document.fonts.ready.then(tick);
+
+      var loaded = false;
+      pageReady.then(function () { loaded = true; });
+
+      var start = performance.now();
+      var shown = 0;
+      var step = function () {
+        var elapsed = (performance.now() - start) / 1000;
+        var real = loaded ? 100 : Math.min(90, (done / total) * 100);
+        var time = Math.min(100, (elapsed / PL.min) * 100);
+        var target = Math.min(real, time);
+        shown += (target - shown) * PL.follow;
+        if (target >= 100 && shown > 99.5) shown = 100;
+
+        var value = Math.round(shown);
+        loader.style.setProperty('--fill', shown.toFixed(2));
+        if (label) label.textContent = value + '%';
+
+        if (value >= 100) { gsap.delayedCall(PL.hold, finish); return; }
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  };
+
   /* ---------- 6. INTRO ---------- */
   var comingIn = html.classList.contains('is-transitioning');
-  var gate = comingIn ? pageReady.then(arrive) : Promise.resolve();
+  var preloading = html.classList.contains('is-preloading');
+  var gate = comingIn ? pageReady.then(arrive) : (preloading ? runPreloader() : Promise.resolve());
 
   gate.then(function () { return document.fonts.ready; }).then(function () {
     if (reduced) return;

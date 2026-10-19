@@ -229,6 +229,18 @@ html.mega-open{overflow:hidden}
 .is-transitioning .transition_component{pointer-events:auto}
 .is-transitioning .transition_column{--p:1}
 
+/* ===== PRELOADER =====
+   Alleen bij het eerste bezoek in een sessie (is-preloading, gezet door
+   trouw-head.js). De kolommen van de paginatransitie dekken de pagina
+   af; daarboven het lichte logo en het percentage (.transition_loader,
+   opmaak in het Style-panel, daar op display none). Het volle logo
+   wordt van links naar rechts zichtbaar via --fill (0 tot 100), dat
+   trouw.js bijwerkt. */
+.is-preloading .transition_component{pointer-events:auto}
+.is-preloading .transition_column{--p:1}
+.is-preloading .transition_loader{display:flex}
+.transition_logo-fill{clip-path:inset(0 calc(100% - var(--fill, 0) * 1%) 0 0)}
+
 /* ===== LENIS ===== */
 html.lenis,html.lenis body{height:auto}
 .lenis.lenis-smooth{scroll-behavior:auto!important}
