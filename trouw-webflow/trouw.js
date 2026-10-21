@@ -521,156 +521,53 @@
   });
 
   /* ---------- 7. SPECIALISATIES ----------
-     Vanaf 768px: .spec_component ligt vast (sticky in het Style-panel) binnen
-     .spec_track. De foto's schuiven van onderaf over elkaar, en
-     nummer, titel, tekst en knop schuiven door een eigen onzichtbaar
-     kader. LET OP: de Gap van .spec_text en .spec_text.is-active
-     moet gelijk zijn, anders verspringt de tekst.
+     De vijf teksten (.spec_text) scrollen gewoon mee; de foto
+     (.spec_media) staat vast (sticky in het Style-panel). De tekst die
+     het dichtst bij de leeslijn staat krijgt is-active (volle dekking),
+     en de foto met hetzelfde nummer ook. Het vervagen van tekst en foto
+     staat als transition in het Style-panel.
 
-     Op mobiel staat .spec-mobile_component: vijf kaarten gewoon onder elkaar. Elke
-     kaart komt iets lager binnen en schuift tijdens het scrollen naar
-     zijn plek. Geen overlap.
-     mobileShift = hoeveel lager een kaart binnenkomt
-     mobileEnd   = waar in het scherm hij op zijn plek ligt
+     Leeslijn: het midden van het scherm. Op mobiel staat de foto
+     bovenaan vast; dan ligt de leeslijn midden in de ruimte onder de
+     foto. */
+  var specTexts = gsap.utils.toArray('.spec_text');
+  var specCards = gsap.utils.toArray('.spec_card');
+  var specComp = document.querySelector('.spec_component');
+  var specMedia = document.querySelector('.spec_media');
 
-     Kantelen (vanaf 768px): foto's en tekst draaien om hun bovenrand.
-     Wat binnenkomt staat eerst met de onderkant naar achteren
-     gekanteld en kantelt omlaag tot het recht staat; tekst die vertrekt
-     kantelt een fractie de andere kant op.
-     tilt        = hoeveel graden, perspective = diepte (lager is sterker) */
-  var SPEC = {
-    cardEase: 'power2.out',
-    duration: 0.8,
-    each: 0.05,
-    ease: 'power2.inOut',
-    mobileShift: '3em',
-    mobileEnd: 'top 70%',
-    tilt: 20,
-    perspective: 1000
-  };
+  if (specComp && specTexts.length) {
+    var specCurrent = -1;
 
-  var specMobile = window.matchMedia('(max-width: 767px)').matches;
-
-  /* --- mobiel --- */
-  if (specMobile && !reduced) {
-    gsap.utils.toArray('.spec-mobile_card').forEach(function (card) {
-      gsap.fromTo(card,
-        { y: SPEC.mobileShift },
-        {
-          y: '0em',
-          ease: 'none',
-          scrollTrigger: {
-            trigger: card,
-            start: 'top bottom',
-            end: SPEC.mobileEnd,
-            scrub: true,
-            invalidateOnRefresh: true
-          }
-        }
-      );
-    });
-  }
-
-  /* --- vanaf 768px --- */
-  var specTrack = document.querySelector('.spec_track');
-  var spec = document.querySelector('.spec_component');
-  if (!specMobile && specTrack && spec && !reduced) {
-    var specCards = gsap.utils.toArray('.spec_card');
-    var specTexts = gsap.utils.toArray('.spec_text');
-    var specSteps = specCards.length - 1;
-
-    var stickTop = function () { return parseFloat(getComputedStyle(spec).top) || 0; };
-
-    var current = 0;
-    var MASK_SLACK = 0.18;
-    var parts = specTexts.map(function (block) {
-      return Array.prototype.slice.call(block.children).map(function (child) {
-        var mask = document.createElement('div');
-        mask.style.overflow = 'hidden';
-        mask.style.paddingBottom = MASK_SLACK + 'em';
-        mask.style.marginBottom = '-' + MASK_SLACK + 'em';
-        block.insertBefore(mask, child);
-        mask.appendChild(child);
-        return child;
-      });
-    });
-
-    var place = function (k) { return k === current ? 0 : (k < current ? -110 : 110); };
-    var tiltFor = function (k) { return k === current ? 0 : (k < current ? SPEC.tilt * 0.5 : -SPEC.tilt); };
-
-    var markActive = function (next) {
-      specTexts.forEach(function (block, k) {
-        block.classList.toggle('is-active', k === next);
-        block.style.pointerEvents = k === next ? 'auto' : 'none';
-      });
+    var specSet = function (next) {
+      if (next === specCurrent) return;
+      specCurrent = next;
+      specTexts.forEach(function (el, k) { el.classList.toggle('is-active', k === next); });
+      specCards.forEach(function (el, k) { el.classList.toggle('is-active', k === next); });
     };
 
-    specTexts.forEach(function (block, k) {
-      block.style.transition = 'none';
-      gsap.set(block, { autoAlpha: 1 });
-      gsap.set(parts[k], {
-        yPercent: place(k),
-        rotationX: tiltFor(k),
-        transformOrigin: '50% 0%',
-        transformPerspective: SPEC.perspective
+    var specCheck = function () {
+      var stacked = getComputedStyle(specComp).flexDirection.indexOf('column') === 0;
+      var line = window.innerHeight / 2;
+      if (stacked && specMedia) {
+        line = (specMedia.getBoundingClientRect().bottom + window.innerHeight) / 2;
+      }
+      var best = 0, bestDist = Infinity;
+      specTexts.forEach(function (el, k) {
+        var r = el.getBoundingClientRect();
+        var dist = Math.abs(r.top + r.height / 2 - line);
+        if (dist < bestDist) { bestDist = dist; best = k; }
       });
-    });
-    markActive(current);
-
-    var showText = function (next) {
-      if (next === current) return;
-      var down = next > current;
-      current = next;
-
-      specTexts.forEach(function (block, k) {
-        var target = place(k);
-        var moving = parts[k].some(function (p) {
-          return Math.abs(gsap.getProperty(p, 'yPercent') - target) > 0.5;
-        });
-        if (moving) {
-          var list = down ? parts[k] : parts[k].slice().reverse();
-          gsap.to(list, {
-            yPercent: target,
-            rotationX: tiltFor(k),
-            duration: SPEC.duration,
-            ease: SPEC.ease,
-            stagger: SPEC.each,
-            overwrite: 'auto'
-          });
-        }
-      });
-      markActive(next);
+      specSet(best);
     };
 
-    if (specSteps > 0) {
-      gsap.set(specCards.slice(1), { autoAlpha: 0 });
-
-      var specTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: specTrack,
-          start: function () { return 'top ' + stickTop() + 'px'; },
-          end: function () { return 'bottom ' + (stickTop() + spec.offsetHeight) + 'px'; },
-          scrub: true,
-          invalidateOnRefresh: true,
-          onUpdate: function (self) {
-            showText(Math.min(specTexts.length - 1, Math.round(self.progress * specSteps)));
-          }
-        }
-      });
-
-      specCards.slice(1).forEach(function (card) {
-        specTl.fromTo(card,
-          {
-            y: function () { return window.innerHeight; },
-            rotationX: -SPEC.tilt,
-            transformOrigin: '50% 0%',
-            transformPerspective: SPEC.perspective
-          },
-          { y: 0, rotationX: 0, ease: SPEC.cardEase, duration: 1, immediateRender: true }
-        );
-        specTl.set(card, { autoAlpha: 1 }, '<');
-      });
-    }
+    ScrollTrigger.create({
+      trigger: specComp,
+      start: 'top bottom',
+      end: 'bottom top',
+      onUpdate: specCheck,
+      onRefresh: specCheck
+    });
+    specCheck();
   }
 
   /* ---------- 8. SECTIES SCHUIVEN OVER ELKAAR ----------
