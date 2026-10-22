@@ -3,7 +3,7 @@
    ========================================================================== */
 
 :root {
-  --kj-pt-color: #F23610;
+  --kj-pt-color: var(--bright, #2E0CF2); /* Webflow-variabele Bright */
 }
 
 /* Dekt het scherm al bij de eerste paint van de binnenkomende pagina, zodat

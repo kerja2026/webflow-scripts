@@ -1,3 +1,13 @@
+/* Laden in <head>, synchroon (geen defer/async). Deze regel dekt de pagina af
+   voor de eerste paint. De rest wacht op DOMContentLoaded, dan zijn GSAP en
+   window.lenis uit de footer beschikbaar. */
+(function () {
+  document.documentElement.setAttribute('data-kj-pt', 'enter');
+  setTimeout(function () {
+    document.documentElement.removeAttribute('data-kj-pt');
+  }, 3000);
+})();
+
 /* ==========================================================================
    PAGE TRANSITION — skyline
    De skyline valt uiteen in losse gebouwen die elk op hun eigen snelheid
@@ -22,7 +32,7 @@
       //   /^\/work\/[^/]+\/?$/    de CMS-projectpagina's daaronder
     ],
 
-    color:          '#F23610',
+    color:          '#2E0CF2',
     coverDuration:  0.8,      // duur van het traagste gebouw
     revealDuration: 0.9,
     ease:           'power3.inOut',
@@ -36,7 +46,7 @@
     seedSpeed:      5150,     // verander voor een ander ritme
 
     revealOnLoad:   'always', // 'always' | 'after-transition'
-    debug:          true      // logt overgeslagen interne links — uitzetten voor live
+    debug:          false     // logt overgeslagen interne links — uitzetten voor live
   };
 
   const root    = document.documentElement;

@@ -1,6 +1,6 @@
 /* CURSOR BLOB */
 (function () {
-  const blob = document.querySelector('.cursor-blob');
+  const blob = document.querySelector('[data-cursor-blob]');
   if (!blob) return;
 
   // Volg de muis soepel met GSAP
@@ -70,6 +70,8 @@ const lenis = new Lenis({
   smooth: true
 });
 
+window.lenis = lenis; // nodig voor kerja-transition.js (scroll stilzetten tijdens transitie)
+
 gsap.ticker.add((time) => {
   lenis.raf(time * 1000);
 });
@@ -78,17 +80,8 @@ gsap.ticker.lagSmoothing(0);
 
 /* BLURRED TEXT */
 (function () {
-  const words = [
-    { holder: ".reshaping_holder",   text: ".reshaping_heading"   },
-    { holder: ".rebranding_holder",  text: ".rebranding_heading"  },
-    { holder: ".reinventing_holder", text: ".reinventing_heading" }
-  ];
-
-  function initBlur({ holder: holderSel, text: textSel }) {
-    const holder = document.querySelector(holderSel);
-    if (!holder) return;
-
-    const textEl = holder.querySelector(textSel);
+  /* Elk woord: data-blur-text op het tekstelement (Webflow > Settings > Custom attributes) */
+  function initBlur(textEl) {
     if (!textEl) return;
 
     const originalText = textEl.textContent.trim();
@@ -171,8 +164,8 @@ gsap.ticker.lagSmoothing(0);
     }
 
     const allSpans = [];
-    words.forEach(word => {
-      const spans = initBlur(word);
+    document.querySelectorAll("[data-blur-text]").forEach(el => {
+      const spans = initBlur(el);
       if (spans) allSpans.push(...spans);
     });
 
