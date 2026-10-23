@@ -149,7 +149,7 @@ html.mega-open{overflow:hidden}
    De naam staat boven de foto. Bij hover schuift de onderrand van het
    fotokader (.mega-menu_photo) omhoog, met de afgeronde hoeken mee, en
    wordt de omschrijving (.mega-menu_desc) eronder zichtbaar.
-   4.75em = hoeveel het kader omhoog schuift, ruim
+   4.375em = hoeveel het kader omhoog schuift: van 250 naar 180 pixels hoog, ruim
    genoeg voor drie regels omschrijving. Opmaak in het Style-panel. */
 .mega-menu_photo{
   clip-path:inset(0 0 0 0 round 0.5em);
@@ -163,7 +163,7 @@ html.mega-open{overflow:hidden}
 }
 @media (hover:hover){
   .mega-menu_card:hover .mega-menu_photo,
-  .mega-menu_card:focus-visible .mega-menu_photo{clip-path:inset(0 0 4.75em 0 round 0.5em)}
+  .mega-menu_card:focus-visible .mega-menu_photo{clip-path:inset(0 0 4.375em 0 round 0.5em)}
   .mega-menu_card:hover .mega-menu_desc,
   .mega-menu_card:focus-visible .mega-menu_desc{transform:translateY(0)}
 }
