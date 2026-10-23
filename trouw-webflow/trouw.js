@@ -712,9 +712,12 @@
   }
 
   /* ---------- 10. PARALLAX OP BEELDEN ---------- */
+  /* shift = beweging in procenten van de fotohoogte, naar boven en naar
+     beneden. zoom = vergroting in het kader. Houd shift onder de helft
+     van de ruimte die zoom geeft: bij zoom 1.2 maximaal 10. */
   var PX = {
-    shift: 4,
-    zoom: 1.1,
+    shift: 8,
+    zoom: 1.2,
     frames: '.home-hero_media, .steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
   };
 
