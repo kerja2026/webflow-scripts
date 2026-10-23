@@ -60,28 +60,10 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 }
 
 /* ===== STICKY HEADER: toestanden die het script zet ===== */
-/* Bij scrollen krijgt de header een vlak met een verloop van links naar
-   rechts. Een verloop kan niet via background-color vervagen, dus het
-   staat op een eigen laag (::before) die in- en uitfadet. */
+/* Bij scrollen krijgt de header geen eigen vlak: logo, menukader en
+   knop blijven los boven de pagina staan. */
 .navbar_component{
-  isolation:isolate;
-  transition:
-    box-shadow .7s ease,
-    top .45s cubic-bezier(.2,.7,.2,1);
-}
-.navbar_component::before{
-  content:"";
-  position:absolute;
-  top:0;left:0;right:0;bottom:0;
-  z-index:-1;
-  background-image:linear-gradient(90deg,#dbc7ad,#ddcab0);
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .7s ease;
-}
-.navbar_component.is-stuck::before{opacity:1}
-.navbar_component.is-stuck{
-  box-shadow:0 1px 0 0 #e3d8c8;
+  transition:top .45s cubic-bezier(.2,.7,.2,1);
 }
 .navbar_component.is-up{top:0}
 
@@ -262,7 +244,7 @@ html.lenis,html.lenis body{height:auto}
 html.menu-open,html.menu-open body{overflow:hidden}
 
 @media (prefers-reduced-motion:reduce){
-  .navbar_component,.navbar_component::before{transition:none}
+  .navbar_component{transition:none}
   .navbar_logo{transition:none}
   .navbar_component.is-stuck .navbar_logo{transform:none}
   .js-anim .navbar_topbar,
