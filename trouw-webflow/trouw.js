@@ -576,7 +576,7 @@
      -1.25em) in het Style-panel. Alleen vanaf 768px. */
   var SLIDE = {
     shift: '6em',
-    sections: '.section_intro, .section_praktijk, .section_team, .section_feature, .section_contract, .section_rates, .section_legal, .section_contact',
+    sections: '.section_intro, .section_praktijk, .section_verwachting, .section_team, .section_feature, .section_contract, .section_rates, .section_legal, .section_contact',
     start: 'top bottom',
     end: 'top 40%'
   };
