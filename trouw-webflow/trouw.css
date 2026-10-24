@@ -204,8 +204,10 @@ html.mega-open{overflow:hidden}
    Live zet deze regel hem aan; het masker maakt de kolommen
    onzichtbaar tot een transitie start. */
 .transition_component{display:flex}
+/* --cw = de echte kolombreedte: een zesde van de transitie, die op
+   brede schermen meegroeit met het venster (Style-panel). */
 .transition_column{
-  --cw:20.25em;
+  --cw:max(20.25em, calc(100vw / 6));
   --fade:4em;
   --p:0;
   -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
