@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   CROSSFIT HENGELO — hoofdscript
+   CROSSFIT HENGELO — hoofdscripts
    Vereist in <head>: GSAP 3.13+ + ScrollTrigger + SplitText
    Vereist in footer, vóór dit bestand: Lenis CDN (v1)
 

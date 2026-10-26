@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   CROSSFIT HENGELO — Home-pagina
+   CROSSFIT HENGELO — Home-paginas
    Alleen op de homepage laden (page footer), NIET site-breed.
    Vereist: GSAP + ScrollTrigger (site-breed in <head> geladen).
    Let op: video-autoplay staat al in crossfithengelo.js.
