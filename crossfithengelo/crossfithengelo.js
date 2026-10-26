@@ -74,9 +74,9 @@
     stagger: '[data-anim="stagger"], .anim-stagger',
     mask: '[data-anim="mask"], .anim-mask-section',
     parallax: '[data-parallax], .parallax_image, .parallax-img',
-    card: '[data-stacked-card], .sc-card',
-    cardText: '[data-stacked-card-text], .sc-card-text',
-    date: '[data-date], .cms-datum, .blog_date, .text-block',
+    card: '[data-stacked-card], .stacked-cards_card, .sc-card',
+    cardText: '[data-stacked-card-text], .stacked-cards_text, .sc-card-text',
+    date: '[data-date], .cms_date, .blog_date, .date_text, .cms-datum, .text-block',
     menuScroll: '[data-menu-scroll], .menu-overlay, .menu-panel'
   };
 
