@@ -47,6 +47,39 @@
     };
   };
 
+  /* ─── Koppelingen ───────────────────────────────────────────
+     Het script zoekt elementen via data-attributen. De oude klassen
+     staan erachter als terugval, zodat de live site en de Client-First-
+     kopie allebei werken. Zijn alle pagina's omgezet, dan kunnen de
+     oude klassen hier weg.
+       data-navbar               navigatiebalk (verbergen bij scrollen)
+       data-navbar-theme         krijgt de klasse navbar--light
+       data-nav-theme="dark"     sectie met donkere achtergrond
+       data-anim="heading"       kop met regel-reveal
+       data-anim="line"          hero-regel die zichtbaar wordt
+       data-anim="stagger"       kinderen faden na elkaar in
+       data-anim="mask"          sectie die van onder opent
+       data-parallax             parallax-afbeelding
+       data-stacked-card         stacked card
+       data-stacked-card-text    tekstblok in een stacked card
+       data-date                 datum die naar Nederlands gaat
+       data-menu-scroll          menu-overlay en -paneel (Lenis laat ze met rust)
+     ─────────────────────────────────────────────────────────── */
+  var SEL = {
+    navbar: '[data-navbar], .nav_section',
+    navbarTheme: '[data-navbar-theme], .navbar_component_wrapper',
+    darkSection: '[data-nav-theme="dark"], .nav-dark-bg',
+    heading: '[data-anim="heading"], .anim-heading',
+    line: '[data-anim="line"], .anim-line',
+    stagger: '[data-anim="stagger"], .anim-stagger',
+    mask: '[data-anim="mask"], .anim-mask-section',
+    parallax: '[data-parallax], .parallax-img',
+    card: '[data-stacked-card], .sc-card',
+    cardText: '[data-stacked-card-text], .sc-card-text',
+    date: '[data-date], .cms-datum, .blog_date, .text-block',
+    menuScroll: '[data-menu-scroll], .menu-overlay, .menu-panel'
+  };
+
   var qsa = function (sel, root_) {
     return Array.prototype.slice.call((root_ || document).querySelectorAll(sel));
   };
@@ -67,12 +100,12 @@
      ═══════════════════════════════════════════════════════════ */
   ready(function () {
 
-    navSection = document.querySelector('.nav_section');
+    navSection = document.querySelector(SEL.navbar);
 
     /* ─── 1. Navbar kleurwissel op donkere secties ─── */
-    var navbarWrapper = document.querySelector('.navbar_component_wrapper');
+    var navbarWrapper = document.querySelector(SEL.navbarTheme);
     if (navbarWrapper) {
-      qsa('.nav-dark-bg').forEach(function (section) {
+      qsa(SEL.darkSection).forEach(function (section) {
         ScrollTrigger.create({
           trigger: section,
           start: 'top top',
@@ -87,7 +120,7 @@
        laden, dan wacht hij tot het overgangs-overlay weg is.
        Wil je het oude gedrag terug (alles meteen bij laden), haal dan het
        scrollTrigger-blok weg. */
-    qsa('.anim-heading').forEach(function (heading) {
+    qsa(SEL.heading).forEach(function (heading) {
       if (reduceMotion) { gsap.set(heading, { opacity: 1 }); return; }
 
       var gespeeld = false;
@@ -136,7 +169,7 @@
     var DATUM_VORM = /^(\d{4}-\d{2}-\d{2}|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4})\b/;
     var NL_DATUM = { day: 'numeric', month: 'long', year: 'numeric' };
 
-    qsa('.cms-datum, .blog_date, .text-block').forEach(function (el) {
+    qsa(SEL.date).forEach(function (el) {
       var raw = el.textContent.trim();
       if (!DATUM_VORM.test(raw)) return;
 
@@ -159,7 +192,7 @@
     });
 
     /* ─── 6. Hero-tekst (.anim-line) ─── */
-    qsa('.anim-line').forEach(function (el, i) {
+    qsa(SEL.line).forEach(function (el, i) {
       if (reduceMotion) { el.classList.add('visible'); return; }
       setTimeout(function () { el.classList.add('visible'); }, INTRO_DELAY * 1000 + i * 150);
     });
@@ -182,7 +215,7 @@
       /* Menu-overlay: Lenis laat wiel en aanraking daar met rust. Het menu
          scrolt dan zelf, en de pagina erachter beweegt niet mee. Dit werkt
          ook zonder dat er ergens een is-menu-open klasse gezet wordt. */
-      qsa('.menu-overlay, .menu-panel').forEach(function (el) {
+      qsa(SEL.menuScroll).forEach(function (el) {
         el.setAttribute('data-lenis-prevent', '');
       });
 
@@ -234,7 +267,7 @@
       /* ─── 11. Parallax (.parallax-img) ─── */
       var mm = gsap.matchMedia();
       var setupParallax = function (yRange) {
-        gsap.utils.toArray('.parallax-img').forEach(function (img) {
+        gsap.utils.toArray(SEL.parallax).forEach(function (img) {
           gsap.fromTo(img, { y: -yRange }, {
             y: yRange, ease: 'none',
             scrollTrigger: { trigger: img, start: 'top bottom', end: 'bottom top', scrub: 1 }
@@ -246,7 +279,7 @@
 
       /* ─── 12. Cards stagger reveal (.anim-stagger) ───
          startBij() zorgt dat ook secties onderaan de pagina nog afspelen. */
-      gsap.utils.toArray('.anim-stagger').forEach(function (parent) {
+      gsap.utils.toArray(SEL.stagger).forEach(function (parent) {
         gsap.from(parent.children, {
           scrollTrigger: { trigger: parent, start: startBij(parent, 25) },
           opacity: 0, y: 36, duration: 1.5, stagger: 0.12, ease: 'power2.out'
@@ -254,7 +287,7 @@
       });
 
       /* ─── 13. Stacked cards scroll (.sc-card) ─── */
-      var stackedCards = qsa('.sc-card');
+      var stackedCards = qsa(SEL.card);
       stackedCards.forEach(function (card, i) {
         var next = stackedCards[i + 1];
         if (!next) return;
@@ -262,12 +295,12 @@
           scrollTrigger: { trigger: next, start: 'top 80%', end: 'top 30%', scrub: 1 }
         });
         tl.to(card, { scale: 0.95, ease: 'none' }, 0);
-        var textEl = card.querySelector('.sc-card-text');
+        var textEl = card.querySelector(SEL.cardText);
         if (textEl) tl.to(textEl, { backgroundColor: CARD_TEXT_ACTIVE, ease: 'none' }, 0);
       });
 
       /* ─── 14. Groene CTA-reveal (.anim-mask-section) ─── */
-      gsap.utils.toArray('.anim-mask-section').forEach(function (el) {
+      gsap.utils.toArray(SEL.mask).forEach(function (el) {
         gsap.fromTo(el,
           { clipPath: 'inset(100% 0 0 0)', y: 100 },
           { clipPath: 'inset(0% 0 0 0)', y: 0, duration: 1.2, ease: 'power3.out',

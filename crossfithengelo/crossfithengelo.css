@@ -4,6 +4,10 @@
    die eerst als <style>-blok in de site-head stonden.
    ═══════════════════════════════════════════════════════════ */
 
+/* Selectors staan dubbel tijdens de omzetting naar Client-First:
+   de oude klasse en de nieuwe naam (of het data-attribuut). Zijn alle
+   pagina's omgezet, dan kunnen de oude namen weg. */
+
 /* ─── Basis ────────────────────────────────────────────────── */
 
 /* Tap-delay voorkomen: één keer op html is genoeg
@@ -21,38 +25,52 @@ html.lenis { height: auto; }
    zelf op <html>). Zonder JS, zonder GSAP (.no-gsap) of bij
    prefers-reduced-motion is alles direct zichtbaar.
    De volgorde van deze vier blokken is belangrijk. */
-.w-mod-js .anim-heading { opacity: 0; }
-.w-mod-js .anim-mask-section { clip-path: inset(100% 0 0 0); }
+.w-mod-js .anim-heading,
+.w-mod-js [data-anim="heading"] { opacity: 0; }
+.w-mod-js .anim-mask-section,
+.w-mod-js [data-anim="mask"] { clip-path: inset(100% 0 0 0); }
 
-.no-gsap .anim-heading { opacity: 1; }
-.no-gsap .anim-mask-section { clip-path: none; }
+.no-gsap .anim-heading,
+.no-gsap [data-anim="heading"] { opacity: 1; }
+.no-gsap .anim-mask-section,
+.no-gsap [data-anim="mask"] { clip-path: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .w-mod-js .anim-heading { opacity: 1; }
-  .w-mod-js .anim-mask-section { clip-path: none; }
-  .nav_section { transition: none; }
+  .w-mod-js .anim-heading,
+  .w-mod-js [data-anim="heading"] { opacity: 1; }
+  .w-mod-js .anim-mask-section,
+  .w-mod-js [data-anim="mask"] { clip-path: none; }
+  .nav_section,
+  .navbar_component { transition: none; }
 }
 
 /* Parallax */
-.parallax-img { will-change: transform; }
+.parallax-img,
+[data-parallax] { will-change: transform; }
 
 /* ─── Navbar ───────────────────────────────────────────────── */
 
 /* Kleurwissel op donkere secties */
-.line-1, .line-2, .line-3 { transition: background-color 0.5s ease; }
-.cfh_logo { transition: filter 0.5s ease; }
+.line-1, .line-2, .line-3,
+.navbar_menu-line { transition: background-color 0.5s ease; }
+.cfh_logo,
+.navbar_logo { transition: filter 0.5s ease; }
 .navbar--light .line-1,
 .navbar--light .line-2,
-.navbar--light .line-3 { background-color: #efe4d5 !important; }
-.navbar--light .cfh_logo { filter: brightness(0) invert(1) sepia(0.15) saturate(0.8) hue-rotate(10deg) !important; }
+.navbar--light .line-3,
+.navbar--light .navbar_menu-line { background-color: #efe4d5 !important; }
+.navbar--light .cfh_logo,
+.navbar--light .navbar_logo { filter: brightness(0) invert(1) sepia(0.15) saturate(0.8) hue-rotate(10deg) !important; }
 
 /* Verbergen bij naar beneden scrollen */
-.nav_section { transition: transform 0.6s ease; }
+.nav_section,
+.navbar_component { transition: transform 0.6s ease; }
 .navbar--hidden { transform: translateY(-100%); }
 
 /* ─── Menu-overlay ─────────────────────────────────────────────
    Eén variabele stuurt alle verticale ruimte. */
-.menu-overlay {
+.menu-overlay,
+.navbar_menu-overlay {
   --menu-gap: clamp(1.5rem, 4vh, 4rem);
   height: 100vh;
   height: 100dvh;
@@ -60,7 +78,8 @@ html.lenis { height: auto; }
 }
 
 /* Paneel: gelijke ruimte tussen kruis en menu */
-.menu-panel {
+.menu-panel,
+.navbar_menu-panel {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -71,10 +90,12 @@ html.lenis { height: auto; }
   overscroll-behavior: contain;
 }
 
-.menu-close { flex: 0 0 auto; }
+.menu-close,
+.navbar_menu-close { flex: 0 0 auto; }
 
 /* Wrapper: geen eigen padding */
-.all_menu_wrapper {
+.all_menu_wrapper,
+.navbar_menu-content {
   display: flex;
   flex-direction: column;
   gap: var(--menu-gap);
@@ -84,7 +105,8 @@ html.lenis { height: auto; }
 }
 
 /* Hoofdlinks vullen de ruimte, gecentreerd */
-.main-menu-links {
+.main-menu-links,
+.navbar_menu-links {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -93,46 +115,56 @@ html.lenis { height: auto; }
 }
 
 /* Footerblok krimpt nooit */
-.small_main_menu_wrapper {
+.small_main_menu_wrapper,
+.navbar_menu-footer {
   flex: 0 0 auto;
   margin-top: 0;
 }
 
 /* Typografie schaalt met de schermhoogte */
-.main-navigation {
+.main-navigation,
+.navbar_menu-link {
   font-size: clamp(1.75rem, 5vh, 4.5rem);
   line-height: 1.05;
 }
 
-.main_navigation_wrapper + .main_navigation_wrapper {
+.main_navigation_wrapper + .main_navigation_wrapper,
+.navbar_menu-item + .navbar_menu-item {
   margin-top: clamp(0.25rem, 1.2vh, 1.25rem);
 }
 
 @media (max-height: 700px) {
-  .arrow_wrapper { display: none; }
+  .arrow_wrapper,
+  .navbar_menu-arrow-wrapper { display: none; }
 }
 
 /* Mobiel: niets krimpt, alles op gelijke afstand */
 @media (max-width: 767px) {
-  .menu-overlay {
+  .menu-overlay,
+  .navbar_menu-overlay {
     --menu-gap: clamp(1.25rem, 5vw, 2.5rem);
   }
 
   .all_menu_wrapper,
-  .main-menu-links {
+  .main-menu-links,
+  .navbar_menu-content,
+  .navbar_menu-links {
     flex: 0 0 auto;
   }
 
-  .main-menu-links {
+  .main-menu-links,
+  .navbar_menu-links {
     justify-content: flex-start;
   }
 
-  .main-navigation {
+  .main-navigation,
+  .navbar_menu-link {
     font-size: clamp(1.5rem, 6.5vw, 2.25rem);
     line-height: 1.1;
   }
 
-  .main_navigation_wrapper + .main_navigation_wrapper {
+  .main_navigation_wrapper + .main_navigation_wrapper,
+  .navbar_menu-item + .navbar_menu-item {
     margin-top: 0.75rem;
   }
 }
@@ -141,18 +173,21 @@ body.is-menu-open { overflow: hidden; }
 body.is-menu-open #CookiebotWidget { display: none; }
 
 /* ─── Marquee ──────────────────────────────────────────────── */
-.scrolling_text_section { overflow: hidden; }
+.scrolling_text_section,
+.section_marquee { overflow: hidden; }
 /* In de Designer staat de wrapper op width en max-width 100vw met
    overflow hidden. Dan knipt hij de tekst af op schermbreedte en schuift
    die rand mee met de animatie. Hier mag hij zo breed als zijn inhoud;
    de sectie hierboven knipt horizontaal af. */
-.scrolling-text-wrapper {
+.scrolling-text-wrapper,
+.marquee_track {
   display: flex;
   width: max-content;
   max-width: none;
   will-change: transform;
 }
-.scrolling-text { white-space: nowrap; flex-shrink: 0; padding-right: 80px; }
+.scrolling-text,
+.marquee_text { white-space: nowrap; flex-shrink: 0; padding-right: 80px; }
 
 /* ─── Cookiebot popup-formaat ──────────────────────────────────
    Alleen maat en scrollgedrag. Nooit display, visibility of
