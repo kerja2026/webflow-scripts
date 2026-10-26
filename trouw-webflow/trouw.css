@@ -114,7 +114,7 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
                    contactregel en knop verkleuren naar licht.
    De duur van het verkleuren (.4s) moet gelijk zijn aan MEGA.colors in
    trouw.js. Opmaak van paneel, kaarten en waas staat in het
-   Style-panel (.mega-menu_component, .mega-menu_beige, .mega-menu_card, .mega-menu_scrim). */
+   Style-panel (.mega-menu_component, .mega-menu_card, .mega-menu_scrim). */
 .navbar_component.is-mega .navbar_menu{background-image:none}
 .mega-menu_component{will-change:clip-path}
 /* Scrollslot: alleen op html. Op body maakt overflow hidden de body
@@ -128,10 +128,8 @@ html.mega-open{overflow:hidden}
 .navbar_cta > .button_dark,
 .navbar_cta-alt{transition:opacity .4s ease}
 
-/* Tekst op de kaarten: donker op het beige, licht zodra het paneel
-   groen wordt (.is-mega-green, gezet door het script in stap 3). */
-.mega-menu_card{color:#3a3128;transition:color .5s ease}
-.navbar_component.is-mega-green .mega-menu_card{color:#f1eae0}
+/* Tekst op de kaarten: licht, op het groene paneel. */
+.mega-menu_card{color:#f1eae0}
 
 .navbar_component.is-mega-light .navbar_link,
 .navbar_component.is-mega-light .navbar_topbar-link{color:#f1eae0}
