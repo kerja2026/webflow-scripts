@@ -521,53 +521,123 @@
   });
 
   /* ---------- 7. SPECIALISATIES ----------
-     De vijf teksten (.spec_text) scrollen gewoon mee; de foto
-     (.spec_media) staat vast (sticky in het Style-panel). De tekst die
-     het dichtst bij de leeslijn staat krijgt is-active (volle dekking),
-     en de foto met hetzelfde nummer ook. Het vervagen van tekst en foto
-     staat als transition in het Style-panel.
+     Desktop en tablet (vanaf 768px): de sectie staat stil terwijl je
+     door .spec_track scrolt (sticky en hoogte in het Style-panel). De
+     foto's (.spec_card) liggen als een stapel: elke volgende schuift van
+     onderaf over de vorige, en de kaarten eronder worden iets kleiner en
+     schuiven een fractie omhoog. De tekst (.spec_text) wisselt mee: de
+     oude verdwijnt naar boven, de nieuwe komt van onderaf.
 
-     Leeslijn: het midden van het scherm. Op mobiel staat de foto
-     bovenaan vast; dan ligt de leeslijn midden in de ruimte onder de
-     foto. */
+     Mobiel (en bij minder beweging): de teksten scrollen gewoon mee en
+     de tekst bij de leeslijn krijgt is-active, samen met zijn foto. Op
+     mobiel ligt de leeslijn midden in de ruimte onder de foto; bij minder
+     beweging op desktop volgt de wissel de scrollpositie in de sectie.
+
+     scale     = hoeveel kleiner een kaart per laag eronder wordt
+     peek      = hoeveel een kaart per laag omhoog schuift, in em
+     depth     = hoeveel lagen van de stapel zichtbaar blijven
+     textShift = hoe ver de tekst in- en uitschuift, in em
+     scrub     = hoe zacht de beweging het scrollen volgt, in seconden */
+  var SPEC = { scale: 0.05, peek: 1.25, depth: 2, textShift: 1.5, scrub: 0.6 };
+
   var specTexts = gsap.utils.toArray('.spec_text');
   var specCards = gsap.utils.toArray('.spec_card');
   var specComp = document.querySelector('.spec_component');
   var specMedia = document.querySelector('.spec_media');
+  var specTrack = document.querySelector('.spec_track');
 
-  if (specComp && specTexts.length) {
-    var specCurrent = -1;
+  if (specComp && specTrack && specTexts.length) {
+    var specMM = gsap.matchMedia();
 
-    var specSet = function (next) {
-      if (next === specCurrent) return;
-      specCurrent = next;
-      specTexts.forEach(function (el, k) { el.classList.toggle('is-active', k === next); });
-      specCards.forEach(function (el, k) { el.classList.toggle('is-active', k === next); });
-    };
+    specMM.add({
+      wide: '(min-width: 768px)',
+      reduce: '(prefers-reduced-motion: reduce)'
+    }, function (ctx) {
+      var wide = ctx.conditions.wide;
+      var still = ctx.conditions.reduce;
+      var em = function () { return parseFloat(getComputedStyle(specComp).fontSize); };
+      var stickTop = function () { return parseFloat(getComputedStyle(specComp).top) || 0; };
+      var n = specTexts.length;
 
-    var specCheck = function () {
-      var stacked = getComputedStyle(specComp).flexDirection.indexOf('column') === 0;
-      var line = window.innerHeight / 2;
-      if (stacked && specMedia) {
-        line = (specMedia.getBoundingClientRect().bottom + window.innerHeight) / 2;
+      /* De stapel: desktop en tablet, met beweging */
+      if (wide && !still) {
+        gsap.set(specCards, { autoAlpha: 1, transformOrigin: '50% 0%' });
+        gsap.set(specCards.slice(1), { y: function () { return window.innerHeight; } });
+        gsap.set(specTexts, { autoAlpha: 0, y: 0 });
+        gsap.set(specTexts[0], { autoAlpha: 1 });
+
+        var tl = gsap.timeline({
+          defaults: { ease: 'power1.out' },
+          scrollTrigger: {
+            trigger: specTrack,
+            start: function () { return 'top ' + stickTop() + 'px'; },
+            end: function () { return 'bottom ' + (stickTop() + specComp.offsetHeight) + 'px'; },
+            scrub: SPEC.scrub,
+            invalidateOnRefresh: true
+          }
+        });
+
+        for (var k = 1; k < n; k++) {
+          var at = k - 1;
+          if (specCards[k]) tl.to(specCards[k], { y: 0, duration: 1 }, at);
+          for (var p = 0; p < k; p++) {
+            if (!specCards[p]) continue;
+            (function (layer) {
+              tl.to(specCards[p], {
+                scale: 1 - SPEC.scale * layer,
+                y: function () { return -SPEC.peek * em() * layer; },
+                duration: 1
+              }, at);
+            })(Math.min(k - p, SPEC.depth));
+          }
+          tl.to(specTexts[k - 1], {
+            autoAlpha: 0,
+            y: function () { return -SPEC.textShift * em(); },
+            duration: 0.35,
+            ease: 'power1.in'
+          }, at + 0.4);
+          tl.fromTo(specTexts[k],
+            { autoAlpha: 0, y: function () { return SPEC.textShift * em(); } },
+            { autoAlpha: 1, y: 0, duration: 0.35, immediateRender: false },
+            at + 0.65);
+        }
+        return;
       }
-      var best = 0, bestDist = Infinity;
-      specTexts.forEach(function (el, k) {
-        var r = el.getBoundingClientRect();
-        var dist = Math.abs(r.top + r.height / 2 - line);
-        if (dist < bestDist) { bestDist = dist; best = k; }
-      });
-      specSet(best);
-    };
 
-    ScrollTrigger.create({
-      trigger: specComp,
-      start: 'top bottom',
-      end: 'bottom top',
-      onUpdate: specCheck,
-      onRefresh: specCheck
+      /* De rustige wissel: mobiel, en desktop bij minder beweging */
+      var specCurrent = -1;
+      var specSet = function (next) {
+        if (next === specCurrent) return;
+        specCurrent = next;
+        specTexts.forEach(function (el, i) { el.classList.toggle('is-active', i === next); });
+        specCards.forEach(function (el, i) { el.classList.toggle('is-active', i === next); });
+      };
+
+      var specCheck = function (self) {
+        if (wide) {
+          specSet(Math.round((self ? self.progress : 0) * (n - 1)));
+          return;
+        }
+        var line = (specMedia ? specMedia.getBoundingClientRect().bottom : 0);
+        line = (line + window.innerHeight) / 2;
+        var best = 0, bestDist = Infinity;
+        specTexts.forEach(function (el, i) {
+          var r = el.getBoundingClientRect();
+          var dist = Math.abs(r.top + r.height / 2 - line);
+          if (dist < bestDist) { bestDist = dist; best = i; }
+        });
+        specSet(best);
+      };
+
+      var st = ScrollTrigger.create({
+        trigger: wide ? specTrack : specComp,
+        start: wide ? function () { return 'top ' + stickTop() + 'px'; } : 'top bottom',
+        end: wide ? function () { return 'bottom ' + (stickTop() + specComp.offsetHeight) + 'px'; } : 'bottom top',
+        onUpdate: specCheck,
+        onRefresh: specCheck
+      });
+      specCheck(st);
     });
-    specCheck();
   }
 
   /* ---------- 8. SECTIES SCHUIVEN OVER ELKAAR ----------
