@@ -105,6 +105,50 @@
     window.addEventListener('scroll', function () { drawBar(window.scrollY); }, { passive: true });
   }
 
+  /* ---------- 3b. HEADER OVER GROEN ----------
+     Ligt het midden van de header boven een groene sectie of de footer,
+     dan krijgt de header is-inverse: logo en contactregel licht, de
+     lichte knop, en het menukader beige met groene tekst (kleuren in
+     trouw.css). Het script kijkt naar wat er echt zichtbaar is onder de
+     header, omdat de secties over elkaar heen schuiven.
+
+     green = de groene secties */
+  var INV = { green: '.section_praktijk, .section_contract, .section_feature, .footer_component' };
+
+  if (header) {
+    var invProbe = header.querySelector('.navbar_container') || header;
+    var invQueued = false;
+
+    var invCheck = function () {
+      invQueued = false;
+      var r = invProbe.getBoundingClientRect();
+      var y = r.top + r.height / 2;
+      var x = Math.max(4, Math.min(window.innerWidth - 4, r.left + 4));
+      var on = false;
+      var stack = document.elementsFromPoint(x, y);
+      for (var i = 0; i < stack.length; i++) {
+        var el = stack[i];
+        if (header.contains(el) || el === document.documentElement || el === document.body) continue;
+        var area = el.closest('section, .footer_component');
+        if (!area) continue;
+        on = !!area.closest(INV.green);
+        break;
+      }
+      header.classList.toggle('is-inverse', on);
+    };
+    var invQueue = function () {
+      if (invQueued) return;
+      invQueued = true;
+      requestAnimationFrame(invCheck);
+    };
+
+    if (lenis) lenis.on('scroll', invQueue);
+    window.addEventListener('scroll', invQueue, { passive: true });
+    window.addEventListener('resize', invQueue);
+    window.addEventListener('load', invQueue);
+    invQueue();
+  }
+
   /* ---------- 4. MOBIEL MENU ---------- */
   var MENU = { duration: 0.7, ease: 'power2.inOut', shift: 20 };
 
