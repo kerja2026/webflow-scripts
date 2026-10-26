@@ -46,6 +46,7 @@ html.lenis { height: auto; }
 
 /* Parallax */
 .parallax-img,
+.parallax_image,
 [data-parallax] { will-change: transform; }
 
 /* ─── Navbar ───────────────────────────────────────────────── */

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   CROSSFIT HENGELO — Home-paginas
+   CROSSFIT HENGELO — Home-pagina
    Alleen op de homepage laden (page footer), NIET site-breed.
    Vereist: GSAP + ScrollTrigger (site-breed in <head> geladen).
    Let op: video-autoplay staat al in crossfithengelo.js.
@@ -32,7 +32,7 @@
   /* ─── Hero text mask ───────────────────────────────────────── */
   ready(function () {
     if (!hasGsap || reduceMotion) return;
-    var lines = document.querySelectorAll('[data-hero-line], .line-mask .line-inner');
+    var lines = document.querySelectorAll('[data-hero-line], .header_line-mask .header_line, .line-mask .line-inner');
     if (!lines.length) return;
     gsap.from(lines, {
       clipPath: 'inset(0 100% 0 0)',
@@ -45,8 +45,8 @@
 
   /* ─── Marquee ──────────────────────────────────────────────── */
   ready(function () {
-    var wrapper = document.querySelector('[data-marquee-track], .scrolling-text-wrapper');
-    var original = wrapper && wrapper.querySelector('[data-marquee-item], .scrolling-text');
+    var wrapper = document.querySelector('[data-marquee-track], .marquee_track, .scrolling-text-wrapper');
+    var original = wrapper && wrapper.querySelector('[data-marquee-item], .marquee_text, .scrolling-text');
     if (!wrapper || !original) return;
 
     var itemWidth = 0;
@@ -100,7 +100,7 @@
     }
 
     /* Niet rekenen als de band buiten beeld staat */
-    var section = wrapper.closest('[data-marquee], .scrolling_text_section') || wrapper;
+    var section = wrapper.closest('[data-marquee], .section_marquee, .scrolling_text_section') || wrapper;
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
         inView = entries[0].isIntersecting;
