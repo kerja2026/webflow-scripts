@@ -128,6 +128,36 @@ html.mega-open{overflow:hidden}
 .navbar_cta > .button_dark,
 .navbar_cta-alt{transition:opacity .4s ease}
 
+/* ===== HEADER OVER GROEN =====
+   .is-inverse (gezet door trouw.js) als de header boven een groene sectie
+   of de footer ligt: logo en contactregel licht, de lichte knop, en het
+   menukader beige met groene tekst. Het beige verloop ligt op een eigen
+   laag (::before), zodat het kan in- en uitfaden. Bij een open
+   uitklapmenu heeft dat voorrang. */
+.navbar_menu{position:relative;isolation:isolate}
+.navbar_menu::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  z-index:-1;
+  border-radius:inherit;
+  background-image:linear-gradient(115deg,#f1eae0 0%,#e3d8c8 100%);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .4s ease;
+}
+.navbar_component.is-inverse:not(.is-mega) .navbar_menu::before{opacity:1}
+.navbar_component.is-inverse:not(.is-mega) .navbar_link{color:#415442}
+.navbar_component.is-inverse:not(.is-mega) .navbar_link::after{background-color:#415442}
+.navbar_component.is-inverse .navbar_topbar-link{color:#f1eae0}
+.navbar_component.is-inverse .navbar_logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
+.navbar_component.is-inverse .navbar_cta > .button_dark{opacity:0;pointer-events:none}
+.navbar_component.is-inverse .navbar_cta-alt{opacity:1;pointer-events:auto}
+.navbar_toggle,
+.navbar_toggle-line{transition:background-color .4s ease}
+.navbar_component.is-inverse .navbar_toggle{background-color:#f1eae0}
+.navbar_component.is-inverse .navbar_toggle-line{background-color:#415442}
+
 /* Tekst op de kaarten: licht, op het groene paneel. */
 .mega-menu_card{color:#f1eae0}
 
