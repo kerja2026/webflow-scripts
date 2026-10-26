@@ -117,9 +117,9 @@ html.lenis { height: auto; }
   justify-content: center;
 }
 
-/* Footerblok krimpt nooit */
+/* Blok met kleine links onderaan het menu krimpt nooit */
 .small_main_menu_wrapper,
-.navbar_menu-footer {
+.navbar_menu-secondary {
   flex: 0 0 auto;
   margin-top: 0;
 }
