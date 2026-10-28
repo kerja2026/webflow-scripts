@@ -173,29 +173,38 @@
   });
 
   /* ---------- 4. MOBIEL MENU ----------
-     Het paneel klapt van boven naar beneden open: eerst verschijnt een
-     strook met de sluitknop (op de plek van de hamburgerknop), daarna
-     groeit die strook naar beneden uit tot het hele paneel. De pagina
-     erachter wordt donkerder. Sluiten gaat omgekeerd. Het openklappen is
-     een clip-path op het paneel.
+     Net als het uitklapmenu op desktop: de groene hamburgerknop groeit
+     uit tot het menu. Het paneel begint precies op de plek, in de maat en
+     met de ronding van de knop, en groeit van daaruit naar zijn volle
+     grootte. De pagina erachter wordt donkerder. Sluiten krimpt het paneel
+     terug naar de knop. Het groeien is een clip-path op het paneel.
 
-     strip  = hoogte van de strook, in em van het paneel
-     fade   = duur van het verschijnen van de strook
-     grow   = duur van het openklappen
-     shrink = duur van het dichtklappen */
-  var MENU = { strip: 4.875, fade: 0.2, grow: 0.6, shrink: 0.45 };
+     grow   = duur van het openen
+     shrink = duur van het sluiten */
+  var MENU = { grow: 0.6, shrink: 0.45 };
 
   var menu = document.querySelector('.mobile-menu_component');
   var panel = menu ? menu.querySelector('.mobile-menu_panel') : null;
   var scrim = menu ? menu.querySelector('.mobile-menu_scrim') : null;
+  var menuToggle = document.querySelector('.navbar_toggle');
   var menuOpen = false;
   var menuTl = null;
 
+  var menuRadius = function (el, size) {
+    var v = getComputedStyle(el).borderTopLeftRadius;
+    return v.indexOf('%') > -1 ? parseFloat(v) / 100 * size : (parseFloat(v) || 0);
+  };
+
+  /* open: het hele paneel. dicht: de plek en maat van de hamburgerknop */
   var menuClip = function (open) {
-    var cs = getComputedStyle(panel);
-    var r = parseFloat(cs.borderTopLeftRadius) || 0;
-    var cut = open ? 0 : Math.max(0, panel.offsetHeight - MENU.strip * parseFloat(cs.fontSize));
-    return 'inset(0px 0px ' + cut + 'px 0px round ' + r + 'px)';
+    if (open || !menuToggle) {
+      return 'inset(0px 0px 0px 0px round ' + menuRadius(panel, panel.offsetWidth) + 'px)';
+    }
+    var p = panel.getBoundingClientRect();
+    var t = menuToggle.getBoundingClientRect();
+    return 'inset(' + (t.top - p.top) + 'px ' + (p.right - t.right) + 'px ' +
+      (p.bottom - t.bottom) + 'px ' + (t.left - p.left) + 'px round ' +
+      menuRadius(menuToggle, Math.min(t.width, t.height)) + 'px)';
   };
 
   var openMenu = function () {
@@ -206,11 +215,11 @@
     if (lenis) lenis.stop();
     if (menuTl) menuTl.kill();
 
-    gsap.set(panel, { clipPath: menuClip(false), autoAlpha: 0 });
     menuTl = gsap.timeline();
-    menuTl.to(scrim, { opacity: 1, duration: reduced ? 0 : MENU.fade + MENU.grow * .6, ease: 'none' }, 0);
-    menuTl.to(panel, { autoAlpha: 1, duration: reduced ? 0 : MENU.fade, ease: 'power1.out' }, 0);
-    menuTl.fromTo(panel, { clipPath: menuClip(false) }, { clipPath: menuClip(true), duration: reduced ? 0 : MENU.grow, ease: 'power3.out', immediateRender: false }, reduced ? 0 : MENU.fade);
+    menuTl.to(scrim, { opacity: 1, duration: reduced ? 0 : MENU.grow, ease: 'none' }, 0);
+    menuTl.fromTo(panel,
+      { clipPath: menuClip(false) },
+      { clipPath: menuClip(true), duration: reduced ? 0 : MENU.grow, ease: 'power3.inOut' }, 0);
   };
 
   var closeMenu = function () {
@@ -222,13 +231,14 @@
       onComplete: function () {
         menu.classList.remove('is-open');
         html.classList.remove('menu-open');
-        gsap.set(panel, { clearProps: 'clipPath,opacity,visibility' });
+        gsap.set(panel, { clearProps: 'clipPath' });
         if (lenis) lenis.start();
       }
     });
-    menuTl.fromTo(panel, { clipPath: menuClip(true) }, { clipPath: menuClip(false), duration: reduced ? 0 : MENU.shrink, ease: 'power3.inOut' }, 0);
-    menuTl.to(scrim, { opacity: 0, duration: reduced ? 0 : MENU.shrink + MENU.fade, ease: 'none' }, 0);
-    menuTl.to(panel, { autoAlpha: 0, duration: reduced ? 0 : MENU.fade, ease: 'power1.in' }, reduced ? 0 : MENU.shrink);
+    menuTl.fromTo(panel,
+      { clipPath: menuClip(true) },
+      { clipPath: menuClip(false), duration: reduced ? 0 : MENU.shrink, ease: 'power3.inOut' }, 0);
+    menuTl.to(scrim, { opacity: 0, duration: reduced ? 0 : MENU.shrink, ease: 'none' }, 0);
   };
 
   document.addEventListener('click', function (e) {
