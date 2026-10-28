@@ -18,6 +18,20 @@ img{max-width:100%;display:block}
 
 :root{--col:20.25em;--stripe-shift:6.75em}
 
+/* ===== TEKSTLINKS =====
+   Links in lopende tekst: onderstreept, in de kleur van de tekst eromheen.
+   Alleen links zonder eigen class, binnen alinea's, lijsten, koppen en
+   rich text. Knoppen, menu's, kaarten en footer hebben een class en
+   blijven ongemoeid. Links die later in een tekst worden gezet, krijgen
+   deze stijl vanzelf. */
+:is(p,li,blockquote,h1,h2,h3,h4,h5,h6,.w-richtext) a:not([class]){
+  color:inherit;
+  text-decoration:underline;
+  text-decoration-color:currentColor;
+  text-decoration-thickness:.06em;
+  text-underline-offset:.18em;
+}
+
 /* ===== SCROLLBALK: elementen maakt het script aan ===== */
 html{scrollbar-width:none;-ms-overflow-style:none}
 html::-webkit-scrollbar,
