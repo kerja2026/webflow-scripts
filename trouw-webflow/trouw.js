@@ -177,7 +177,8 @@
      uit tot het menu. Het paneel begint precies op de plek, in de maat en
      met de ronding van de knop, en groeit van daaruit naar zijn volle
      grootte. De pagina erachter wordt donkerder. Sluiten krimpt het paneel
-     terug naar de knop. Het groeien is een clip-path op het paneel.
+     terug naar de knop. Het groeien is een clip-path op het paneel. De
+     sluitknop staat op de plek en in de maat van de hamburgerknop.
 
      grow   = duur van het openen
      shrink = duur van het sluiten */
@@ -187,6 +188,7 @@
   var panel = menu ? menu.querySelector('.mobile-menu_panel') : null;
   var scrim = menu ? menu.querySelector('.mobile-menu_scrim') : null;
   var menuToggle = document.querySelector('.navbar_toggle');
+  var menuClose = panel ? panel.querySelector('.mobile-menu_close') : null;
   var menuOpen = false;
   var menuTl = null;
 
@@ -207,6 +209,20 @@
       menuRadius(menuToggle, Math.min(t.width, t.height)) + 'px)';
   };
 
+  /* De sluitknop komt op de plek en in de maat van de hamburgerknop. */
+  var placeClose = function () {
+    if (!menuClose || !menuToggle) return;
+    panel.scrollTop = 0;
+    var p = panel.getBoundingClientRect();
+    var t = menuToggle.getBoundingClientRect();
+    gsap.set(menuClose, {
+      top: t.top - p.top,
+      right: p.right - t.right,
+      width: t.width,
+      height: t.height
+    });
+  };
+
   var openMenu = function () {
     if (!menu || menuOpen) return;
     menuOpen = true;
@@ -214,6 +230,7 @@
     html.classList.add('menu-open');
     if (lenis) lenis.stop();
     if (menuTl) menuTl.kill();
+    placeClose();
 
     menuTl = gsap.timeline();
     menuTl.to(scrim, { opacity: 1, duration: reduced ? 0 : MENU.grow, ease: 'none' }, 0);
