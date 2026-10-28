@@ -23,13 +23,31 @@ img{max-width:100%;display:block}
    Alleen links zonder eigen class, binnen alinea's, lijsten, koppen en
    rich text. Knoppen, menu's, kaarten en footer hebben een class en
    blijven ongemoeid. Links die later in een tekst worden gezet, krijgen
-   deze stijl vanzelf. */
+   deze stijl vanzelf.
+   De onderstreping is een getekend lijntje (background), zodat hij kan
+   bewegen: bij hover verdwijnt hij één keer van links naar rechts en
+   verschijnt hij weer van links naar rechts.
+   --lw = dikte, --lt = duur van de hele beweging */
 :is(p,li,blockquote,h1,h2,h3,h4,h5,h6,.w-richtext) a:not([class]){
+  --lw:.06em;
+  --lt:.7s;
   color:inherit;
-  text-decoration:underline;
-  text-decoration-color:currentColor;
-  text-decoration-thickness:.06em;
-  text-underline-offset:.18em;
+  text-decoration:none;
+  background-image:linear-gradient(currentColor,currentColor);
+  background-repeat:no-repeat;
+  background-size:100% var(--lw);
+  background-position:0 100%;
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  :is(p,li,blockquote,h1,h2,h3,h4,h5,h6,.w-richtext) a:not([class]):hover{
+    animation:trouw-link-wipe var(--lt) cubic-bezier(.65,0,.35,1) 1;
+  }
+}
+@keyframes trouw-link-wipe{
+  0%{background-size:100% var(--lw);background-position:100% 100%}
+  50%{background-size:0% var(--lw);background-position:100% 100%}
+  50.001%{background-size:0% var(--lw);background-position:0 100%}
+  100%{background-size:100% var(--lw);background-position:0 100%}
 }
 
 /* ===== SCROLLBALK: elementen maakt het script aan ===== */

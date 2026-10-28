@@ -603,8 +603,11 @@
   if (specComp && specTrack && specTexts.length) {
     var specMM = gsap.matchMedia();
 
+    /* GSAP voert dit blok alleen uit als minstens één voorwaarde klopt;
+       wide en narrow dekken samen elk scherm. */
     specMM.add({
       wide: '(min-width: 768px)',
+      narrow: '(max-width: 767px)',
       reduce: '(prefers-reduced-motion: reduce)'
     }, function (ctx) {
       var wide = ctx.conditions.wide;
