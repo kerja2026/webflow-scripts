@@ -105,6 +105,73 @@
     window.addEventListener('scroll', function () { drawBar(window.scrollY); }, { passive: true });
   }
 
+  /* ---------- 3b. HEADER OVER GROEN ----------
+     Ligt het midden van de header boven een groene sectie of de footer,
+     dan krijgt de header is-inverse: logo en contactregel licht, de
+     lichte knop, en het menukader beige met groene tekst (kleuren in
+     trouw.css). Het script kijkt naar wat er echt zichtbaar is onder de
+     header, omdat de secties over elkaar heen schuiven.
+
+     green = de groene secties */
+  var INV = { green: '.section_praktijk, .section_contract, .section_feature, .footer_component' };
+
+  if (header) {
+    var invProbe = header.querySelector('.navbar_container') || header;
+    var invQueued = false;
+
+    var invCheck = function () {
+      invQueued = false;
+      var r = invProbe.getBoundingClientRect();
+      var y = r.top + r.height / 2;
+      var x = Math.max(4, Math.min(window.innerWidth - 4, r.left + 4));
+      var on = false;
+      var stack = document.elementsFromPoint(x, y);
+      for (var i = 0; i < stack.length; i++) {
+        var el = stack[i];
+        if (header.contains(el) || el === document.documentElement || el === document.body) continue;
+        var area = el.closest('section, .footer_component');
+        if (!area) continue;
+        on = !!area.closest(INV.green);
+        break;
+      }
+      header.classList.toggle('is-inverse', on);
+    };
+    var invQueue = function () {
+      if (invQueued) return;
+      invQueued = true;
+      requestAnimationFrame(invCheck);
+    };
+
+    if (lenis) lenis.on('scroll', invQueue);
+    window.addEventListener('scroll', invQueue, { passive: true });
+    window.addEventListener('resize', invQueue);
+    window.addEventListener('load', invQueue);
+    invQueue();
+  }
+
+  /* ---------- 3c. MENULINKS: ROL BIJ HOVER ----------
+     Zet de tekst van elke menulink twee keer in een clip, zodat de
+     tekst kan rollen zoals bij de knoppen (beweging in trouw.css). De
+     kopie is verborgen voor schermlezers. */
+  document.querySelectorAll('.navbar_link').forEach(function (link) {
+    if (link.querySelector('.navbar_link-clip')) return;
+    var text = link.textContent.trim();
+    if (!text) return;
+    var clip = document.createElement('span');
+    clip.className = 'navbar_link-clip';
+    var main = document.createElement('span');
+    main.className = 'navbar_link-roll';
+    main.textContent = text;
+    var copy = document.createElement('span');
+    copy.className = 'navbar_link-roll is-copy';
+    copy.setAttribute('aria-hidden', 'true');
+    copy.textContent = text;
+    clip.appendChild(main);
+    clip.appendChild(copy);
+    link.textContent = '';
+    link.appendChild(clip);
+  });
+
   /* ---------- 4. MOBIEL MENU ---------- */
   var MENU = { duration: 0.7, ease: 'power2.inOut', shift: 20 };
 
@@ -766,6 +833,43 @@
         }
       );
     });
+  }
+
+  /* ---------- 10a. GROTE FOTO OP HOME ----------
+     De grote foto (.home-hero_media) opent zich bij het scrollen van
+     75% naar 100%, vanuit het midden van de onderrand: de onderkant
+     staat vast, de foto groeit naar boven en naar beide kanten. Het kader
+     opent via clip-path, zodat de hoeken altijd 1,25em rond blijven en
+     de pagina eronder niet verschuift. Loopt mee met het scrollen.
+
+     from   = beginformaat (0.75 = 75%)
+     end    = wanneer hij 100% is: als de bovenkant van de foto dit punt
+              in het scherm bereikt
+     radius = afronding van de hoeken, in em */
+  var HERO = { from: 0.75, end: 'top 15%', radius: 1.25 };
+  var heroMedia = document.querySelector('.home-hero_media');
+
+  if (heroMedia && !reduced) {
+    var heroClip = function (p) {
+      var size = HERO.from + (1 - HERO.from) * p;
+      var top = (1 - size) * 100;
+      var side = top / 2;
+      return 'inset(' + top + '% ' + side + '% 0% ' + side + '% round ' + HERO.radius + 'em)';
+    };
+    gsap.fromTo(heroMedia,
+      { clipPath: heroClip(0) },
+      {
+        clipPath: heroClip(1),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: heroMedia,
+          start: 0,
+          end: HERO.end,
+          scrub: true,
+          invalidateOnRefresh: true
+        }
+      }
+    );
   }
 
   /* ---------- 10. PARALLAX OP BEELDEN ---------- */

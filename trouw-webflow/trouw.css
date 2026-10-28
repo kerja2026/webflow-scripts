@@ -77,33 +77,19 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .navbar_component.is-up .navbar_logo{transform:scale(1)}
 
 /* ===== HOOFDNAVIGATIE: hover =====
-   Onder een menulink tekent een dunne lijn zich van links naar
-   rechts, en de tekst wordt iets lichter. Bij het verlaten trekt de
-   lijn zich terug naar rechts. De lijn is een ::after en bestaat dus
-   niet in de Designer; .navbar_link staat in het Style-panel op
-   position relative zodat de lijn eraan vastzit.
-   Kleur, dikte en afstand onder de tekst staan hieronder. */
-.navbar_link{transition:opacity .35s ease}
-.navbar_link::after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0.1em;
-  height:2px;
-  background-color:#415442;
-  transform:scaleX(0);
-  transform-origin:right center;
-  transition:transform .55s cubic-bezier(.65,0,.35,1);
-  pointer-events:none;
+   Dezelfde rol als bij de knoppen: de tekst schuift één hoogte omlaag en
+   krimpt naar 85%, terwijl een kopie van boven op volle grootte binnen-
+   komt, in 0,23 seconde. trouw.js zet de tekst van elke menulink daarvoor
+   twee keer in een .navbar_link-clip (de kopie met is-copy). */
+.navbar_link-clip{position:relative;display:inline-block;overflow:hidden;vertical-align:top;padding:0 .15em;margin:0 -.15em}
+.navbar_link-roll{display:block;transition:transform .23s cubic-bezier(.45,0,.55,1)}
+.navbar_link-roll.is-copy{position:absolute;left:0;right:0;top:0;padding:0 .15em;transform:translateY(-100%) scale(.85)}
+@media (hover:hover){
+  .navbar_link:hover .navbar_link-roll{transform:translateY(100%) scale(.85)}
+  .navbar_link:hover .navbar_link-roll.is-copy{transform:none}
 }
-.navbar_link:hover{opacity:.65}
-.navbar_link:hover::after{
-  transform:scaleX(1);
-  transform-origin:left center;
-}
-@media (hover:none){
-  .navbar_link::after{display:none}
+@media (prefers-reduced-motion:reduce){
+  .navbar_link-roll{transition:none}
 }
 
 /* ===== SPECIALISATIES-MENU =====
@@ -123,17 +109,44 @@ html.mega-open{overflow:hidden}
 
 .navbar_link,
 .navbar_topbar-link{transition:color .4s ease,opacity .35s ease,text-shadow .4s ease}
-.navbar_link::after{transition:transform .55s cubic-bezier(.65,0,.35,1),background-color .4s ease}
 .navbar_logo img{transition:filter .4s ease}
 .navbar_cta > .button_dark,
 .navbar_cta-alt{transition:opacity .4s ease}
+
+/* ===== HEADER OVER GROEN =====
+   .is-inverse (gezet door trouw.js) als de header boven een groene sectie
+   of de footer ligt: logo en contactregel licht, de lichte knop, en het
+   menukader beige met groene tekst. Het beige verloop ligt op een eigen
+   laag (::before), zodat het kan in- en uitfaden. Bij een open
+   uitklapmenu heeft dat voorrang. */
+.navbar_menu{position:relative;isolation:isolate}
+.navbar_menu::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  z-index:-1;
+  border-radius:inherit;
+  background-image:linear-gradient(115deg,#f1eae0 0%,#e3d8c8 100%);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .4s ease;
+}
+.navbar_component.is-inverse:not(.is-mega) .navbar_menu::before{opacity:1}
+.navbar_component.is-inverse:not(.is-mega) .navbar_link{color:#415442}
+.navbar_component.is-inverse .navbar_topbar-link{color:#f1eae0}
+.navbar_component.is-inverse .navbar_logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
+.navbar_component.is-inverse .navbar_cta > .button_dark{opacity:0;pointer-events:none}
+.navbar_component.is-inverse .navbar_cta-alt{opacity:1;pointer-events:auto}
+.navbar_toggle,
+.navbar_toggle-line{transition:background-color .4s ease}
+.navbar_component.is-inverse .navbar_toggle{background-color:#f1eae0}
+.navbar_component.is-inverse .navbar_toggle-line{background-color:#415442}
 
 /* Tekst op de kaarten: licht, op het groene paneel. */
 .mega-menu_card{color:#f1eae0}
 
 .navbar_component.is-mega-light .navbar_link,
 .navbar_component.is-mega-light .navbar_topbar-link{color:#f1eae0}
-.navbar_component.is-mega-light .navbar_link::after{background-color:#f1eae0}
 .navbar_component.is-mega-light .navbar_link.is-mega{text-shadow:0 0 .55px currentColor,0 0 .55px currentColor}
 .navbar_component.is-mega-light .navbar_logo img{filter:brightness(0) saturate(100%) invert(95%) sepia(7%) saturate(520%) hue-rotate(324deg) brightness(101%)}
 .navbar_component.is-mega-light .navbar_cta > .button_dark{opacity:0;pointer-events:none}
