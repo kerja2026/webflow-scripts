@@ -149,27 +149,32 @@
     invQueue();
   }
 
-  /* ---------- 3c. MENULINKS: ROL BIJ HOVER ----------
-     Zet de tekst van elke menulink twee keer in een clip, zodat de
+  /* ---------- 3c. TEKSTROL BIJ HOVER ----------
+     Zet de tekst van elk element in ROLL twee keer in een clip, zodat de
      tekst kan rollen zoals bij de knoppen (beweging in trouw.css). De
-     kopie is verborgen voor schermlezers. */
-  document.querySelectorAll('.navbar_link').forEach(function (link) {
-    if (link.querySelector('.navbar_link-clip')) return;
-    var text = link.textContent.trim();
+     kopie is verborgen voor schermlezers. Voeg je hier een class toe,
+     zet hem dan ook in de hover-regel in trouw.css (Tekstrol bij hover).
+
+     targets = wat er rolt */
+  var ROLL = { targets: '.navbar_link, .rates_tag' };
+
+  document.querySelectorAll(ROLL.targets).forEach(function (el) {
+    if (el.querySelector('.text-roll_clip')) return;
+    var text = el.textContent.trim();
     if (!text) return;
     var clip = document.createElement('span');
-    clip.className = 'navbar_link-clip';
+    clip.className = 'text-roll_clip';
     var main = document.createElement('span');
-    main.className = 'navbar_link-roll';
+    main.className = 'text-roll_item';
     main.textContent = text;
     var copy = document.createElement('span');
-    copy.className = 'navbar_link-roll is-copy';
+    copy.className = 'text-roll_item is-copy';
     copy.setAttribute('aria-hidden', 'true');
     copy.textContent = text;
     clip.appendChild(main);
     clip.appendChild(copy);
-    link.textContent = '';
-    link.appendChild(clip);
+    el.textContent = '';
+    el.appendChild(clip);
   });
 
   /* ---------- 4. MOBIEL MENU ----------

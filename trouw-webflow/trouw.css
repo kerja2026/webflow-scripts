@@ -108,20 +108,22 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 .navbar_component.is-stuck .navbar_logo{transform:scale(.85)}
 .navbar_component.is-up .navbar_logo{transform:scale(1)}
 
-/* ===== HOOFDNAVIGATIE: hover =====
+/* ===== TEKSTROL BIJ HOVER =====
    Dezelfde rol als bij de knoppen: de tekst schuift één hoogte omlaag en
    krimpt naar 85%, terwijl een kopie van boven op volle grootte binnen-
-   komt, in 0,23 seconde. trouw.js zet de tekst van elke menulink daarvoor
-   twee keer in een .navbar_link-clip (de kopie met is-copy). */
-.navbar_link-clip{position:relative;display:inline-block;overflow:hidden;vertical-align:top;padding:0 .15em;margin:0 -.15em}
-.navbar_link-roll{display:block;transition:transform .23s cubic-bezier(.45,0,.55,1)}
-.navbar_link-roll.is-copy{position:absolute;left:0;right:0;top:0;padding:0 .15em;transform:translateY(-100%) scale(.85)}
+   komt, in 0,23 seconde. trouw.js zet de tekst van elk element in ROLL
+   daarvoor twee keer in een .text-roll_clip (de kopie met is-copy).
+   Nu: het hoofdmenu (.navbar_link) en de verzekeraars op Tarieven
+   (.rates_tag). */
+.text-roll_clip{position:relative;display:inline-block;overflow:hidden;vertical-align:top;padding:0 .15em;margin:0 -.15em}
+.text-roll_item{display:block;transition:transform .23s cubic-bezier(.45,0,.55,1)}
+.text-roll_item.is-copy{position:absolute;left:0;right:0;top:0;padding:0 .15em;transform:translateY(-100%) scale(.85)}
 @media (hover:hover){
-  .navbar_link:hover .navbar_link-roll{transform:translateY(100%) scale(.85)}
-  .navbar_link:hover .navbar_link-roll.is-copy{transform:none}
+  :is(.navbar_link,.rates_tag):hover .text-roll_item{transform:translateY(100%) scale(.85)}
+  :is(.navbar_link,.rates_tag):hover .text-roll_item.is-copy{transform:none}
 }
 @media (prefers-reduced-motion:reduce){
-  .navbar_link-roll{transition:none}
+  .text-roll_item{transition:none}
 }
 
 /* ===== SPECIALISATIES-MENU =====
