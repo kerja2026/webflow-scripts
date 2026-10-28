@@ -908,7 +908,7 @@
     });
   }
 
-  /* ---------- 11. FOOTER ----------
+  /* ---------- 11. FOOTER -----------
      De footer (.footer_component) ligt vast onderin het scherm. De pagina krijgt
      onderaan net zoveel ruimte als de footer hoog is. Alleen de
      inhoud van de footer schuift licht mee. */
