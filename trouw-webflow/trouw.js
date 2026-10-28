@@ -172,13 +172,31 @@
     link.appendChild(clip);
   });
 
-  /* ---------- 4. MOBIEL MENU ---------- */
-  var MENU = { duration: 0.7, ease: 'power2.inOut', shift: 20 };
+  /* ---------- 4. MOBIEL MENU ----------
+     Het paneel klapt van boven naar beneden open: eerst verschijnt een
+     strook met de sluitknop (op de plek van de hamburgerknop), daarna
+     groeit die strook naar beneden uit tot het hele paneel. De pagina
+     erachter wordt donkerder. Sluiten gaat omgekeerd. Het openklappen is
+     een clip-path op het paneel.
+
+     strip  = hoogte van de strook, in em van het paneel
+     fade   = duur van het verschijnen van de strook
+     grow   = duur van het openklappen
+     shrink = duur van het dichtklappen */
+  var MENU = { strip: 4.875, fade: 0.2, grow: 0.6, shrink: 0.45 };
 
   var menu = document.querySelector('.mobile-menu_component');
   var panel = menu ? menu.querySelector('.mobile-menu_panel') : null;
   var scrim = menu ? menu.querySelector('.mobile-menu_scrim') : null;
   var menuOpen = false;
+  var menuTl = null;
+
+  var menuClip = function (open) {
+    var cs = getComputedStyle(panel);
+    var r = parseFloat(cs.borderTopLeftRadius) || 0;
+    var cut = open ? 0 : Math.max(0, panel.offsetHeight - MENU.strip * parseFloat(cs.fontSize));
+    return 'inset(0px 0px ' + cut + 'px 0px round ' + r + 'px)';
+  };
 
   var openMenu = function () {
     if (!menu || menuOpen) return;
@@ -186,28 +204,31 @@
     menu.classList.add('is-open');
     html.classList.add('menu-open');
     if (lenis) lenis.stop();
+    if (menuTl) menuTl.kill();
 
-    gsap.set(menu, { '--p': 0 });
-    gsap.to(scrim, { opacity: 1, duration: MENU.duration * .6, ease: 'none' });
-    gsap.fromTo(panel, { x: -MENU.shift }, { x: 0, duration: MENU.duration, ease: MENU.ease });
-    gsap.to(menu, { '--p': 1, duration: MENU.duration, ease: MENU.ease });
+    gsap.set(panel, { clipPath: menuClip(false), autoAlpha: 0 });
+    menuTl = gsap.timeline();
+    menuTl.to(scrim, { opacity: 1, duration: reduced ? 0 : MENU.fade + MENU.grow * .6, ease: 'none' }, 0);
+    menuTl.to(panel, { autoAlpha: 1, duration: reduced ? 0 : MENU.fade, ease: 'power1.out' }, 0);
+    menuTl.fromTo(panel, { clipPath: menuClip(false) }, { clipPath: menuClip(true), duration: reduced ? 0 : MENU.grow, ease: 'power3.out', immediateRender: false }, reduced ? 0 : MENU.fade);
   };
 
   var closeMenu = function () {
     if (!menu || !menuOpen) return;
     menuOpen = false;
-    gsap.to(scrim, { opacity: 0, duration: MENU.duration * .6, ease: 'none' });
-    gsap.to(panel, { x: -MENU.shift, duration: MENU.duration, ease: MENU.ease });
-    gsap.to(menu, {
-      '--p': 0,
-      duration: MENU.duration,
-      ease: MENU.ease,
+    if (menuTl) menuTl.kill();
+
+    menuTl = gsap.timeline({
       onComplete: function () {
         menu.classList.remove('is-open');
         html.classList.remove('menu-open');
+        gsap.set(panel, { clearProps: 'clipPath,opacity,visibility' });
         if (lenis) lenis.start();
       }
     });
+    menuTl.fromTo(panel, { clipPath: menuClip(true) }, { clipPath: menuClip(false), duration: reduced ? 0 : MENU.shrink, ease: 'power3.inOut' }, 0);
+    menuTl.to(scrim, { opacity: 0, duration: reduced ? 0 : MENU.shrink + MENU.fade, ease: 'none' }, 0);
+    menuTl.to(panel, { autoAlpha: 0, duration: reduced ? 0 : MENU.fade, ease: 'power1.in' }, reduced ? 0 : MENU.shrink);
   };
 
   document.addEventListener('click', function (e) {
