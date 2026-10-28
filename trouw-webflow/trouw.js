@@ -812,6 +812,43 @@
     });
   }
 
+  /* ---------- 10a. GROTE FOTO OP HOME ----------
+     De grote foto (.home-hero_media) opent zich bij het scrollen van
+     75% naar 100%, vanuit het midden van de onderrand: de onderkant
+     staat vast, de foto groeit naar boven en naar beide kanten. Het kader
+     opent via clip-path, zodat de hoeken altijd 1,25em rond blijven en
+     de pagina eronder niet verschuift. Loopt mee met het scrollen.
+
+     from   = beginformaat (0.75 = 75%)
+     end    = wanneer hij 100% is: als de bovenkant van de foto dit punt
+              in het scherm bereikt
+     radius = afronding van de hoeken, in em */
+  var HERO = { from: 0.75, end: 'top 15%', radius: 1.25 };
+  var heroMedia = document.querySelector('.home-hero_media');
+
+  if (heroMedia && !reduced) {
+    var heroClip = function (p) {
+      var size = HERO.from + (1 - HERO.from) * p;
+      var top = (1 - size) * 100;
+      var side = top / 2;
+      return 'inset(' + top + '% ' + side + '% 0% ' + side + '% round ' + HERO.radius + 'em)';
+    };
+    gsap.fromTo(heroMedia,
+      { clipPath: heroClip(0) },
+      {
+        clipPath: heroClip(1),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: heroMedia,
+          start: 0,
+          end: HERO.end,
+          scrub: true,
+          invalidateOnRefresh: true
+        }
+      }
+    );
+  }
+
   /* ---------- 10. PARALLAX OP BEELDEN ---------- */
   /* shift = beweging in procenten van de fotohoogte, naar boven en naar
      beneden. zoom = vergroting in het kader. Houd shift onder de helft
