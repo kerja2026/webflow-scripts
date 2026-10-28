@@ -173,12 +173,14 @@
   });
 
   /* ---------- 4. MOBIEL MENU ----------
-     Net als het uitklapmenu op desktop: de groene hamburgerknop groeit
-     uit tot het menu. Het paneel begint precies op de plek, in de maat en
-     met de ronding van de knop, en groeit van daaruit naar zijn volle
-     grootte. De pagina erachter wordt donkerder. Sluiten krimpt het paneel
-     terug naar de knop. Het groeien is een clip-path op het paneel. De
-     sluitknop staat op de plek en in de maat van de hamburgerknop.
+     De hamburgerknop groeit uit tot het menu, net als het uitklapmenu op
+     desktop. Het paneel staat met zijn rechterbovenhoek op die van de
+     knop, begint in de maat en ronding van de knop, en groeit vanuit die
+     hoek naar links en naar beneden. Tegelijk veranderen de drie lijnen
+     van de knop in een kruisje: de bovenste en onderste draaien naar
+     elkaar toe, de middelste verdwijnt. De pagina erachter wordt
+     donkerder. Sluiten gaat omgekeerd. Het groeien is een clip-path op het
+     paneel; de lijnen zitten in .mobile-menu_close, op de plek van de knop.
 
      grow   = duur van het openen
      shrink = duur van het sluiten */
@@ -197,7 +199,18 @@
     return v.indexOf('%') > -1 ? parseFloat(v) / 100 * size : (parseFloat(v) || 0);
   };
 
-  /* open: het hele paneel. dicht: de plek en maat van de hamburgerknop */
+  /* Paneel met zijn rechterbovenhoek op die van de knop; de sluitknop
+     op de plek en in de maat van de knop. */
+  var placeMenu = function () {
+    if (!menuToggle) return;
+    var c = menu.getBoundingClientRect();
+    var t = menuToggle.getBoundingClientRect();
+    gsap.set(panel, { top: t.top - c.top, right: c.right - t.right });
+    panel.scrollTop = 0;
+    if (menuClose) gsap.set(menuClose, { top: 0, right: 0, width: t.width, height: t.height });
+  };
+
+  /* open: het hele paneel. dicht: de knop, in de rechterbovenhoek */
   var menuClip = function (open) {
     if (open || !menuToggle) {
       return 'inset(0px 0px 0px 0px round ' + menuRadius(panel, panel.offsetWidth) + 'px)';
@@ -209,18 +222,34 @@
       menuRadius(menuToggle, Math.min(t.width, t.height)) + 'px)';
   };
 
-  /* De sluitknop komt op de plek en in de maat van de hamburgerknop. */
-  var placeClose = function () {
-    if (!menuClose || !menuToggle) return;
-    panel.scrollTop = 0;
-    var p = panel.getBoundingClientRect();
-    var t = menuToggle.getBoundingClientRect();
-    gsap.set(menuClose, {
-      top: t.top - p.top,
-      right: p.right - t.right,
-      width: t.width,
-      height: t.height
-    });
+  /* De lijnen: in hamburgerstand op de hoogte van de lijnen in de knop,
+     in kruisstand samen in het midden, gedraaid. */
+  var menuLines = function () {
+    if (!menuClose || !menuToggle) return null;
+    var up = menuClose.querySelector('.mobile-menu_close-line.is-up');
+    var mid = menuClose.querySelector('.mobile-menu_close-line.is-mid');
+    var down = menuClose.querySelector('.mobile-menu_close-line.is-down');
+    var tl = menuToggle.querySelectorAll('.navbar_toggle-line');
+    if (!up || !down || tl.length < 3) return null;
+    var tr = menuToggle.getBoundingClientRect();
+    var mid0 = tr.top + tr.height / 2;
+    var dy = function (el) { var r = el.getBoundingClientRect(); return r.top + r.height / 2 - mid0; };
+    return { up: up, mid: mid, down: down, dyUp: dy(tl[0]), dyDown: dy(tl[tl.length - 1]) };
+  };
+
+  var linesBurger = function (L) {
+    return [
+      [L.up, { y: L.dyUp, rotation: 0 }],
+      [L.down, { y: L.dyDown, rotation: 0 }],
+      [L.mid, { opacity: 1 }]
+    ];
+  };
+  var linesCross = function (L) {
+    return [
+      [L.up, { y: 0, rotation: 45 }],
+      [L.down, { y: 0, rotation: -45 }],
+      [L.mid, { opacity: 0 }]
+    ];
   };
 
   var openMenu = function () {
@@ -230,13 +259,21 @@
     html.classList.add('menu-open');
     if (lenis) lenis.stop();
     if (menuTl) menuTl.kill();
-    placeClose();
+    placeMenu();
 
-    menuTl = gsap.timeline();
-    menuTl.to(scrim, { opacity: 1, duration: reduced ? 0 : MENU.grow, ease: 'none' }, 0);
-    menuTl.fromTo(panel,
-      { clipPath: menuClip(false) },
-      { clipPath: menuClip(true), duration: reduced ? 0 : MENU.grow, ease: 'power3.inOut' }, 0);
+    var d = reduced ? 0 : MENU.grow;
+    menuTl = gsap.timeline({ defaults: { ease: 'power3.inOut' } });
+    menuTl.to(scrim, { opacity: 1, duration: d, ease: 'none' }, 0);
+    menuTl.fromTo(panel, { clipPath: menuClip(false) }, { clipPath: menuClip(true), duration: d }, 0);
+
+    var L = menuLines();
+    if (L) {
+      var from = linesBurger(L), to = linesCross(L);
+      for (var i = 0; i < from.length; i++) {
+        if (!from[i][0]) continue;
+        menuTl.fromTo(from[i][0], from[i][1], Object.assign({ duration: d }, to[i][1]), 0);
+      }
+    }
   };
 
   var closeMenu = function () {
@@ -244,7 +281,9 @@
     menuOpen = false;
     if (menuTl) menuTl.kill();
 
+    var d = reduced ? 0 : MENU.shrink;
     menuTl = gsap.timeline({
+      defaults: { ease: 'power3.inOut' },
       onComplete: function () {
         menu.classList.remove('is-open');
         html.classList.remove('menu-open');
@@ -252,10 +291,17 @@
         if (lenis) lenis.start();
       }
     });
-    menuTl.fromTo(panel,
-      { clipPath: menuClip(true) },
-      { clipPath: menuClip(false), duration: reduced ? 0 : MENU.shrink, ease: 'power3.inOut' }, 0);
-    menuTl.to(scrim, { opacity: 0, duration: reduced ? 0 : MENU.shrink, ease: 'none' }, 0);
+    menuTl.fromTo(panel, { clipPath: menuClip(true) }, { clipPath: menuClip(false), duration: d }, 0);
+    menuTl.to(scrim, { opacity: 0, duration: d, ease: 'none' }, 0);
+
+    var L = menuLines();
+    if (L) {
+      var to = linesBurger(L);
+      for (var i = 0; i < to.length; i++) {
+        if (!to[i][0]) continue;
+        menuTl.to(to[i][0], Object.assign({ duration: d }, to[i][1]), 0);
+      }
+    }
   };
 
   document.addEventListener('click', function (e) {
