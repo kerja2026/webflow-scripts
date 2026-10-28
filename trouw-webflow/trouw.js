@@ -193,6 +193,23 @@
   var menuClose = panel ? panel.querySelector('.mobile-menu_close') : null;
   var menuOpen = false;
   var menuTl = null;
+  var menuKnop = null;
+
+  /* Plek van de knop en zijn lijnen, gemeten vóór het blokkeren van het
+     scrollen; openen en sluiten rekenen hiermee. */
+  var measureToggle = function () {
+    if (!menuToggle) return null;
+    var r = menuToggle.getBoundingClientRect();
+    var mid0 = r.top + r.height / 2;
+    var lines = menuToggle.querySelectorAll('.navbar_toggle-line');
+    var dy = function (el) { var q = el.getBoundingClientRect(); return q.top + q.height / 2 - mid0; };
+    return {
+      top: r.top, right: r.right, bottom: r.bottom, left: r.left, width: r.width, height: r.height,
+      radius: menuRadius(menuToggle, Math.min(r.width, r.height)),
+      dyUp: lines.length >= 3 ? dy(lines[0]) : 0,
+      dyDown: lines.length >= 3 ? dy(lines[lines.length - 1]) : 0
+    };
+  };
 
   var menuRadius = function (el, size) {
     var v = getComputedStyle(el).borderTopLeftRadius;
@@ -202,9 +219,9 @@
   /* Paneel met zijn rechterbovenhoek op die van de knop; de sluitknop
      op de plek en in de maat van de knop. */
   var placeMenu = function () {
-    if (!menuToggle) return;
+    if (!menuKnop) return;
     var c = menu.getBoundingClientRect();
-    var t = menuToggle.getBoundingClientRect();
+    var t = menuKnop;
     gsap.set(panel, { top: t.top - c.top, right: c.right - t.right });
     panel.scrollTop = 0;
     if (menuClose) gsap.set(menuClose, { top: 0, right: 0, width: t.width, height: t.height });
@@ -212,29 +229,24 @@
 
   /* open: het hele paneel. dicht: de knop, in de rechterbovenhoek */
   var menuClip = function (open) {
-    if (open || !menuToggle) {
+    if (open || !menuKnop) {
       return 'inset(0px 0px 0px 0px round ' + menuRadius(panel, panel.offsetWidth) + 'px)';
     }
     var p = panel.getBoundingClientRect();
-    var t = menuToggle.getBoundingClientRect();
+    var t = menuKnop;
     return 'inset(' + (t.top - p.top) + 'px ' + (p.right - t.right) + 'px ' +
-      (p.bottom - t.bottom) + 'px ' + (t.left - p.left) + 'px round ' +
-      menuRadius(menuToggle, Math.min(t.width, t.height)) + 'px)';
+      (p.bottom - t.bottom) + 'px ' + (t.left - p.left) + 'px round ' + t.radius + 'px)';
   };
 
   /* De lijnen: in hamburgerstand op de hoogte van de lijnen in de knop,
      in kruisstand samen in het midden, gedraaid. */
   var menuLines = function () {
-    if (!menuClose || !menuToggle) return null;
+    if (!menuClose || !menuKnop) return null;
     var up = menuClose.querySelector('.mobile-menu_close-line.is-up');
     var mid = menuClose.querySelector('.mobile-menu_close-line.is-mid');
     var down = menuClose.querySelector('.mobile-menu_close-line.is-down');
-    var tl = menuToggle.querySelectorAll('.navbar_toggle-line');
-    if (!up || !down || tl.length < 3) return null;
-    var tr = menuToggle.getBoundingClientRect();
-    var mid0 = tr.top + tr.height / 2;
-    var dy = function (el) { var r = el.getBoundingClientRect(); return r.top + r.height / 2 - mid0; };
-    return { up: up, mid: mid, down: down, dyUp: dy(tl[0]), dyDown: dy(tl[tl.length - 1]) };
+    if (!up || !down) return null;
+    return { up: up, mid: mid, down: down, dyUp: menuKnop.dyUp, dyDown: menuKnop.dyDown };
   };
 
   var linesBurger = function (L) {
@@ -255,6 +267,7 @@
   var openMenu = function () {
     if (!menu || menuOpen) return;
     menuOpen = true;
+    menuKnop = measureToggle();
     menu.classList.add('is-open');
     html.classList.add('menu-open');
     if (lenis) lenis.stop();

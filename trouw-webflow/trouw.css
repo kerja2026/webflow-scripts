@@ -273,7 +273,9 @@ html.lenis,html.lenis body{height:auto}
 .lenis.lenis-smooth{scroll-behavior:auto!important}
 .lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
 .lenis.lenis-stopped{overflow:hidden}
-html.menu-open,html.menu-open body{overflow:hidden}
+/* Alleen html: overflow op body maakt van body een eigen scrollvlak, en
+   dan springt de plakkende header terug naar de bovenkant van de pagina. */
+html.menu-open{overflow:hidden}
 
 @media (prefers-reduced-motion:reduce){
   .navbar_component{transition:none}
