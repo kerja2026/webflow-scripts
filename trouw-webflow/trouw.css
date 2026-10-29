@@ -8,7 +8,7 @@
    De Osmo-schaling staat in het Style-panel: font-size op de body per
    breakpoint, max-width op .padding-global. Hier alleen wat het
    Style-panel niet kan. */
-html{background:#faf8f4}
+html{background:#f7efe2}
 html,body{margin:0;padding:0;width:100%;max-width:100%}
 body{overflow-wrap:break-word;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 button,input,select,textarea{font-family:inherit}
