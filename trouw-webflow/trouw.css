@@ -262,13 +262,9 @@ html.mega-open{overflow:hidden}
    Alleen bij het eerste bezoek in een sessie (is-preloading, gezet door
    trouw-head.js). De kolommen van de paginatransitie dekken de pagina
    af; daarboven beeldmerk, fotovak en woordmerk (.transition_loader,
-   opmaak in het Style-panel, daar op display none).
-   Bewuste uitzondering: het beige van de kolommen staat hier en niet in
-   het Style-panel, omdat het alleen tijdens de preloader geldt en er
-   vanaf de eerste beeldopbouw moet zijn. Zelfde gradient als
-   .background_stripes; wijzigt die, pas deze dan mee aan. */
+   opmaak in het Style-panel, daar op display none). */
 .is-preloading .transition_component{pointer-events:auto}
-.is-preloading .transition_column{--p:1;background-image:linear-gradient(156.6deg,#dbc7ad 9.22%,#fcf0dd 34.73%)}
+.is-preloading .transition_column{--p:1}
 .is-preloading .transition_loader{display:flex}
 /* Onzichtbaar tot trouw.js het overneemt, zodat het open fotovak niet
    even te zien is voordat het script draait. */

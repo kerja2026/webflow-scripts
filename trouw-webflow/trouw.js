@@ -568,7 +568,7 @@
 
   /* ---------- 5b. PRELOADER ----------
      Bij het eerste bezoek in een sessie dekken de kolommen de pagina af,
-     in beige (trouw.css). In het midden staat het logo, in twee delen:
+     net als bij de paginatransitie. In het midden staat het logo, in twee delen:
      beeldmerk (.transition_mark) en woordmerk (.transition_word).
      Daartussen gaat een fotovak open (.transition_media) waarin de foto's
      van de behandelingen elkaar snel afwisselen, tot de site geladen is.
@@ -576,14 +576,17 @@
      (.mega-menu_card), in de kleinste maat; een foto doet pas mee als
      hij binnen is. De eerste wordt gemaakt van het voorbeeldbeeld in het
      vak (.transition_media-img), de rest zijn kopieën daarvan.
-     Is alles er (en zijn er minstens PL.min seconden voorbij): het vak
-     gaat dicht, beeldmerk en woordmerk schuiven samen tot het logo,
-     en de kolommen gaan open zoals bij een paginatransitie.
+     Elke foto komt minstens één keer voorbij; duurt het laden langer,
+     dan begint de reeks opnieuw. Is alles er, zijn alle foto's geweest
+     en zijn er minstens PL.min seconden voorbij: het vak gaat dicht,
+     beeldmerk en woordmerk schuiven samen tot het logo, en de kolommen
+     gaan open zoals bij een paginatransitie.
      Maten van vak, logo en afstanden staan in het Style-panel; het
      script meet het open vak en laat het vanaf nul opengaan.
 
      min     = minimale duur in seconden
-     maxWait = langer wachten op het laden dan dit doet de preloader niet
+     maxWait = langer wachten op het laden (en op trage foto's) dan dit
+               doet de preloader niet
      swap    = hoe lang elke foto blijft staan
      appear  = logo verschijnt
      open    = fotovak gaat open
@@ -591,7 +594,7 @@
      hold    = hoe lang het hele logo blijft staan
      fade    = logo vervaagt terwijl de kolommen opengaan */
   var PL = {
-    min: 1.5,
+    min: 3,
     maxWait: 6,
     swap: 0.3,
     appear: 0.5,
@@ -618,8 +621,8 @@
       });
 
       /* Kolommen open, logo weg. is-preloading blijft staan tot de
-         kolommen weg zijn, anders verspringt het beige naar de kleur van
-         de paginatransitie. */
+         kolommen weg zijn, anders verdwijnt het logo (display none)
+         voordat het is vervaagd. */
       var reveal = function () {
         overlay.style.pointerEvents = 'none';
         var done = function () {
@@ -679,11 +682,24 @@
       var opened = false;
       var timer = null;
 
+      /* Klaar als elke foto die laadt (mislukte tellen niet) zijn volle
+         beurt heeft gehad */
+      var expected = urls.length;
+      var seen = [];
+      var allSeen;
+      var allShown = new Promise(function (done) {
+        allSeen = done;
+        setTimeout(done, PL.maxWait * 1000);
+      });
+      var checkSeen = function () { if (seen.length >= expected) allSeen(); };
+
       var show = function (i) {
         shots.forEach(function (shot, n) { shot.style.visibility = n === i ? 'visible' : 'hidden'; });
         current = i;
+        if (seen.indexOf(shots[i]) === -1) seen.push(shots[i]);
       };
       var next = function () {
+        checkSeen();
         if (shots.length) show((current + 1) % shots.length);
         timer = gsap.delayedCall(PL.swap, next);
       };
@@ -708,13 +724,16 @@
           open();
         };
         shot.addEventListener('load', add, { once: true });
+        shot.addEventListener('error', function () { expected--; if (!opened) checkSeen(); }, { once: true });
         shot.src = url;
         if (shot.complete && shot.naturalWidth) { shot.removeEventListener('load', add); add(); }
       });
 
       var minTime = new Promise(function (done) { setTimeout(done, PL.min * 1000); });
 
-      Promise.all([siteLoaded, minTime]).then(function () {
+      if (!urls.length) allSeen();
+
+      Promise.all([siteLoaded, minTime, allShown]).then(function () {
         if (timer) timer.kill();
         if (!opened) { gsap.delayedCall(PL.hold, reveal); return; }
         gsap.to(media, {
