@@ -568,84 +568,165 @@
 
   /* ---------- 5b. PRELOADER ----------
      Bij het eerste bezoek in een sessie dekken de kolommen de pagina af,
-     met in het midden het lichte logo en daaronder het percentage. Het
-     percentage volgt wat er echt binnenkomt: de lettertypen en de foto's
-     die direct laden (lazy foto's verder op de pagina tellen niet mee).
-     Het loopt vloeiend op, blijft onder de 90% tot alles er is, en duurt
-     minimaal PL.min seconden. Daarna: logo en percentage vervagen, en de
-     kolommen verdwijnen zoals bij binnenkomst na een paginatransitie.
+     in beige (trouw.css). In het midden staat het logo, in twee delen:
+     beeldmerk (.transition_mark) en woordmerk (.transition_word).
+     Daartussen gaat een fotovak open (.transition_media) waarin de foto's
+     van de behandelingen elkaar snel afwisselen, tot de site geladen is.
+     De foto's komen uit de kaarten van het uitklapmenu
+     (.mega-menu_card), in de kleinste maat; een foto doet pas mee als
+     hij binnen is. De eerste wordt gemaakt van het voorbeeldbeeld in het
+     vak (.transition_media-img), de rest zijn kopieën daarvan.
+     Is alles er (en zijn er minstens PL.min seconden voorbij): het vak
+     gaat dicht, beeldmerk en woordmerk schuiven samen tot het logo,
+     en de kolommen gaan open zoals bij een paginatransitie.
+     Maten van vak, logo en afstanden staan in het Style-panel; het
+     script meet het open vak en laat het vanaf nul opengaan.
 
-     min    = minimale duur in seconden
-     hold   = hoe lang 100% blijft staan
-     fade   = vervagen van logo en percentage
-     follow = hoe snel het getal de werkelijke voortgang volgt (0 tot 1) */
-  var PL = { min: 1.2, hold: 0.3, fade: 0.4, follow: 0.08 };
+     min     = minimale duur in seconden
+     maxWait = langer wachten op het laden dan dit doet de preloader niet
+     swap    = hoe lang elke foto blijft staan
+     appear  = logo verschijnt
+     open    = fotovak gaat open
+     close   = fotovak gaat dicht, logo komt samen
+     hold    = hoe lang het hele logo blijft staan
+     fade    = logo vervaagt terwijl de kolommen opengaan */
+  var PL = {
+    min: 1.5,
+    maxWait: 6,
+    swap: 0.3,
+    appear: 0.5,
+    open: 0.7,
+    close: 0.6,
+    hold: 0.25,
+    fade: 0.4,
+    ease: 'power3.inOut'
+  };
 
   var runPreloader = function () {
     return new Promise(function (resolve) {
       var loader = overlay ? overlay.querySelector('.transition_loader') : null;
-      var label = loader ? loader.querySelector('.transition_percent') : null;
       if (!overlay || !loader) { html.classList.remove('is-preloading'); resolve(); return; }
 
-      var finish = function () {
+      var parts = loader.querySelectorAll('.transition_mark, .transition_word');
+      var media = loader.querySelector('.transition_media');
+      var template = media ? media.querySelector('.transition_media-img') : null;
+
+      var siteLoaded = new Promise(function (done) {
+        if (document.readyState === 'complete') { done(); return; }
+        window.addEventListener('load', done, { once: true });
+        setTimeout(done, PL.maxWait * 1000);
+      });
+
+      /* Kolommen open, logo weg. is-preloading blijft staan tot de
+         kolommen weg zijn, anders verspringt het beige naar de kleur van
+         de paginatransitie. */
+      var reveal = function () {
+        overlay.style.pointerEvents = 'none';
+        var done = function () {
+          html.classList.remove('is-preloading');
+          gsap.set(loader, { clearProps: 'opacity,visibility' });
+          resolve();
+        };
+        if (reduced) { gsap.set(cols, { '--p': 0 }); done(); return; }
         gsap.set(cols, { '--p': 1 });
-        gsap.to(loader, {
-          autoAlpha: 0,
-          duration: reduced ? 0 : PL.fade,
-          ease: 'power2.out',
-          onComplete: function () {
-            html.classList.remove('is-preloading');
-            overlay.style.pointerEvents = 'none';
-            gsap.set(loader, { clearProps: 'opacity,visibility' });
-            if (reduced) { gsap.set(cols, { '--p': 0 }); resolve(); return; }
-            if (pageWrap) {
-              gsap.fromTo(pageWrap,
-                { x: -TR.shift },
-                { x: 0, duration: TR.outDuration, ease: TR.ease, clearProps: 'transform' }
-              );
-            }
-            gsap.to(cols, { '--p': 2, duration: TR.outDuration, ease: TR.ease, onComplete: resolve });
-          }
+        gsap.to(loader, { autoAlpha: 0, duration: PL.fade, ease: 'power2.out' });
+        if (pageWrap) {
+          gsap.fromTo(pageWrap,
+            { x: -TR.shift },
+            { x: 0, duration: TR.outDuration, ease: TR.ease, clearProps: 'transform' }
+          );
+        }
+        gsap.to(cols, { '--p': 2, duration: TR.outDuration, ease: TR.ease, onComplete: done });
+      };
+
+      if (reduced || !media || !template) {
+        if (media) media.style.display = 'none';
+        gsap.set(parts, { autoAlpha: 1 });
+        siteLoaded.then(reveal);
+        return;
+      }
+
+      /* Het open vak meten, dan dichtzetten */
+      var cs = getComputedStyle(media);
+      var openState = {
+        width: media.offsetWidth,
+        marginLeft: parseFloat(cs.marginLeft) || 0,
+        marginRight: parseFloat(cs.marginRight) || 0
+      };
+      gsap.set(media, { width: 0, marginLeft: 0, marginRight: 0, opacity: 1 });
+      template.style.visibility = 'hidden';
+      gsap.fromTo(parts, { autoAlpha: 0 }, { autoAlpha: 1, duration: PL.appear, ease: 'power2.out' });
+
+      /* De foto's uit het menu, de kleinste maat uit srcset */
+      var smallest = function (img) {
+        var best = img.getAttribute('src');
+        var bestW = Infinity;
+        (img.getAttribute('srcset') || '').split(',').forEach(function (part) {
+          var bits = part.trim().split(/\s+/);
+          var w = parseInt(bits[1], 10);
+          if (bits[0] && w && w < bestW) { best = bits[0]; bestW = w; }
         });
+        return best;
+      };
+      var urls = [];
+      document.querySelectorAll('.mega-menu_card img').forEach(function (img) {
+        var url = smallest(img);
+        if (url && urls.indexOf(url) === -1) urls.push(url);
+      });
+
+      var shots = [];
+      var current = -1;
+      var opened = false;
+      var timer = null;
+
+      var show = function (i) {
+        shots.forEach(function (shot, n) { shot.style.visibility = n === i ? 'visible' : 'hidden'; });
+        current = i;
+      };
+      var next = function () {
+        if (shots.length) show((current + 1) % shots.length);
+        timer = gsap.delayedCall(PL.swap, next);
+      };
+      var open = function () {
+        if (opened) return;
+        opened = true;
+        show(0);
+        gsap.to(media, { width: openState.width, marginLeft: openState.marginLeft, marginRight: openState.marginRight, duration: PL.open, ease: PL.ease });
+        timer = gsap.delayedCall(PL.swap, next);
       };
 
-      if (reduced) { pageReady.then(finish); return; }
-
-      /* Wat er geladen moet worden */
-      var imgs = Array.prototype.filter.call(document.images, function (img) {
-        return img.getAttribute('loading') !== 'lazy' && !overlay.contains(img);
+      urls.forEach(function (url, i) {
+        var shot = i === 0 ? template : template.cloneNode(false);
+        shot.removeAttribute('srcset');
+        shot.removeAttribute('sizes');
+        shot.removeAttribute('loading');
+        shot.alt = '';
+        var add = function () {
+          shot.style.visibility = 'hidden';
+          if (shot !== template) media.appendChild(shot);
+          shots.push(shot);
+          open();
+        };
+        shot.addEventListener('load', add, { once: true });
+        shot.src = url;
+        if (shot.complete && shot.naturalWidth) { shot.removeEventListener('load', add); add(); }
       });
-      var total = imgs.length + 1;
-      var done = 0;
-      var tick = function () { done++; };
-      imgs.forEach(function (img) {
-        if (img.complete) { tick(); return; }
-        img.addEventListener('load', tick, { once: true });
-        img.addEventListener('error', tick, { once: true });
+
+      var minTime = new Promise(function (done) { setTimeout(done, PL.min * 1000); });
+
+      Promise.all([siteLoaded, minTime]).then(function () {
+        if (timer) timer.kill();
+        if (!opened) { gsap.delayedCall(PL.hold, reveal); return; }
+        gsap.to(media, {
+          width: 0,
+          marginLeft: 0,
+          marginRight: 0,
+          duration: PL.close,
+          ease: PL.ease,
+          overwrite: true,
+          onComplete: function () { gsap.delayedCall(PL.hold, reveal); }
+        });
       });
-      document.fonts.ready.then(tick);
-
-      var loaded = false;
-      pageReady.then(function () { loaded = true; });
-
-      var start = performance.now();
-      var shown = 0;
-      var step = function () {
-        var elapsed = (performance.now() - start) / 1000;
-        var real = loaded ? 100 : Math.min(90, (done / total) * 100);
-        var time = Math.min(100, (elapsed / PL.min) * 100);
-        var target = Math.min(real, time);
-        shown += (target - shown) * PL.follow;
-        if (target >= 100 && shown > 99.5) shown = 100;
-
-        var value = Math.round(shown);
-        loader.style.setProperty('--fill', shown.toFixed(2));
-        if (label) label.textContent = value + '%';
-
-        if (value >= 100) { gsap.delayedCall(PL.hold, finish); return; }
-        requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
     });
   };
 

@@ -5,7 +5,7 @@
    is-transitioning als de bezoeker van een andere pagina komt (de
    paginatransitie dekt de pagina af tot hij geladen is), of
    is-preloading bij het eerste bezoek in een sessie (de preloader met
-   logo en percentage dekt de pagina af).
+   logo en wisselende foto's dekt de pagina af).
    ============================================================= */
 (function () {
   var html = document.documentElement;

@@ -261,14 +261,18 @@ html.mega-open{overflow:hidden}
 /* ===== PRELOADER =====
    Alleen bij het eerste bezoek in een sessie (is-preloading, gezet door
    trouw-head.js). De kolommen van de paginatransitie dekken de pagina
-   af; daarboven het lichte logo en het percentage (.transition_loader,
-   opmaak in het Style-panel, daar op display none). Het volle logo
-   wordt van links naar rechts zichtbaar via --fill (0 tot 100), dat
-   trouw.js bijwerkt. */
+   af; daarboven beeldmerk, fotovak en woordmerk (.transition_loader,
+   opmaak in het Style-panel, daar op display none).
+   Bewuste uitzondering: het beige van de kolommen staat hier en niet in
+   het Style-panel, omdat het alleen tijdens de preloader geldt en er
+   vanaf de eerste beeldopbouw moet zijn. Zelfde gradient als
+   .background_stripes; wijzigt die, pas deze dan mee aan. */
 .is-preloading .transition_component{pointer-events:auto}
-.is-preloading .transition_column{--p:1}
+.is-preloading .transition_column{--p:1;background-image:linear-gradient(156.6deg,#dbc7ad 9.22%,#fcf0dd 34.73%)}
 .is-preloading .transition_loader{display:flex}
-.transition_logo-fill{clip-path:inset(0 calc(100% - var(--fill, 0) * 1%) 0 0)}
+/* Onzichtbaar tot trouw.js het overneemt, zodat het open fotovak niet
+   even te zien is voordat het script draait. */
+.is-preloading .transition_loader>*{opacity:0}
 
 /* ===== LENIS ===== */
 html.lenis,html.lenis body{height:auto}
