@@ -23,14 +23,14 @@ img{max-width:100%;display:block}
    Alleen links zonder eigen class, binnen alinea's, lijsten, koppen en
    rich text. Knoppen, menu's, kaarten en footer hebben een class en
    blijven ongemoeid. Links die later in een tekst worden gezet, krijgen
-   deze stijl vanzelf. Uitzondering met class: .contact_link (de
-   e-maillink bij Praktijkgegevens op Contact).
+   deze stijl vanzelf. Een link die wel een class nodig heeft, krijgt
+   deze stijl met .text-style-link (zoals de e-maillink op Contact).
    De onderstreping is een getekend lijntje (background), zodat hij kan
    bewegen: bij hover verdwijnt hij één keer van links naar rechts en
    verschijnt hij weer van links naar rechts.
    --lw = dikte, --lt = duur van de hele beweging */
 :is(p,li,blockquote,h1,h2,h3,h4,h5,h6,.w-richtext) a:not([class]),
-.contact_link{
+.text-style-link{
   --lw:.06em;
   --lt:.7s;
   color:inherit;
@@ -42,7 +42,7 @@ img{max-width:100%;display:block}
 }
 @media (hover:hover) and (prefers-reduced-motion:no-preference){
   :is(p,li,blockquote,h1,h2,h3,h4,h5,h6,.w-richtext) a:not([class]):hover,
-  .contact_link:hover{
+  .text-style-link:hover{
     animation:trouw-link-wipe var(--lt) cubic-bezier(.65,0,.35,1) 1;
   }
 }
