@@ -2,8 +2,9 @@
    PRAKTIJK TROUW — SCRIPT
    Smooth scroll, scrollbalk, header, mobiel menu, paginatransitie,
    preloader, intro, specialisaties, schuivende secties, achtergrond, parallax
-   en footer. Geladen met defer, na GSAP, ScrollTrigger, SplitText
-   en Lenis.
+   en footer. Geladen met defer, na ScrollTrigger, SplitText en Lenis.
+   GSAP zelf laadt Webflow al (voor de Webflow-interacties); de
+   plugins in de footer moeten dezelfde versie hebben.
    ============================================================= */
 (function () {
   'use strict';
@@ -142,7 +143,7 @@
       requestAnimationFrame(invCheck);
     };
 
-    if (lenis) lenis.on('scroll', invQueue);
+    /* Ook met Lenis scrollt het venster zelf, dus scroll volstaat */
     window.addEventListener('scroll', invQueue, { passive: true });
     window.addEventListener('resize', invQueue);
     window.addEventListener('load', invQueue);
@@ -948,8 +949,7 @@
      Elke .background_stripes wordt opgedeeld in kolommen die verschuiven en
      draaien terwijl hun eigen sectie door beeld scrolt. Waar de
      kolommen beginnen, komt uit Background position in het
-     Style-panel. Elke orb (.background_blob en .background_orb) zakt en groeit
-     licht mee. */
+     Style-panel. Elke orb (.background_blob) zakt en groeit licht mee. */
   var BG = {
     columns: 8,
     travel: 33.3,
@@ -1031,7 +1031,7 @@
         .to(stripes, { '--bg-turn': BG.turn + 'deg' }, 0);
     });
 
-    gsap.utils.toArray('.background_blob, .background_orb').forEach(function (blob) {
+    gsap.utils.toArray('.background_blob').forEach(function (blob) {
       gsap.fromTo(blob,
         { yPercent: -BG.orbShift, scale: 1 },
         {
@@ -1136,9 +1136,8 @@
 
   if (pageWrap && siteFooter) {
     fitFooter();
-    window.addEventListener('load', function () { fitFooter(); ScrollTrigger.refresh(); });
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { fitFooter(); ScrollTrigger.refresh(); });
+      document.fonts.ready.then(function () { ScrollTrigger.refresh(); });
     }
 
     if (!reduced && footerInner) {
@@ -1159,15 +1158,18 @@
     }
   }
 
-  /* ---------- 12. RESIZE ---------- */
+  /* ---------- 12. HERBEREKENEN EN RESIZE ----------
+     ScrollTrigger rekent zelf alles opnieuw na het laden en na een
+     resize. Vlak daarvoor worden de orbs op hun kolomrand gelegd en
+     krijgt de footer zijn ruimte, zodat de nieuwe maten meetellen. */
+  ScrollTrigger.addEventListener('refreshInit', function () {
+    bgSnaps.forEach(function (fn) { fn(); });
+    fitFooter();
+  });
+
   var rt;
   window.addEventListener('resize', function () {
     clearTimeout(rt);
-    rt = setTimeout(function () {
-      closeMega();
-      bgSnaps.forEach(function (fn) { fn(); });
-      fitFooter();
-      ScrollTrigger.refresh();
-    }, 200);
+    rt = setTimeout(closeMega, 200);
   });
 })();

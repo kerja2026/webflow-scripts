@@ -13,8 +13,6 @@ html,body{margin:0;padding:0;width:100%;max-width:100%}
 body{overflow-wrap:break-word;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 button,input,select,textarea{font-family:inherit}
 img{max-width:100%;display:block}
-/* Het keuzerondje in het formulier heeft in Webflow geen eigen class. */
-.contact-form_radio input[type="radio"]{margin:0;width:1em;height:1em;flex:0 0 auto}
 
 :root{--col:20.25em;--stripe-shift:6.75em}
 
@@ -135,9 +133,9 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
                    menulinks verdwijnt, want het paneel neemt het over.
    .is-mega-light  het paneel is helemaal uitgegroeid. Logo, menulinks,
                    contactregel en knop verkleuren naar licht.
-   De duur van het verkleuren (.4s) moet gelijk zijn aan MEGA.colors in
-   trouw.js. Opmaak van paneel, kaarten en waas staat in het
-   Style-panel (.mega-menu_component, .mega-menu_card, .mega-menu_scrim). */
+   De duur van het verkleuren (.4s) staat hieronder; trouw.js zet
+   .is-mega-light op het moment MEGA.lightAt. Opmaak van paneel,
+   kaarten en waas staat in het Style-panel (.mega-menu_component, .mega-menu_card, .mega-menu_scrim). */
 .navbar_component.is-mega .navbar_menu{background-image:none}
 .mega-menu_component{will-change:clip-path}
 /* Scrollslot: alleen op html. Op body maakt overflow hidden de body

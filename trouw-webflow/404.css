@@ -2,8 +2,7 @@
    PRAKTIJK TROUW — 404
    De 404 heeft een beeldvullende gif. Logo, menu en contactregel
    staan daar overheen en moeten daarom licht zijn.
-   Alleen geladen op de 404-pagina. Dit is een test om te zien of
-   dit werkt binnen GitHub Desktop
+   Alleen geladen op de 404-pagina.
    ============================================================= */
 .navbar_component .navbar_logo{filter:brightness(0) invert(1)}
 .navbar_component .navbar_link,
