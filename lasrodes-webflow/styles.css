@@ -4,6 +4,8 @@
 /* Osmo Scaling System (root-variant) — designbreedte 1512 */
 :root{--size-unit:16;--size-container-ideal:1512;--size-container-min:320px;--size-container-max:1920px;--size-container:clamp(var(--size-container-min),100vw,var(--size-container-max));--size-font:calc(var(--size-container) / (var(--size-container-ideal) / var(--size-unit)))}
 html{font-size:var(--size-font)}
+/* Tablet en mobiel (tot 991px): mobiele designbreedte 393, zodat rem-waarden uit het Figma-frame 'Las Rodes Mobile' direct kloppen */
+@media (max-width:991px){:root{--size-container-ideal:393}}
 
 /* Lenis */
 html.lenis,html.lenis body{height:auto}
@@ -38,6 +40,7 @@ html.lr-intro:not(.lr-logo-in) .nav_logo{visibility:hidden}
 .lr-menu .coral_menu{position:static;inset:auto;display:flex;flex-direction:column;align-items:center;transform:none;width:auto;max-width:none;height:auto;min-height:0;max-height:none}
 .lr-menu .coral_menu-link{position:static;display:block;overflow:hidden;padding:.12em 0 .25em;margin:-.12em 0 -.25em;color:var(--color--cream);font-size:7.1875rem;line-height:7.8125rem;text-align:center;white-space:nowrap}
 .lr-menu_line{display:block}
+@media (max-width:991px){.lr-menu .coral_menu-link{font-size:2.5rem;line-height:2.625rem}.lr-menu_content{gap:3rem}}
 .lr-menu_smask{overflow:hidden;padding:.25rem 0}
 .lr-menu .footer_social{position:static;inset:auto;transform:none;height:auto}
 
