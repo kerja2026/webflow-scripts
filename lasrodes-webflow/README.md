@@ -20,7 +20,8 @@ las-rodes/
     09-concert.js       concertfoto groeit naar schermvullend
     10-cierre.js        afsluiter: kop blijft staan, zussen scrollen eroverheen
     11-concert-text.js  crème tekst over de concertfoto, Tarará per regel
-    12-patterns.js      WebGL-patronen: banden, fotomaskers, olievlek, parallax (moet als laatste)
+    13-line-tilt.js     regels die rechttrekken tijdens scrollen (attribuut data-line-tilt)
+    99-patterns.js      WebGL-patronen: banden, fotomaskers, olievlek, parallax (moet als laatste)
   dist/                 gebouwde bestanden, deze laadt Webflow
     las-rodes.js        alle src-bestanden achter elkaar
     las-rodes.min.js    geminificeerd
@@ -52,6 +53,7 @@ Werk met tags, niet met `@main`: jsDelivr bewaart een branch tot 7 dagen in de c
 | 09-concert.js | `K=.85` | snelheid van de concertfoto t.o.v. de tekst |
 | 10-cierre.js | `K=.9` | snelheid van de zussenfoto na het loslaten |
 | Webflow (attribuut) | `data-parallax` | parallaxsterkte per element, zonder code aan te passen |
+| Webflow (attribuut) | `data-line-tilt` | starthoek per regel in graden, bijvoorbeeld `-3`; recht in het midden van het venster |
 
 ## Afhankelijkheden
 
