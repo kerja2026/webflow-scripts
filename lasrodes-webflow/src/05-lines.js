@@ -1,7 +1,7 @@
 /* Middenlijnen tekenen zich uit tijdens het scrollen: de punt van de lijn staat steeds op 70% van de vensterhoogte */
 document.addEventListener("DOMContentLoaded",function(){
   if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  var lines=[].slice.call(document.querySelectorAll(".raices_line,.raices_line-bottom,.voces_line,.voces_line-bottom,.voz_line,.voz_line-bottom,.cierre_line,.footer_line"));
+  var lines=[].slice.call(document.querySelectorAll(".raices_line,.raices_line-bottom,.voces_line,.voces_line-bottom,.voces_line-extra,.voz_line,.voz_line-bottom,.cierre_line,.footer_line"));
   if(!lines.length)return;
   (function tick(){
     var tip=.7*window.innerHeight;
