@@ -27,6 +27,35 @@ document.addEventListener("DOMContentLoaded",function(){
   function getField(){if(!field&&window.LR){field=window.LR.fields.find(function(f){return f.el===band;});if(field){field.opts.idle=.05;field.opts.noBias=true;}}return field;}
   function setOpenUI(on){root.classList.toggle("lr-menu-open",on);btn.textContent=on?"Close":label;btn.setAttribute("aria-expanded",on?"true":"false");}
   function hash(a,b){var r=Math.sin(a*127.1+b*311.7)*43758.5453;return r-Math.floor(r);}
+  /* CLOSE verdwijnt achter tegels in het rood van het menu; MENU verschijnt vanachter tegels in de kleur van de pagina eronder */
+  var fx=document.createElement("canvas");fx.setAttribute("aria-hidden","true");
+  fx.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:101";document.body.appendChild(fx);
+  var FX_MS=600,FX_SIZE=.45;/* duur in ms, tegelmaat als deel van de lettergrootte */
+  function textRect(a){var rg=document.createRange();rg.selectNodeContents(a);var rs=[].slice.call(rg.getClientRects()).filter(function(q){return q.width>0;});
+    if(!rs.length)return a.getBoundingClientRect();
+    var l=Math.min.apply(null,rs.map(function(q){return q.left;})),t=Math.min.apply(null,rs.map(function(q){return q.top;})),
+        r=Math.max.apply(null,rs.map(function(q){return q.right;})),b=Math.max.apply(null,rs.map(function(q){return q.bottom;}));
+    return {left:l,top:t,width:r-l,height:b-t};}
+  function wordFx(el,col,cover,ex,ey,cb,first){
+    var r=textRect(el),fs=parseFloat(getComputedStyle(el).fontSize),P=FX_SIZE*fs,pad=P,W=r.width+2*pad,H=r.height+2*pad,cells=[],max=0;
+    if(ex==null){ex=r.left+r.width/2;ey=r.top+r.height/2;}
+    var sx=ex-r.left+pad,sy=ey-r.top+pad;
+    for(var j=0;j<=H/P;j++)for(var i=0;i<=W/P;i++){var cx=i*P,cy=j*P,edge=cx<P||cy<P||cx>W-P||cy>H-P;
+      if(edge&&hash(i+.7,j+.3)<.45)continue;/* gerafelde rand */
+      var d=Math.hypot(cx-sx,cy-sy);max=Math.max(max,d);cells.push([cx,cy,d,hash(i,j),edge,hash(i+.2,j+.9)]);}
+    max+=P;var band=.6*max,x=fx.getContext("2d"),dpr=Math.min(window.devicePixelRatio||1,2),t0=performance.now(),k=P/62.6;
+    fx.width=Math.round(innerWidth*dpr);fx.height=Math.round(innerHeight*dpr);
+    function piece(c,s){var kk=k*s;[[0,0,0],[-.3,0,1],[.3,0,2],[0,-.3,3],[0,.3,4],[.5,.5,c[5]<.48?5:c[5]<.69?6:7]].forEach(function(pc){
+      x.save();x.translate(c[0]+pc[0]*P,c[1]+pc[1]*P);x.scale(kk,kk);x.fill(P2[pc[2]],"evenodd");x.restore();});}
+    (function step(now){
+      var q=Math.min(1,(now-t0)/FX_MS),e=-(Math.cos(Math.PI*q)-1)/2,front=e*(max+band*1.6);
+      x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,innerWidth,innerHeight);x.save();x.translate(r.left-pad,r.top-pad);x.fillStyle=col;
+      cells.forEach(function(c){var t=(front-c[2])/band-c[3]*.8,cov=cover?t:1-t,s;/* cov: mate van bedekking van deze tegel */
+        if(cov<=0)return;if(cov>=1&&!c[4]){x.fillRect(c[0]-P/2,c[1]-P/2,P+1,P+1);return;}s=Math.min(1,cov);s=s*s*(3-2*s);piece(c,s);});
+      x.restore();if(first){first();first=null;}
+      if(q<1)requestAnimationFrame(step);else{if(cover){el.style.color="transparent";}x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,fx.width,fx.height);cb&&cb();}
+    })(t0);
+  }
   var G=null;/* raster van het rode vlak */
   function layout(){
     var rem=parseFloat(getComputedStyle(root).fontSize),W=ov.clientWidth,Bh=W*878/1514;
@@ -70,10 +99,21 @@ document.addEventListener("DOMContentLoaded",function(){
     if(on)setOpenUI(true);
   }
   function openMenu(){if(open||busy)return;open=true;gsap.set(content,{autoAlpha:0});gsap.set(items,{yPercent:115});run(true,function(){var a=content.querySelector("a");a&&a.focus({preventScroll:true});});window.lenis&&window.lenis.stop();}
-  function closeMenu(target){if(!open||busy)return;open=false;window.lenis&&window.lenis.start();
-    if(target){var el=document.querySelector(target);if(el){window.lenis?window.lenis.scrollTo(el,{duration:1.4}):el.scrollIntoView({behavior:"smooth"});}}
-    run(false,function(){setOpenUI(false);btn.focus({preventScroll:true});});}
-  btn.addEventListener("click",function(e){e.preventDefault();open?closeMenu():openMenu();});
+  function closeMenu(target,ex,ey){if(!open||busy)return;open=false;busy=true;
+    var done=function(){btn.focus({preventScroll:true});};
+    function go(){busy=false;window.lenis&&window.lenis.start();
+      if(target){var el=document.querySelector(target);if(el){window.lenis?window.lenis.scrollTo(el,{duration:1.4}):el.scrollIntoView({behavior:"smooth"});}}
+      run(false,function(){
+        if(reduce){setOpenUI(false);btn.style.color="";done();return;}
+        /* MENU: eerst volledig onder tegels in de kleur van de pagina onder de knop, die lossen op */
+        var tr=btn.style.transition;btn.style.transition="none";setOpenUI(false);
+        var r=btn.getBoundingClientRect(),bg=window.LR_NAV?window.LR_NAV.bgAt(r.left+r.width/2,r.top+r.height/2):"#f2ece1";
+        wordFx(btn,bg,false,null,null,function(){btn.style.transition=tr;done();},function(){btn.style.color="";});
+      });}
+    /* CLOSE: eerst volledig bedekt door tegels in het rood van het menu, pas dan sluit het menu */
+    if(reduce){go();return;}
+    wordFx(btn,red,true,ex,ey,go);}
+  btn.addEventListener("click",function(e){e.preventDefault();open?closeMenu(null,e.clientX,e.clientY):openMenu();});
   content.addEventListener("click",function(e){var a=e.target.closest("a[href^='#']");if(!a)return;e.preventDefault();closeMenu(a.getAttribute("href"));});
   document.addEventListener("keydown",function(e){if(!open)return;if(e.key==="Escape")closeMenu();
     if(e.key==="Tab"){var fs=[btn].concat([].slice.call(content.querySelectorAll("a"))),i=fs.indexOf(document.activeElement);
