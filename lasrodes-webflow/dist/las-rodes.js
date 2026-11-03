@@ -289,7 +289,7 @@ document.addEventListener("DOMContentLoaded",function(){
       cells.forEach(function(c){var t=(front-c[2])/band-c[3]*.8,cov=cover?t:1-t,s;/* cov: mate van bedekking van deze tegel */
         if(cov<=0)return;if(cov>=1&&!c[4]){x.fillRect(c[0]-P/2,c[1]-P/2,P+1,P+1);return;}s=Math.min(1,cov);s=s*s*(3-2*s);piece(c,s);});
       x.restore();if(first){first();first=null;}
-      if(q<1)requestAnimationFrame(step);else{if(cover){el.style.color="transparent";}x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,fx.width,fx.height);cb&&cb();}
+      if(q<1)requestAnimationFrame(step);else{if(cover){el.style.transition="none";el.style.color="transparent";}/* zonder overgang: anders vervaagt de tekst traag en komt hij na de tegels weer tevoorschijn */x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,fx.width,fx.height);cb&&cb();}
     })(t0);
   }
   var G=null;/* raster van het rode vlak */
@@ -340,11 +340,11 @@ document.addEventListener("DOMContentLoaded",function(){
     function go(){busy=false;window.lenis&&window.lenis.start();
       if(target){var el=document.querySelector(target);if(el){window.lenis?window.lenis.scrollTo(el,{duration:1.4}):el.scrollIntoView({behavior:"smooth"});}}
       run(false,function(){
-        if(reduce){setOpenUI(false);btn.style.color="";done();return;}
+        if(reduce){setOpenUI(false);btn.style.color="";btn.style.transition="";done();return;}
         /* MENU: eerst volledig onder tegels in de kleur van de pagina onder de knop, die lossen op */
-        var tr=btn.style.transition;btn.style.transition="none";setOpenUI(false);
+        btn.style.transition="none";setOpenUI(false);
         var r=btn.getBoundingClientRect(),bg=window.LR_NAV?window.LR_NAV.bgAt(r.left+r.width/2,r.top+r.height/2):"#f2ece1";
-        wordFx(btn,bg,false,null,null,function(){btn.style.transition=tr;done();},function(){btn.style.color="";});
+        wordFx(btn,bg,false,null,null,function(){btn.style.transition="";done();},function(){btn.style.color="";});
       });}
     /* CLOSE: eerst volledig bedekt door tegels in het rood van het menu, pas dan sluit het menu */
     if(reduce){go();return;}
