@@ -21,6 +21,7 @@ las-rodes/
     10-cierre.js        afsluiter: kop blijft staan, zussen scrollen eroverheen
     11-concert-text.js  crème tekst over de concertfoto, Tarará per regel
     13-line-tilt.js     regels die rechttrekken tijdens scrollen (attribuut data-line-tilt)
+    14-logo-scale.js    logo verkleint naar 65% bij scrollen, terug bovenaan
     99-patterns.js      WebGL-patronen: banden, fotomaskers, olievlek, parallax (moet als laatste)
   dist/                 gebouwde bestanden, deze laadt Webflow
     las-rodes.js        alle src-bestanden achter elkaar

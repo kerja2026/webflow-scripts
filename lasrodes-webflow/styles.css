@@ -43,6 +43,10 @@ html.lr-intro:not(.lr-logo-in) .nav_logo{visibility:hidden}
 
 /* Nav kleurt vloeiend mee met het menu en met donkere achtergronden */
 .nav_lang,.nav_menu-button{transition:color .7s ease}
-.nav_logo{filter:brightness(1) invert(0) sepia(0) saturate(1) hue-rotate(0deg);transition:filter .7s ease}
+.nav_logo{filter:brightness(1) invert(0) sepia(0) saturate(1) hue-rotate(0deg);transform-origin:50% 0;transition:filter .7s ease,transform 1s cubic-bezier(.65,0,.35,1)}
 html.lr-menu-open .nav_lang,html.lr-menu-open .nav_menu-button,.nav_lang.lr-on-dark,.nav_menu-button.lr-on-dark{color:var(--color--cream)}
 html.lr-menu-open .nav_logo,.nav_logo.lr-on-dark{filter:brightness(0) invert(93%) sepia(8%) saturate(250%) hue-rotate(345deg)}
+
+/* Logo verkleint naar 65% zodra je naar beneden scrolt, en wordt pas weer 100% bovenaan de pagina (zie src/14-logo-scale.js) */
+html.lr-logo-small .nav_logo{transform:scale(.65)}
+@media (prefers-reduced-motion: reduce){.nav_logo{transition:filter .7s ease}}
