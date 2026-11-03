@@ -329,6 +329,7 @@ document.addEventListener("DOMContentLoaded",function(){
         var cur=g.Bh-(front-g.Fh),pts=["0px "+g.Bh+"px"];for(var c=0;c<g.colOff.length;c++){var yy=Math.max(0,Math.min(g.Bh,cur+4*g.P+g.colOff[c]));pts.push(c*g.P+"px "+yy+"px",(c+1)*g.P+"px "+yy+"px");}pts.push(g.W+"px "+g.Bh+"px");band.style.clipPath="polygon("+pts.join(",")+")";
         if(Pr>=1&&!this.done){this.done=!0;band.style.clipPath="";if(on){f.opts.build=null;finish(true,cb);}else finish(false,cb);}
         return cur;}};
+      f.opts.build.f(f);/* eerste beeld direct tekenen: layout() wist het canvas, anders zie je één frame de pagina erdoor */
       window.LR.update();
     };
     if(f){f.near=true;f.prepare().then(go).catch(function(){f=null;go();});}else go();
