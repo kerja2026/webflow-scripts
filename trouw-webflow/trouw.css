@@ -84,6 +84,7 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
 @media screen and (min-width:768px){
   .js-anim .section_intro,
   .js-anim .section_praktijk,
+  .js-anim .section_samenhang,
   .js-anim .section_verwachting,
   .js-anim .section_team,
   .js-anim .section_feature,
@@ -208,6 +209,21 @@ html.mega-open{overflow:hidden}
   .mega-menu_card:focus-visible .mega-menu_photo{clip-path:inset(0 0 4.375em 0 round 0.5em)}
   .mega-menu_card:hover .mega-menu_desc,
   .mega-menu_card:focus-visible .mega-menu_desc{transform:translateY(0)}
+}
+
+/* ===== SAMENHANG: foto's vergroten bij hover =====
+   De kaarten onder "Hangt vaak samen met" op elke behandelingspagina.
+   De parallax (trouw.js) zet al een transform op de foto. Daarom
+   vergroot de hover met de losse eigenschap scale, die daarbovenop
+   werkt. --hz = vergroting, --ht = duur. */
+.spec-detail_other-img{
+  --hz:1.05;
+  --ht:.6s;
+  transition:scale var(--ht) cubic-bezier(.22,1,.36,1);
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .spec-detail_other:hover .spec-detail_other-img,
+  .spec-detail_other:focus-visible .spec-detail_other-img{scale:var(--hz)}
 }
 
 /* ===== MOBIEL MENU: open-toestand =====

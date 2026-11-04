@@ -114,7 +114,7 @@
      header, omdat de secties over elkaar heen schuiven.
 
      green = de groene secties */
-  var INV = { green: '.section_praktijk, .section_contract, .section_feature, .footer_component' };
+  var INV = { green: '.section_praktijk, .section_samenhang, .section_contract, .section_feature, .footer_component' };
 
   if (header) {
     var invProbe = header.querySelector('.navbar_container') || header;
@@ -916,7 +916,7 @@
      -1.25em) in het Style-panel. Alleen vanaf 768px. */
   var SLIDE = {
     shift: '6em',
-    sections: '.section_intro, .section_praktijk, .section_verwachting, .section_team, .section_feature, .section_contract, .section_rates, .section_legal, .section_contact',
+    sections: '.section_intro, .section_praktijk, .section_samenhang, .section_verwachting, .section_team, .section_feature, .section_contract, .section_rates, .section_legal, .section_contact',
     start: 'top bottom',
     end: 'top 40%'
   };
