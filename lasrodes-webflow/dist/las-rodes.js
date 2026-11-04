@@ -335,11 +335,16 @@ document.addEventListener("DOMContentLoaded",function(){
     if(f){f.near=true;f.prepare().then(go).catch(function(){f=null;go();});}else go();
     if(on)setOpenUI(true);
   }
+  /* scroll naar een sectie: de bovenkant van de sectie plus data-scroll-offset (in rem, in Webflow per sectie instelbaar).
+     Gemeten op de opmaak zonder transforms, zodat parallax de eindpositie niet laat verspringen. */
+  function goTo(hash){var el=document.querySelector(hash);if(!el)return;var y=0;for(var n=el;n;n=n.offsetParent)y+=n.offsetTop;
+    y+=(parseFloat(el.getAttribute("data-scroll-offset"))||0)*parseFloat(getComputedStyle(root).fontSize);
+    window.lenis?window.lenis.scrollTo(y,{duration:1.4}):window.scrollTo({top:y,behavior:"smooth"});}
   function openMenu(){if(open||busy)return;open=true;gsap.set(content,{autoAlpha:0});gsap.set(items,{yPercent:115});run(true,function(){var a=content.querySelector("a");a&&a.focus({preventScroll:true});});window.lenis&&window.lenis.stop();}
   function closeMenu(target,ex,ey){if(!open||busy)return;open=false;busy=true;
     var done=function(){btn.focus({preventScroll:true});};
     function go(){busy=false;window.lenis&&window.lenis.start();
-      if(target){var el=document.querySelector(target);if(el){window.lenis?window.lenis.scrollTo(el,{duration:1.4}):el.scrollIntoView({behavior:"smooth"});}}
+      if(target)goTo(target);
       run(false,function(){
         if(reduce){setOpenUI(false);btn.style.color="";btn.style.transition="";done();return;}
         /* MENU: eerst volledig onder tegels in de kleur van de pagina onder de knop, die lossen op */
@@ -351,6 +356,8 @@ document.addEventListener("DOMContentLoaded",function(){
     if(reduce){go();return;}
     wordFx(btn,red,true,ex,ey,go);}
   btn.addEventListener("click",function(e){e.preventDefault();open?closeMenu(null,e.clientX,e.clientY):openMenu();});
+  /* menulinks in de pagina zelf (Coral) landen op dezelfde plek als die in het menu */
+  document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".coral_menu a[href^='#']");if(!a||a.closest(".lr-menu"))return;e.preventDefault();goTo(a.getAttribute("href"));});
   content.addEventListener("click",function(e){var a=e.target.closest("a[href^='#']");if(!a)return;e.preventDefault();closeMenu(a.getAttribute("href"));});
   document.addEventListener("keydown",function(e){if(!open)return;if(e.key==="Escape")closeMenu();
     if(e.key==="Tab"){var fs=[btn].concat([].slice.call(content.querySelectorAll("a"))),i=fs.indexOf(document.activeElement);
