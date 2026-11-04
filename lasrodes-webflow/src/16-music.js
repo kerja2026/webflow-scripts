@@ -1,6 +1,6 @@
 /* Muziek: start bij de klik op ENTRAR na de preloader (of zodra de site geladen is als er geen preloader is) en speelt door tot de bezoeker hem zelf uitzet.
    Browsers blokkeren geluid dat vanzelf start tot de bezoeker iets op de pagina doet; dan start hij bij de eerste klik, tik of toets.
-   Knop rechtsonder met de eigen play- en pause-iconen. Uitgezet blijft uit, ook bij een volgend bezoek. */
+   Knop rechtsonder met de eigen play- en pause-iconen. Uitgezet blijft uit tot het tabblad sluit. */
 document.addEventListener("DOMContentLoaded",function(){
   var CDN="https://cdn.prod.website-files.com/6ae4913cbd8a2e883953ad49/",
       SRC=CDN+"6aeb69732f639e79020bc23b_Las%20Rodes%20-%20Nada%20Na.mp3",
@@ -10,7 +10,8 @@ document.addEventListener("DOMContentLoaded",function(){
   var btn=document.createElement("button");btn.type="button";btn.className="lr-music";
   var img=document.createElement("img");img.alt="";img.width=60;img.height=60;btn.appendChild(img);document.body.appendChild(btn);
   new Image().src=ICON_PLAY;new Image().src=ICON_PAUSE;/* beide iconen vooraf laden */
-  var off=false,fadeT=null;try{off=localStorage.getItem(KEY)==="1";}catch(e){}
+  var off=false,fadeT=null;/* uitgezet blijft alleen uit binnen dit bezoek (tabblad); een nieuw bezoek start weer met muziek bij ENTRAR */
+  try{localStorage.removeItem(KEY);off=sessionStorage.getItem(KEY)==="1";}catch(e){}
   function ui(){var on=!audio.paused;img.src=on?ICON_PAUSE:ICON_PLAY;btn.setAttribute("aria-pressed",on?"true":"false");btn.setAttribute("aria-label",on?"Muziek uitzetten":"Muziek aanzetten");}
   function fade(to,cb){clearInterval(fadeT);var from=audio.volume,t0=performance.now();
     fadeT=setInterval(function(){var q=Math.min(1,(performance.now()-t0)/FADE);audio.volume=from+(to-from)*q;if(q>=1){clearInterval(fadeT);cb&&cb();}},30);}
@@ -19,8 +20,8 @@ document.addEventListener("DOMContentLoaded",function(){
     var ev=["pointerdown","keydown","touchstart"];function go(e){if(btn.contains(e.target))return;ev.forEach(function(n){document.removeEventListener(n,go,true);});play();}
     ev.forEach(function(n){document.addEventListener(n,go,true);});}
   btn.addEventListener("click",function(){
-    if(audio.paused){off=false;try{localStorage.removeItem(KEY);}catch(e){}audio.play().then(function(){fade(VOL);ui();}).catch(function(){});}
-    else{off=true;try{localStorage.setItem(KEY,"1");}catch(e){}fade(0,function(){audio.pause();ui();});ui();img.src=ICON_PLAY;}});
+    if(audio.paused){off=false;try{sessionStorage.removeItem(KEY);}catch(e){}audio.play().then(function(){fade(VOL);ui();}).catch(function(){});}
+    else{off=true;try{sessionStorage.setItem(KEY,"1");}catch(e){}fade(0,function(){audio.pause();ui();});ui();img.src=ICON_PLAY;}});
   /* tabblad op de achtergrond: muziek pauzeert, en gaat verder als je terugkomt */
   var wasOn=false;document.addEventListener("visibilitychange",function(){if(document.hidden){wasOn=!audio.paused;if(wasOn)audio.pause();}else if(wasOn&&!off){audio.play().catch(function(){});}ui();});
   audio.addEventListener("play",ui);audio.addEventListener("pause",ui);ui();
