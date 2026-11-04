@@ -1090,7 +1090,10 @@
   /* ---------- 10. PARALLAX OP BEELDEN ---------- */
   /* shift = beweging in procenten van de fotohoogte, naar boven en naar
      beneden. zoom = vergroting in het kader. Houd shift onder de helft
-     van de ruimte die zoom geeft: bij zoom 1.2 maximaal 10. */
+     van de ruimte die zoom geeft: bij zoom 1.2 maximaal 10.
+     De parallax beweegt alleen yPercent. De vergroting staat er los
+     van, zodat de hover hieronder hem kan veranderen zonder de
+     parallax te storen. */
   var PX = {
     shift: 8,
     zoom: 1.2,
@@ -1102,11 +1105,11 @@
       var img = frame.querySelector('img');
       if (!img) return;
 
+      gsap.set(img, { scale: PX.zoom });
       gsap.fromTo(img,
-        { yPercent: -PX.shift, scale: PX.zoom },
+        { yPercent: -PX.shift },
         {
           yPercent: PX.shift,
-          scale: PX.zoom,
           ease: 'none',
           scrollTrigger: {
             trigger: frame,
@@ -1117,6 +1120,30 @@
           }
         }
       );
+    });
+  }
+
+  /* ---------- 10b. SAMENHANG: FOTO VERGROOT BIJ HOVER ----------
+     De kaarten onder "Hangt vaak samen met" op de behandelingspagina's.
+     Dit kan niet in CSS: GSAP beheert de transform van deze foto's
+     en zet de losse CSS-eigenschap scale daarbij op none.
+     grow = extra vergroting bovenop PX.zoom, duur in seconden.
+     Alleen met een muis, en niet bij "beweging verminderen". */
+  var HOVERZOOM = { cards: '.spec-detail_other', grow: 1.05, duur: 0.6 };
+
+  if (!reduced && window.matchMedia('(hover: hover)').matches) {
+    gsap.utils.toArray(HOVERZOOM.cards).forEach(function (card) {
+      var img = card.querySelector('img');
+      if (!img) return;
+      var zoomTo = function (s) {
+        gsap.to(img, { scale: s, duration: HOVERZOOM.duur, ease: 'power3.out', overwrite: 'auto' });
+      };
+      var grow = function () { zoomTo(PX.zoom * HOVERZOOM.grow); };
+      var back = function () { zoomTo(PX.zoom); };
+      card.addEventListener('mouseenter', grow);
+      card.addEventListener('mouseleave', back);
+      card.addEventListener('focus', function () { if (card.matches(':focus-visible')) grow(); });
+      card.addEventListener('blur', back);
     });
   }
 
