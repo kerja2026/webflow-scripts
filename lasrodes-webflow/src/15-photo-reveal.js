@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded",function(){
       var W=w.clientWidth,H=w.clientHeight,d=Math.min(window.devicePixelRatio||1,2),rem=parseFloat(getComputedStyle(document.documentElement).fontSize),P=1.75*rem,cells=[];
       cv.width=Math.round(W*d);cv.height=Math.round(H*d);
       for(var j=-1;j<=H/P+1;j++)for(var i=-1;i<=W/P+1;i++)cells.push([i*P,j*P,hash(i,j),hash(i+.6,j+.2)]);
-      G={W:W,H:H,d:d,P:P,cells:cells,band:6*P,rim:2.5*P};draw();
+      G={W:W,H:H,d:d,P:P,cells:cells,band:14*P,rim:2.5*P};/* band: hoe geleidelijk de tegels verdwijnen; breed, zodat het in hetzelfde tempo gaat als de andere patronen */draw();
     }
     function piece(c,P,s){var k=P/62.6*s;[[0,0,0],[-.3,0,1],[.3,0,2],[0,-.3,3],[0,.3,4],[.5,.5,c[3]<.48?5:c[3]<.69?6:7]].forEach(function(pc){
       x.save();x.translate(c[0]+pc[0]*P,c[1]+pc[1]*P);x.scale(k,k);x.fill(P2[pc[2]],"evenodd");x.restore();});}

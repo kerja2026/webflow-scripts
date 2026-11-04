@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded",function(){
     var It=ir.top+y,Ih=ir.height;
     /* kop voor 95% in beeld; past hij niet in het venster, dan zodra de laatste regel volledig in beeld staat */
     var sP=Hh<=vh?Ht+.95*Hh-vh:Hb-.95*vh;
+    /* tablet en mobiel: de kop blijft hoger in het venster staan (onderkant op 70%), zodat hij helemaal leesbaar is voordat de zussen komen */
+    if(window.innerWidth<992)sP=Math.max(Ht-.2*vh,Hb-.7*vh);
     var D=Math.max(0,vh+sP-It);/* foto start precies onder de onderrand van het venster */
     var L=vh+.1*Ih;/* vasthouden tot de foto voor 10% boven het venster is verdwenen */
     st={sP:sP,D:D,L:L};
