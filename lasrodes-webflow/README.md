@@ -23,6 +23,7 @@ las-rodes/
     13-line-tilt.js     regels die rechttrekken tijdens scrollen (attribuut data-line-tilt)
     14-logo-scale.js    logo verkleint naar 65% bij scrollen, terug bovenaan
     15-photo-reveal.js  foto komt uit het patroon tevoorschijn en groeit (attribuut data-photo-reveal)
+    16-music.js         muziek met knop rechtsonder, start na de preloader
     99-patterns.js      WebGL-patronen: banden, fotomaskers, olievlek, parallax (moet als laatste)
   dist/                 gebouwde bestanden, deze laadt Webflow
     las-rodes.js        alle src-bestanden achter elkaar

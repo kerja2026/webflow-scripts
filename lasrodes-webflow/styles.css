@@ -53,3 +53,10 @@ html.lr-menu-open .nav_logo,.nav_logo.lr-on-dark{filter:brightness(0) invert(93%
 /* Logo verkleint naar 65% zodra je naar beneden scrolt, en wordt pas weer 100% bovenaan de pagina (zie src/14-logo-scale.js) */
 html.lr-logo-small .nav_logo{transform:scale(.65)}
 @media (prefers-reduced-motion: reduce){.nav_logo{transition:filter .7s ease}}
+
+/* Muziekknop rechtsonder (src/16-music.js): verschijnt na de preloader */
+.lr-music{position:fixed;right:2.5rem;bottom:2.5rem;z-index:96;width:3.75rem;height:3.75rem;padding:0;border:0;background:none;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .6s ease,visibility .6s}
+.lr-music img{display:block;width:100%;height:100%}
+.lr-music:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+html.lr-music-ready .lr-music{opacity:1;visibility:visible}
+@media (max-width:991px){.lr-music{right:1.25rem;bottom:1.25rem}}
