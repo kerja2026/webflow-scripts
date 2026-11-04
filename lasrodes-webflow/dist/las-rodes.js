@@ -351,7 +351,8 @@ document.addEventListener("DOMContentLoaded",function(){
   /* scroll naar een sectie: de bovenkant van de sectie plus data-scroll-offset (in rem, in Webflow per sectie instelbaar).
      Gemeten op de opmaak zonder transforms, zodat parallax de eindpositie niet laat verspringen. */
   function goTo(hash){var el=document.querySelector(hash);if(!el)return;var y=0;for(var n=el;n;n=n.offsetParent)y+=n.offsetTop;
-    y+=(parseFloat(el.getAttribute("data-scroll-offset"))||0)*parseFloat(getComputedStyle(root).fontSize);
+    var mob=window.innerWidth<992&&el.hasAttribute("data-scroll-offset-mobile");/* tablet en mobiel: eigen afstand, de opbouw is daar anders */
+    y+=(parseFloat(el.getAttribute(mob?"data-scroll-offset-mobile":"data-scroll-offset"))||0)*parseFloat(getComputedStyle(root).fontSize);
     window.lenis?window.lenis.scrollTo(y,{duration:1.4}):window.scrollTo({top:y,behavior:"smooth"});}
   function openMenu(){if(open||busy)return;open=true;gsap.set(content,{autoAlpha:0});gsap.set(items,{yPercent:115});run(true,function(){var a=content.querySelector("a");a&&a.focus({preventScroll:true});});window.lenis&&window.lenis.stop();}
   function closeMenu(target,ex,ey){if(!open||busy)return;open=false;busy=true;
@@ -612,6 +613,11 @@ document.addEventListener("DOMContentLoaded",function(){
   /* tabblad op de achtergrond: muziek pauzeert, en gaat verder als je terugkomt */
   var wasOn=false;document.addEventListener("visibilitychange",function(){if(document.hidden){wasOn=!audio.paused;if(wasOn)audio.pause();}else if(wasOn&&!off){audio.play().catch(function(){});}ui();});
   audio.addEventListener("play",ui);audio.addEventListener("pause",ui);ui();
+  /* knop kleurt mee: licht op donkere achtergronden, net als de nav */
+  (function tone(){var r=btn.getBoundingClientRect(),c=window.LR_NAV&&window.LR_NAV.bgAt(r.left+r.width/2,r.top+r.height/2);
+    if(c){var v=(c.match(/[\d.]+/g)||[]).map(parseFloat),hex=/^#/.test(c)?[parseInt(c.substr(1,2),16),parseInt(c.substr(3,2),16),parseInt(c.substr(5,2),16)]:v;
+      btn.classList.toggle("lr-on-dark",(.2126*hex[0]+.7152*hex[1]+.0722*hex[2])/255<.5);}
+    setTimeout(function(){requestAnimationFrame(tone);},120);})();
   function start(){root.classList.add("lr-music-ready");if(audio.paused)play();}
   /* klik op ENTRAR: start direct, binnen de klik, zodat de browser het geluid toestaat */
   document.addEventListener("lasrodes:enter",function(){root.classList.add("lr-music-ready");if(!off&&audio.paused){audio.play().then(function(){fade(VOL);ui();}).catch(function(){waitForGesture();});}});

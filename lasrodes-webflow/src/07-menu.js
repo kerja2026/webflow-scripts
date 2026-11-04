@@ -102,7 +102,8 @@ document.addEventListener("DOMContentLoaded",function(){
   /* scroll naar een sectie: de bovenkant van de sectie plus data-scroll-offset (in rem, in Webflow per sectie instelbaar).
      Gemeten op de opmaak zonder transforms, zodat parallax de eindpositie niet laat verspringen. */
   function goTo(hash){var el=document.querySelector(hash);if(!el)return;var y=0;for(var n=el;n;n=n.offsetParent)y+=n.offsetTop;
-    y+=(parseFloat(el.getAttribute("data-scroll-offset"))||0)*parseFloat(getComputedStyle(root).fontSize);
+    var mob=window.innerWidth<992&&el.hasAttribute("data-scroll-offset-mobile");/* tablet en mobiel: eigen afstand, de opbouw is daar anders */
+    y+=(parseFloat(el.getAttribute(mob?"data-scroll-offset-mobile":"data-scroll-offset"))||0)*parseFloat(getComputedStyle(root).fontSize);
     window.lenis?window.lenis.scrollTo(y,{duration:1.4}):window.scrollTo({top:y,behavior:"smooth"});}
   function openMenu(){if(open||busy)return;open=true;gsap.set(content,{autoAlpha:0});gsap.set(items,{yPercent:115});run(true,function(){var a=content.querySelector("a");a&&a.focus({preventScroll:true});});window.lenis&&window.lenis.stop();}
   function closeMenu(target,ex,ey){if(!open||busy)return;open=false;busy=true;

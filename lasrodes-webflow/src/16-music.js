@@ -25,6 +25,11 @@ document.addEventListener("DOMContentLoaded",function(){
   /* tabblad op de achtergrond: muziek pauzeert, en gaat verder als je terugkomt */
   var wasOn=false;document.addEventListener("visibilitychange",function(){if(document.hidden){wasOn=!audio.paused;if(wasOn)audio.pause();}else if(wasOn&&!off){audio.play().catch(function(){});}ui();});
   audio.addEventListener("play",ui);audio.addEventListener("pause",ui);ui();
+  /* knop kleurt mee: licht op donkere achtergronden, net als de nav */
+  (function tone(){var r=btn.getBoundingClientRect(),c=window.LR_NAV&&window.LR_NAV.bgAt(r.left+r.width/2,r.top+r.height/2);
+    if(c){var v=(c.match(/[\d.]+/g)||[]).map(parseFloat),hex=/^#/.test(c)?[parseInt(c.substr(1,2),16),parseInt(c.substr(3,2),16),parseInt(c.substr(5,2),16)]:v;
+      btn.classList.toggle("lr-on-dark",(.2126*hex[0]+.7152*hex[1]+.0722*hex[2])/255<.5);}
+    setTimeout(function(){requestAnimationFrame(tone);},120);})();
   function start(){root.classList.add("lr-music-ready");if(audio.paused)play();}
   /* klik op ENTRAR: start direct, binnen de klik, zodat de browser het geluid toestaat */
   document.addEventListener("lasrodes:enter",function(){root.classList.add("lr-music-ready");if(!off&&audio.paused){audio.play().then(function(){fade(VOL);ui();}).catch(function(){waitForGesture();});}});
