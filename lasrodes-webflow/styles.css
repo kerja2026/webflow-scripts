@@ -60,3 +60,9 @@ html.lr-logo-small .nav_logo{transform:scale(.65)}
 .lr-music:focus-visible{outline:2px solid currentColor;outline-offset:4px}
 html.lr-music-ready .lr-music{opacity:1;visibility:visible}
 @media (max-width:991px){.lr-music{right:1.25rem;bottom:1.25rem}}
+
+/* ENTRAR na de preloader (src/03-preloader.js): Norman Bold 24/38, crème, midden in het rode scherm, tekst achter een masker */
+.lr-pre_enter{position:fixed;left:50%;top:50%;z-index:101;pointer-events:auto;transform:translate(-50%,-50%);overflow:hidden;padding:.5em .75em;border:0;background:none;cursor:pointer;
+  font-family:var(--font--heading),serif;font-weight:700;font-size:1.5rem;line-height:2.375rem;letter-spacing:0;text-transform:uppercase;color:var(--color--cream)}
+.lr-pre_enter-text{display:block;transform-origin:0 100%}
+.lr-pre_enter:focus-visible{outline:2px solid var(--color--cream);outline-offset:2px}

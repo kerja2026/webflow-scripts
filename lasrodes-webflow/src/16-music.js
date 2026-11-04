@@ -1,4 +1,4 @@
-/* Muziek: start automatisch zodra de site geladen is (na de preloader) en speelt door tot de bezoeker hem zelf uitzet.
+/* Muziek: start bij de klik op ENTRAR na de preloader (of zodra de site geladen is als er geen preloader is) en speelt door tot de bezoeker hem zelf uitzet.
    Browsers blokkeren geluid dat vanzelf start tot de bezoeker iets op de pagina doet; dan start hij bij de eerste klik, tik of toets.
    Knop rechtsonder met de eigen play- en pause-iconen. Uitgezet blijft uit, ook bij een volgend bezoek. */
 document.addEventListener("DOMContentLoaded",function(){
@@ -24,7 +24,9 @@ document.addEventListener("DOMContentLoaded",function(){
   /* tabblad op de achtergrond: muziek pauzeert, en gaat verder als je terugkomt */
   var wasOn=false;document.addEventListener("visibilitychange",function(){if(document.hidden){wasOn=!audio.paused;if(wasOn)audio.pause();}else if(wasOn&&!off){audio.play().catch(function(){});}ui();});
   audio.addEventListener("play",ui);audio.addEventListener("pause",ui);ui();
-  function start(){root.classList.add("lr-music-ready");play();}
+  function start(){root.classList.add("lr-music-ready");if(audio.paused)play();}
+  /* klik op ENTRAR: start direct, binnen de klik, zodat de browser het geluid toestaat */
+  document.addEventListener("lasrodes:enter",function(){root.classList.add("lr-music-ready");if(!off&&audio.paused){audio.play().then(function(){fade(VOL);ui();}).catch(function(){waitForGesture();});}});
   /* pas na de preloader (de hele site geladen); zonder preloader na het load-event */
   if(root.classList.contains("lr-pre"))document.addEventListener("lasrodes:preloaded",start);
   else if(document.readyState==="complete")start();else window.addEventListener("load",start);

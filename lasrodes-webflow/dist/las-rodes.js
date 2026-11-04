@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
 /* ===== 03-preloader.js ===== */
 /* Preloader: rood scherm, logo vult zich van onder naar boven met crème terwijl de pagina laadt,
-   schuift dan naar zijn plek in de nav; daarna lost het rode vlak op in tegels vanuit het midden,
+   schuift dan naar zijn plek in de nav; daarna verschijnt ENTRAR. Na de klik lost het rode vlak op in tegels vanuit het midden,
    in hetzelfde tempo en met dezelfde curve als de olievlek. De olievlek start zodra 30% van het rode vlak is verdwenen. */
 document.addEventListener("DOMContentLoaded",function(){
   var root=document.documentElement;if(!root.classList.contains("lr-pre"))return;
@@ -74,8 +74,20 @@ document.addEventListener("DOMContentLoaded",function(){
   }
   function land(){
     root.classList.add("lr-logo-in");lg.style.display="none";
-    root.classList.remove("lr-pre");/* pagina zichtbaar onder het rode canvas */
-    dissolve();
+    enter();
+  }
+  /* ENTRAR: verschijnt vanachter een masker met een kanteling van 10 naar 0 graden. Pas na de klik lost het rode vlak op.
+     Die klik geeft de browser toestemming voor geluid, zodat de muziek direct mee start (zie 16-music.js). */
+  function enter(){
+    var b=document.createElement("button");b.type="button";b.className="lr-pre_enter";b.innerHTML='<span class="lr-pre_enter-text">Entrar</span>';
+    document.body.appendChild(b);var t=b.firstChild,done=false;
+    if(window.gsap)gsap.fromTo(t,{yPercent:130,rotation:10},{yPercent:0,rotation:0,duration:1.1,ease:"power3.out",delay:.15});else t.style.transform="none";
+    function go(){if(done)return;done=true;
+      document.dispatchEvent(new Event("lasrodes:enter"));/* binnen de klik: muziek mag nu starten */
+      root.classList.remove("lr-pre");/* pagina zichtbaar onder het rode canvas */
+      if(window.gsap)gsap.to(t,{yPercent:-130,rotation:-6,duration:.6,ease:"power3.in",onComplete:function(){b.remove();}});else b.remove();
+      dissolve();}
+    b.addEventListener("click",go);
   }
   function hash(a,b){var r=Math.sin(a*127.1+b*311.7)*43758.5453;return r-Math.floor(r);}
   function dissolve(){
@@ -572,7 +584,7 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 /* ===== 16-music.js ===== */
-/* Muziek: start automatisch zodra de site geladen is (na de preloader) en speelt door tot de bezoeker hem zelf uitzet.
+/* Muziek: start bij de klik op ENTRAR na de preloader (of zodra de site geladen is als er geen preloader is) en speelt door tot de bezoeker hem zelf uitzet.
    Browsers blokkeren geluid dat vanzelf start tot de bezoeker iets op de pagina doet; dan start hij bij de eerste klik, tik of toets.
    Knop rechtsonder met de eigen play- en pause-iconen. Uitgezet blijft uit, ook bij een volgend bezoek. */
 document.addEventListener("DOMContentLoaded",function(){
@@ -598,7 +610,9 @@ document.addEventListener("DOMContentLoaded",function(){
   /* tabblad op de achtergrond: muziek pauzeert, en gaat verder als je terugkomt */
   var wasOn=false;document.addEventListener("visibilitychange",function(){if(document.hidden){wasOn=!audio.paused;if(wasOn)audio.pause();}else if(wasOn&&!off){audio.play().catch(function(){});}ui();});
   audio.addEventListener("play",ui);audio.addEventListener("pause",ui);ui();
-  function start(){root.classList.add("lr-music-ready");play();}
+  function start(){root.classList.add("lr-music-ready");if(audio.paused)play();}
+  /* klik op ENTRAR: start direct, binnen de klik, zodat de browser het geluid toestaat */
+  document.addEventListener("lasrodes:enter",function(){root.classList.add("lr-music-ready");if(!off&&audio.paused){audio.play().then(function(){fade(VOL);ui();}).catch(function(){waitForGesture();});}});
   /* pas na de preloader (de hele site geladen); zonder preloader na het load-event */
   if(root.classList.contains("lr-pre"))document.addEventListener("lasrodes:preloaded",start);
   else if(document.readyState==="complete")start();else window.addEventListener("load",start);
