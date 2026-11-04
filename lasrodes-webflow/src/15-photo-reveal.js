@@ -34,6 +34,10 @@ document.addEventListener("DOMContentLoaded",function(){
     img.style.visibility="hidden";
     if(img.complete)layout();else img.addEventListener("load",layout);
     var rt;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(layout,200);});
+    /* zonder groei: voortgang direct uit de zichtbare positie. Nodig voor foto's die een ander script verplaatst (de afsluiter),
+       daar klopt een ScrollTrigger-meting niet en mag niemand anders aan de transform zitten */
+    if(scale===1){var endF=(parseFloat(w.getAttribute("data-photo-end"))||85)/100;
+      (function tick(){var r=w.getBoundingClientRect(),np=r.height?Math.min(1,Math.max(0,(innerHeight-r.top)/(endF*r.height))):0;if(np!==prog){prog=np;draw();}requestAnimationFrame(tick);})();return;}
     gsap.fromTo(w,{scale:1},{scale:scale,ease:"none",scrollTrigger:{trigger:w,start:"top bottom",end:w.getAttribute("data-photo-end")||"85% bottom",scrub:true,
       onUpdate:function(st){prog=st.progress;draw();},onRefresh:function(st){prog=st.progress;draw();}}});
   });
