@@ -1,4 +1,4 @@
-/* Gekantelde afbeeldingen: starten op hun hoek uit de Designer en staan recht zodra ze midden in beeld staan */
+/* Gekantelde afbeeldingen: starten op hun hoek uit de Designer en staan recht zodra ze midden in beeld staan (of op data-tilt-end) */
 document.addEventListener("DOMContentLoaded",function(){
   if(!window.gsap||!window.ScrollTrigger)return;gsap.registerPlugin(ScrollTrigger);
   var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -9,6 +9,6 @@ document.addEventListener("DOMContentLoaded",function(){
     else if(cs.transform&&cs.transform!=="none"){var n=cs.transform.match(/\(([^)]+)\)/)[1].split(",").map(parseFloat);ang=Math.atan2(n[1],n[0])*180/Math.PI;}
     if(Math.abs(ang)<.5||Math.abs(ang)>45)return;
     if(reduce){gsap.set(el,{rotation:0});return;}
-    gsap.fromTo(el,{rotation:ang},{rotation:0,ease:"none",scrollTrigger:{trigger:el,start:"top bottom",end:"center center",scrub:true}});
+    gsap.fromTo(el,{rotation:ang},{rotation:0,ease:"none",scrollTrigger:{trigger:el,start:"top bottom",end:el.getAttribute("data-tilt-end")||"center center",scrub:true}});
   });
 });

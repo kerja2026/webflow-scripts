@@ -1,6 +1,6 @@
 /* Foto die uit het patroon tevoorschijn komt: elk element met data-photo-reveal (de wrapper rond een foto).
    Bij binnenkomst is de foto bijna helemaal bedekt; tijdens het scrollen vallen de tegels van onder naar boven weg,
-   en groeit de foto naar data-photo-scale (standaard 1.25). Klaar als hij midden in het venster staat, onderaan blijft een rafelrand.
+   en groeit de foto naar data-photo-scale (standaard 1.25). Klaar als de foto voor 85% in beeld is (data-photo-end), dan helemaal zichtbaar.
    De foto wordt op een canvas in de wrapper getekend, dus kanteling en schaal van de wrapper werken gewoon mee. */
 document.addEventListener("DOMContentLoaded",function(){
   if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded",function(){
       if(!G||!img.complete||!img.naturalWidth)return;var g=G,P=g.P;
       var front=g.H+g.band*1.6-prog*(g.H+g.band*3.2);/* onder het beeld bij 0, boven het beeld bij 1 */
       x.setTransform(g.d,0,0,g.d,0,0);x.globalCompositeOperation="source-over";x.clearRect(0,0,g.W,g.H);x.fillStyle="#000";
-      g.cells.forEach(function(c){var v=Math.min((c[1]-front)/g.band,(g.H-c[1])/g.rim+.6)-c[2]*.8;/* front van onder naar boven; vaste rafelrand onderaan */
+      g.cells.forEach(function(c){var v=Math.min((c[1]-front)/g.band,(g.H-c[1])/g.rim+.6+prog*4)-c[2]*.8;/* front van onder naar boven; de rafelrand onderaan verdwijnt tegen het eind, zodat de foto dan helemaal zichtbaar is */
         if(v<=0)return;if(v>=1){x.fillRect(c[0]-P/2,c[1]-P/2,P+1,P+1);return;}var s=v*v*(3-2*v);piece(c,P,s);});
       /* de foto zelf, op zijn plek en uitsnede zoals in de Designer (object-fit: cover) */
       var ox=img.offsetLeft,oy=img.offsetTop,ow=img.offsetWidth,oh=img.offsetHeight,nw=img.naturalWidth,nh=img.naturalHeight,s=Math.max(ow/nw,oh/nh),dw=nw*s,dh=nh*s;
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded",function(){
     img.style.visibility="hidden";
     if(img.complete)layout();else img.addEventListener("load",layout);
     var rt;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(layout,200);});
-    gsap.fromTo(w,{scale:1},{scale:scale,ease:"none",scrollTrigger:{trigger:w,start:"top bottom",end:"center center",scrub:true,
+    gsap.fromTo(w,{scale:1},{scale:scale,ease:"none",scrollTrigger:{trigger:w,start:"top bottom",end:w.getAttribute("data-photo-end")||"85% bottom",scrub:true,
       onUpdate:function(st){prog=st.progress;draw();},onRefresh:function(st){prog=st.progress;draw();}}});
   });
 });
