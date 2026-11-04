@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded",function(){
     if(!hero&&window.LR)hero=window.LR.fields.find(function(f){return f.opts.intro;});if(hero)hero.opts.intro.s=performance.now();}
   var phase=0,front=-1,G=null,spill=false,SPILL_AT=.3;/* SPILL_AT: deel van het rode vlak dat weg moet zijn voor de olievlek start */
   function startSpill(){if(spill)return;spill=true;holdSpill();}/* zet de klok van de olievlek op nu, daarna loopt hij vrij */
-  window.LR_PRE={dark:function(x,y){if(phase<2)return true;if(phase>2||!G)return false;var d=Math.hypot(x-G.cx,y-G.cy);return d>front-.5*G.band;}};
+  window.LR_PRE={dark:function(x,y){return phase<2;}};/* tot de klik op ENTRAR is de nav licht; daarna kleurt hij mee met de pagina */
   (function load(){
     holdSpill();
     var t=target();p=Math.min(t,p+Math.max(.006,(t-p)*.06));
@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded",function(){
     if(window.gsap)gsap.fromTo(t,{yPercent:130,rotation:10},{yPercent:0,rotation:0,duration:1.1,ease:"power3.out",delay:.15});else t.style.transform="none";
     function go(){if(done)return;done=true;
       document.dispatchEvent(new Event("lasrodes:enter"));/* binnen de klik: muziek mag nu starten */
+      root.classList.add("lr-entered");setTimeout(function(){root.classList.remove("lr-entered");},1800);/* logo gaat rustig van licht naar donker */
       root.classList.remove("lr-pre");/* pagina zichtbaar onder het rode canvas */
       if(window.gsap)gsap.to(t,{yPercent:-130,rotation:-6,duration:.6,ease:"power3.in",onComplete:function(){b.remove();}});else b.remove();
       dissolve();}
