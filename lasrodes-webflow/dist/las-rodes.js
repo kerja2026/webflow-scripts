@@ -567,10 +567,14 @@ document.addEventListener("DOMContentLoaded",function(){
       x.save();x.translate(c[0]+pc[0]*P,c[1]+pc[1]*P);x.scale(k,k);x.fill(P2[pc[2]],"evenodd");x.restore();});}
     function draw(){
       if(!G||!img.complete||!img.naturalWidth)return;var g=G,P=g.P;
-      var front=g.H+g.band*1.6-prog*(g.H+g.band*3.2);/* onder het beeld bij 0, boven het beeld bij 1 */
+      var front=g.H+g.band*1.6-prog*(g.H+g.band*3.8);/* onder het beeld bij 0, ruim boven het beeld bij 1 */
       x.setTransform(g.d,0,0,g.d,0,0);x.globalCompositeOperation="source-over";x.clearRect(0,0,g.W,g.H);x.fillStyle="#000";
-      g.cells.forEach(function(c){var v=Math.min((c[1]-front)/g.band,(g.H-c[1])/g.rim+.6+prog*4)-c[2]*.8;/* front van onder naar boven; de rafelrand onderaan verdwijnt tegen het eind, zodat de foto dan helemaal zichtbaar is */
-        if(v<=0)return;if(v>=1){x.fillRect(c[0]-P/2,c[1]-P/2,P+1,P+1);return;}var s=v*v*(3-2*v);piece(c,P,s);});
+      g.cells.forEach(function(c){var v=2*Math.min((c[1]-front)/g.band,(g.H-c[1])/g.rim+.6+prog*4)-c[2]*1.2;/* front van onder naar boven; de rafelrand onderaan verdwijnt tegen het eind, zodat de foto dan helemaal zichtbaar is */
+        if(v<=0)return;if(v>=2){x.fillRect(c[0]-P/2,c[1]-P/2,P+1,P+1);return;}
+        /* twee vloeiende stappen per tegel: 0-1 groeit het patroon, 1-2 groeit vanuit het midden een volle tegel tot de cel dicht is.
+           Zo is er geen sprong van patroon naar volle tegel meer */
+        var s=Math.min(1,v);s=s*s*(3-2*s);piece(c,P,s);
+        if(v>1){var q=v-1;q=q*q*(3-2*q);var z=(P+1)*q;x.fillRect(c[0]-z/2,c[1]-z/2,z,z);}});
       /* de foto zelf, op zijn plek en uitsnede zoals in de Designer (object-fit: cover) */
       var ox=img.offsetLeft,oy=img.offsetTop,ow=img.offsetWidth,oh=img.offsetHeight,nw=img.naturalWidth,nh=img.naturalHeight,s=Math.max(ow/nw,oh/nh),dw=nw*s,dh=nh*s;
       x.globalCompositeOperation="source-in";x.drawImage(img,ox+(ow-dw)/2,oy+(oh-dh)/2,dw,dh);x.globalCompositeOperation="source-over";
