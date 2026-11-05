@@ -13,7 +13,12 @@ document.addEventListener("DOMContentLoaded",function(){
   band.setAttribute("data-color","red");band.setAttribute("data-manual","");
   host.appendChild(band);ov.appendChild(host);
   var content=document.createElement("nav");content.className="lr-menu_content";content.setAttribute("aria-label","Secciones");
-  var src=document.querySelector(".coral_menu");if(src){var l=src.cloneNode(true);l.classList.add("lr-menu_links");content.appendChild(l);}
+  /* menu-items: een menulijst op de pagina wordt gekopieerd; staat die er niet (meer), dan bouwt het script de lijst zelf */
+  var src=document.querySelector(".coral_menu"),l;
+  if(src){l=src.cloneNode(true);}
+  else{l=document.createElement("div");l.className="coral_menu";
+    [["#raices","Ra\u00edces"],["#voces","Las voces detr\u00e1s"],["#voz","Su propia voz"]].forEach(function(it){var a=document.createElement("a");a.className="coral_menu-link heading-style-h4";a.href=it[0];a.textContent=it[1];l.appendChild(a);});}
+  l.classList.add("lr-menu_links");content.appendChild(l);
   var so=document.querySelector(".footer_social");if(so){var s2=so.cloneNode(true);s2.classList.add("lr-menu_social");content.appendChild(s2);
     /* in het rode menu het Spotify-logo met rode strepen; de footer houdt de donkere */
     [].forEach.call(s2.querySelectorAll("img"),function(i){if(/icon-spotify-dark/.test(i.src)){i.removeAttribute("srcset");i.src="https://cdn.prod.website-files.com/6ae4913cbd8a2e883953ad49/6ae8bbb175f1a3563f863b3e_icon-spotify.svg";}});}

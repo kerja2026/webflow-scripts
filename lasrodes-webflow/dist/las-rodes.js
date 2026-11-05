@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded",function(){
 /* Middenlijnen tekenen zich uit tijdens het scrollen: de punt van de lijn staat steeds op 70% van de vensterhoogte */
 document.addEventListener("DOMContentLoaded",function(){
   if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  var lines=[].slice.call(document.querySelectorAll(".raices_line,.raices_line-bottom,.voces_line,.voces_line-bottom,.voces_line-extra,.voz_line,.voz_line-bottom,.cierre_line,.footer_line"));
+  var lines=[].slice.call(document.querySelectorAll(".coral_line,.raices_line,.raices_line-bottom,.voces_line,.voces_line-bottom,.voces_line-extra,.voz_line,.voz_line-bottom,.cierre_line,.footer_line"));
   if(!lines.length)return;
   (function tick(){
     var tip=.7*window.innerHeight;
@@ -262,7 +262,12 @@ document.addEventListener("DOMContentLoaded",function(){
   band.setAttribute("data-color","red");band.setAttribute("data-manual","");
   host.appendChild(band);ov.appendChild(host);
   var content=document.createElement("nav");content.className="lr-menu_content";content.setAttribute("aria-label","Secciones");
-  var src=document.querySelector(".coral_menu");if(src){var l=src.cloneNode(true);l.classList.add("lr-menu_links");content.appendChild(l);}
+  /* menu-items: een menulijst op de pagina wordt gekopieerd; staat die er niet (meer), dan bouwt het script de lijst zelf */
+  var src=document.querySelector(".coral_menu"),l;
+  if(src){l=src.cloneNode(true);}
+  else{l=document.createElement("div");l.className="coral_menu";
+    [["#raices","Ra\u00edces"],["#voces","Las voces detr\u00e1s"],["#voz","Su propia voz"]].forEach(function(it){var a=document.createElement("a");a.className="coral_menu-link heading-style-h4";a.href=it[0];a.textContent=it[1];l.appendChild(a);});}
+  l.classList.add("lr-menu_links");content.appendChild(l);
   var so=document.querySelector(".footer_social");if(so){var s2=so.cloneNode(true);s2.classList.add("lr-menu_social");content.appendChild(s2);
     /* in het rode menu het Spotify-logo met rode strepen; de footer houdt de donkere */
     [].forEach.call(s2.querySelectorAll("img"),function(i){if(/icon-spotify-dark/.test(i.src)){i.removeAttribute("srcset");i.src="https://cdn.prod.website-files.com/6ae4913cbd8a2e883953ad49/6ae8bbb175f1a3563f863b3e_icon-spotify.svg";}});}
