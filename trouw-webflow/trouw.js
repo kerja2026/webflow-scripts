@@ -794,6 +794,8 @@
      onderaf over de vorige, en de kaarten eronder worden iets kleiner en
      schuiven een fractie omhoog. De tekst (.spec_text) wisselt mee: de
      oude verdwijnt naar boven, de nieuwe komt van onderaf.
+     Terwijl de kaarten wisselen, schuift de hele sectie langzaam
+     omhoog. Zo stopt de pagina niet abrupt als de sectie vastgaat.
 
      Mobiel (en bij minder beweging): de teksten scrollen gewoon mee en
      de tekst bij de leeslijn krijgt is-active, samen met zijn foto. Op
@@ -804,8 +806,11 @@
      peek      = hoeveel een kaart per laag omhoog schuift, in em
      depth     = hoeveel lagen van de stapel zichtbaar blijven
      textShift = hoe ver de tekst in- en uitschuift, in em
-     scrub     = hoe zacht de beweging het scrollen volgt, in seconden */
-  var SPEC = { scale: 0.05, peek: 1.25, depth: 2, textShift: 1.5, scrub: 0.6 };
+     scrub     = hoe zacht de beweging het scrollen volgt, in seconden
+     drift     = hoe ver de sectie in totaal omhoog schuift terwijl hij
+                 vaststaat, in em. 0 = helemaal stil. Houd hem onder 8:
+                 meer schuift de bovenkant onder de header. */
+  var SPEC = { scale: 0.05, peek: 1.25, depth: 2, textShift: 1.5, scrub: 0.6, drift: 6 };
 
   var specTexts = gsap.utils.toArray('.spec_text');
   var specCards = gsap.utils.toArray('.spec_card');
@@ -846,6 +851,20 @@
             invalidateOnRefresh: true
           }
         });
+
+        /* De sectie schuift gelijkmatig omhoog over de hele wissel: van
+           een halve drift onder het midden naar een halve drift erboven.
+           Zo blijft hij in het midden van het scherm en schuift hij niet
+           onder de header. */
+        if (SPEC.drift) {
+          tl.fromTo(specComp,
+            { y: function () { return SPEC.drift / 2 * em(); } },
+            {
+              y: function () { return -SPEC.drift / 2 * em(); },
+              duration: Math.max(n - 1, 1),
+              ease: 'none'
+            }, 0);
+        }
 
         for (var k = 1; k < n; k++) {
           var at = k - 1;
