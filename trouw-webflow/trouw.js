@@ -743,9 +743,44 @@
       tl.to(rest, { x: 0, duration: HC.slide, ease: 'power3.out', stagger: HC.stagger }, '<');
     }
     tl.call(function () {
-      gsap.set(heroCards, { clearProps: 'transform,zIndex,opacity,visibility' });
+      /* Niet transform wissen: daar zit ook de trap-parallax (HCP) in */
+      gsap.set(heroCards, { clearProps: 'zIndex,opacity,visibility' });
     });
   };
+
+  /* Trap-parallax: bij het scrollen schuiven de kaarten een fractie
+     omhoog ten opzichte van de pagina, elk met een eigen snelheid:
+     links het meest, rechts het minst. Alleen vanaf 768px; op mobiel
+     staan de kaarten in een schuifbare rij.
+     shift = hoe ver elke kaart in totaal omhoog schuift, in em, van
+             links naar rechts (3.75em = 60px op de designbreedte)
+     scrub = hoe zacht de beweging het scrollen volgt, in seconden
+     De beweging loopt van de bovenkant van de pagina tot de hero uit
+     beeld is. */
+  var HCP = { shift: [3.75, 2.5, 1.25], scrub: 0.6 };
+
+  if (heroCards.length && !reduced) {
+    var heroSection = heroCards[0].closest('section') || heroCards[0].parentElement;
+    gsap.matchMedia().add('(min-width: 768px)', function () {
+      heroCards.forEach(function (card, i) {
+        var em = HCP.shift[Math.min(i, HCP.shift.length - 1)];
+        gsap.fromTo(card,
+          { y: 0 },
+          {
+            y: function () { return -em * parseFloat(getComputedStyle(card).fontSize); },
+            ease: 'none',
+            scrollTrigger: {
+              trigger: heroSection,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: HCP.scrub,
+              invalidateOnRefresh: true
+            }
+          }
+        );
+      });
+    });
+  }
 
   /* ---------- 5b. PRELOADER ----------
      Bij het eerste bezoek in een sessie dekken de kolommen de pagina af,
@@ -1261,7 +1296,7 @@
   var PX = {
     shift: 8,
     zoom: 1.2,
-    frames: '.home-hero_card, .steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
+    frames: '.steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
   };
 
   if (!reduced) {
