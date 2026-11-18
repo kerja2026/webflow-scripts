@@ -336,10 +336,13 @@
   /* ---------- 4b. SPECIALISATIES-MENU ----------
      Een klik op "Specialisaties" (.navbar_link.is-mega) opent het paneel
      .mega-menu_component in de header. De opbouw gaat in vaste volgorde, met een
-     kleine overlap zodat het geheel rond de 1,5 seconde blijft:
+     kleine overlap zodat het geheel rond de 1,8 seconde blijft. Het uitgroeien
+     start en eindigt rustig (power3.inOut), zodat het paneel niet in één keer
+     openklapt:
 
        1. Het groene kader rond de menulinks groeit vanuit zijn midden
-          uit tot het volle groene paneel.
+          uit tot het volle glazen paneel (half transparant groen met
+          blur, lichte rand en glans; opmaak in het Style-panel).
           (Het groeien is een clip-path op het paneel.)
        2. De klachten verschijnen kort na elkaar: elke kaart hangt aan
           zijn bovenrand en kantelt subtiel omlaag tot hij recht staat.
@@ -363,9 +366,9 @@
                (de duur daarvan, .4s, staat in trouw.css)
      radius  = afronding van het kader, round = afronding van het paneel */
   var MEGA = {
-    grow: 0.5, cardsAt: 0.35, cards: 0.6, each: 0.06, tilt: 20, perspective: 1000,
-    lightAt: 0.75,
-    easeOpen: 'expo.out', easeClose: 'power3.inOut',
+    grow: 0.9, cardsAt: 0.5, cards: 0.8, each: 0.08, tilt: 20, perspective: 1000,
+    lightAt: 0.7,
+    easeOpen: 'power3.inOut', easeClose: 'power3.inOut',
     radius: 0.9375, round: 0.5
   };
 
@@ -415,7 +418,7 @@
       megaTl = gsap.timeline();
       /* 1. uitgroeien */
       megaTl.to(mega, { clipPath: openClip(), duration: at(MEGA.grow), ease: MEGA.easeOpen }, 0);
-      if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: at(MEGA.grow), ease: 'power2.out' }, 0);
+      if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: at(MEGA.grow), ease: 'power2.inOut' }, 0);
       /* 2. de specialisaties */
       megaTl.to(megaCards, { autoAlpha: 1, rotationX: 0, duration: at(MEGA.cards), ease: 'power3.out', stagger: at(MEGA.each) }, at(MEGA.cardsAt));
       /* 3. logo, contactregel en knop naar licht */
