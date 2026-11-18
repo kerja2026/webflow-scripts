@@ -366,10 +366,10 @@
                (de duur daarvan, .4s, staat in trouw.css)
      radius  = afronding van het kader, round = afronding van het paneel */
   var MEGA = {
-    grow: 0.9, cardsAt: 0.5, cards: 0.8, each: 0.08, tilt: 20, perspective: 1000,
+    grow: 1.5, cardsAt: 0.5, cards: 0.8, each: 0.08, tilt: 20, perspective: 1000,
     lightAt: 0.7,
     easeOpen: 'power3.inOut', easeClose: 'power3.inOut',
-    radius: 0.9375, round: 0.5
+    radius: 1.0, round: 0.5
   };
 
   var mega = document.querySelector('.mega-menu_component');
