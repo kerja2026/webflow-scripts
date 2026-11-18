@@ -366,7 +366,7 @@
                (de duur daarvan, .4s, staat in trouw.css)
      radius  = afronding van het kader, round = afronding van het paneel */
   var MEGA = {
-    grow: 1.4, cardsAt: 0.85, cards: 1.0, each: 0.1, tilt: 20, perspective: 1000,
+    grow: 1.1, cardsAt: 0.85, cards: 1.0, each: 0.1, tilt: 20, perspective: 1000,
     lightAt: 1.1,
     easeOpen: 'power3.inOut', easeClose: 'power3.inOut',
     radius: 0.9375, round: 0.5
