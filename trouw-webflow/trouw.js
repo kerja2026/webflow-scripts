@@ -336,7 +336,7 @@
   /* ---------- 4b. SPECIALISATIES-MENU ----------
      Een klik op "Specialisaties" (.navbar_link.is-mega) opent het paneel
      .mega-menu_component in de header. De opbouw gaat in vaste volgorde, met een
-     kleine overlap zodat het geheel rond de 1,8 seconde blijft. Het uitgroeien
+     kleine overlap zodat het geheel rond de 2,5 seconde blijft. Het uitgroeien
      start en eindigt rustig (power3.inOut), zodat het paneel niet in één keer
      openklapt:
 
@@ -366,10 +366,10 @@
                (de duur daarvan, .4s, staat in trouw.css)
      radius  = afronding van het kader, round = afronding van het paneel */
   var MEGA = {
-    grow: 1.5, cardsAt: 0.5, cards: 0.8, each: 0.08, tilt: 20, perspective: 1000,
-    lightAt: 0.7,
+    grow: 1.4, cardsAt: 0.85, cards: 1.0, each: 0.1, tilt: 20, perspective: 1000,
+    lightAt: 1.1,
     easeOpen: 'power3.inOut', easeClose: 'power3.inOut',
-    radius: 1.0, round: 0.5
+    radius: 0.9375, round: 0.5
   };
 
   var mega = document.querySelector('.mega-menu_component');
