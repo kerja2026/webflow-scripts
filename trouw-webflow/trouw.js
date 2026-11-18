@@ -336,22 +336,30 @@
   /* ---------- 4b. SPECIALISATIES-MENU ----------
      Een klik op "Specialisaties" (.navbar_link.is-mega) opent het paneel
      .mega-menu_component in de header. De opbouw gaat in vaste volgorde, met een
-     kleine overlap zodat het geheel rond de 2,5 seconde blijft. Het uitgroeien
-     start en eindigt rustig (power3.inOut), zodat het paneel niet in één keer
-     openklapt:
+     kleine overlap zodat het geheel rond de 2 seconden blijft:
 
-       1. Het groene kader rond de menulinks groeit vanuit zijn midden
-          uit tot het volle glazen paneel (half transparant groen met
-          blur, lichte rand en glans; opmaak in het Style-panel).
-          (Het groeien is een clip-path op het paneel.)
+       1. Het paneel groeit uit vanuit de menupil. Het begint exact als de
+          pil: zelfde verloop (115deg, #8da089 naar #415442), zelfde plek,
+          zelfde afronding. Tijdens het uitgroeien rekt het verloop mee en
+          loopt de afronding geleidelijk naar die van het open paneel, op
+          alle vier de hoeken. De pil zelf verliest zijn verloop
+          (.is-mega in trouw.css); het paneel ligt er dan precies overheen,
+          dus dat wissel is niet te zien.
+          (Het groeien is een clip-path; het verloop krijgt dezelfde maat
+          en plek als de clip, met background-size en -position.)
        2. De klachten verschijnen kort na elkaar: elke kaart hangt aan
           zijn bovenrand en kantelt subtiel omlaag tot hij recht staat.
        3. Logo, contactregel en knop verkleuren naar licht
           (.is-mega-light op de header, kleuren in trouw.css).
+       4. Het paneel wordt geleidelijk glas: het verloop wordt half
+          transparant, de pagina erachter vervaagt (backdrop blur) en de
+          glans bovenin komt op. Pas als het paneel bijna open is, want
+          blur met een groeiende clip-path maakt in de browser de hoeken
+          recht. Rand en lichtlijn bovenin staan in het Style-panel.
 
-     Sluiten gaat precies omgekeerd. Sluiten kan door opnieuw te
-     klikken, buiten het paneel of op de waas te klikken, met Escape,
-     of door het venster te verkleinen.
+     Sluiten gaat precies omgekeerd: eerst weer dekkend, dan terug naar
+     de pil. Sluiten kan door opnieuw te klikken, buiten het paneel of op
+     de waas te klikken, met Escape, of door het venster te verkleinen.
 
      Zolang het paneel open is, staat de pagina op slot (.mega-open,
      alleen op html: op body zou de sticky header wegspringen) en ligt
@@ -364,12 +372,16 @@
      tilt    = hoeveel graden een kaart begint gekanteld, perspective = diepte
      lightAt = start van logo, contactregel en knop naar licht
                (de duur daarvan, .4s, staat in trouw.css)
-     radius  = afronding van het kader, round = afronding van het paneel */
+     glassAt = start van het glas, glass = duur ervan
+     alpha   = dekking van het verloop als glas (1 = dekkend)
+     blur    = vervaging achter het glas, in em
+     De afrondingen komen uit de styles zelf: de pil (.navbar_menu) en
+     het open paneel (.mega-menu_component). */
   var MEGA = {
-    grow: 1.1, cardsAt: 0.85, cards: 1.0, each: 0.1, tilt: 20, perspective: 1000,
+    grow: 1.4, cardsAt: 0.85, cards: 0.6, each: 0.06, tilt: 20, perspective: 1000,
     lightAt: 1.1,
-    easeOpen: 'power3.inOut', easeClose: 'power3.inOut',
-    radius: 0.9375, round: 0.5
+    glassAt: 1.2, glass: 0.8, alpha: 0.55, blur: 1.5,
+    easeOpen: 'power3.inOut', easeClose: 'power3.inOut'
   };
 
   var mega = document.querySelector('.mega-menu_component');
@@ -384,18 +396,40 @@
     var megaTl = null;
     var emPx = function (n) { return n * parseFloat(getComputedStyle(mega).fontSize); };
     var at = function (n) { return reduced ? 0 : n; };
+    var radiusOf = function (el) { return parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0; };
 
-    var closedClip = function () {
-      var p = mega.getBoundingClientRect();
+    /* p: 0 = pil, 1 = open paneel. glass: 0 = dekkend, 1 = glas. */
+    var megaState = { p: 0, glass: 0 };
+    var geo = null;
+    var measureMega = function () {
+      var m = mega.getBoundingClientRect();
       var r = navMenu.getBoundingClientRect();
-      var rad = emPx(MEGA.radius);
-      return 'inset(' + (r.top - p.top) + 'px ' + (p.right - r.right) + 'px ' +
-        (p.bottom - r.bottom) + 'px ' + (r.left - p.left) + 'px round ' +
-        rad + 'px ' + rad + 'px ' + rad + 'px ' + rad + 'px)';
+      geo = {
+        w: m.width, h: m.height,
+        t: r.top - m.top, r: m.right - r.right, b: m.bottom - r.bottom, l: r.left - m.left,
+        r0: radiusOf(navMenu), r1: radiusOf(mega), blur: emPx(MEGA.blur)
+      };
     };
-    var openClip = function () {
-      var b = emPx(MEGA.round);
-      return 'inset(0px 0px 0px 0px round ' + b + 'px ' + b + 'px ' + b + 'px ' + b + 'px)';
+    var renderMega = function () {
+      if (!geo) return;
+      var q = 1 - megaState.p;
+      var t = geo.t * q, r = geo.r * q, b = geo.b * q, l = geo.l * q;
+      var rad = geo.r0 + (geo.r1 - geo.r0) * megaState.p;
+      mega.style.clipPath = 'inset(' + t + 'px ' + r + 'px ' + b + 'px ' + l + 'px round ' + rad + 'px)';
+      /* laag 1 = glans over het hele paneel, laag 2 = het verloop, op de maat van de clip */
+      mega.style.backgroundSize = '100% 100%, ' + (geo.w - l - r) + 'px ' + (geo.h - t - b) + 'px';
+      mega.style.backgroundPosition = '0px 0px, ' + l + 'px ' + t + 'px';
+      var g = megaState.glass;
+      mega.style.setProperty('--mega-alpha', 1 - (1 - MEGA.alpha) * g);
+      mega.style.setProperty('--mega-gloss', g);
+      var bf = g > 0.001 ? 'blur(' + (geo.blur * g) + 'px) saturate(' + (100 + 60 * g) + '%)' : 'none';
+      mega.style.backdropFilter = bf;
+      mega.style.webkitBackdropFilter = bf;
+    };
+    var resetMega = function () {
+      ['clipPath', 'backgroundSize', 'backgroundPosition', 'backdropFilter', 'webkitBackdropFilter'].forEach(function (k) { mega.style[k] = ''; });
+      mega.style.removeProperty('--mega-alpha');
+      mega.style.removeProperty('--mega-gloss');
     };
     var setClass = function (name, on) { header.classList.toggle(name, on); };
 
@@ -405,24 +439,35 @@
       if (megaOpen) return;
       megaOpen = true;
       megaTrigger.setAttribute('aria-expanded', 'true');
+      var wasClosed = mega.style.display !== 'block';
       if (megaTl) megaTl.kill();
 
       mega.style.display = 'block';
-      gsap.set(mega, { clipPath: closedClip() });
-      gsap.set(megaCards, { autoAlpha: 0, rotationX: -MEGA.tilt, transformOrigin: '50% 0%', transformPerspective: MEGA.perspective });
+      if (wasClosed) {
+        megaState.p = 0;
+        megaState.glass = 0;
+        gsap.set(megaCards, { autoAlpha: 0, rotationX: -MEGA.tilt, transformOrigin: '50% 0%', transformPerspective: MEGA.perspective });
+      }
+      measureMega();
+      renderMega();
       setClass('is-mega', true);
       html.classList.add('mega-open');
       if (lenis) lenis.stop();
-      if (megaScrim) { megaScrim.style.display = 'block'; gsap.set(megaScrim, { autoAlpha: 0 }); }
+      if (megaScrim) {
+        megaScrim.style.display = 'block';
+        if (wasClosed) gsap.set(megaScrim, { autoAlpha: 0 });
+      }
 
       megaTl = gsap.timeline();
-      /* 1. uitgroeien */
-      megaTl.to(mega, { clipPath: openClip(), duration: at(MEGA.grow), ease: MEGA.easeOpen }, 0);
+      /* 1. uitgroeien vanuit de pil */
+      megaTl.to(megaState, { p: 1, duration: at(MEGA.grow), ease: MEGA.easeOpen, onUpdate: renderMega }, 0);
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 1, duration: at(MEGA.grow), ease: 'power2.inOut' }, 0);
       /* 2. de specialisaties */
       megaTl.to(megaCards, { autoAlpha: 1, rotationX: 0, duration: at(MEGA.cards), ease: 'power3.out', stagger: at(MEGA.each) }, at(MEGA.cardsAt));
       /* 3. logo, contactregel en knop naar licht */
       megaTl.call(function () { setClass('is-mega-light', true); }, null, at(MEGA.lightAt));
+      /* 4. geleidelijk glas */
+      megaTl.to(megaState, { glass: 1, duration: at(MEGA.glass), ease: 'power2.inOut', onUpdate: renderMega }, at(MEGA.glassAt));
     };
 
     closeMega = function () {
@@ -430,22 +475,25 @@
       megaOpen = false;
       megaTrigger.setAttribute('aria-expanded', 'false');
       if (megaTl) megaTl.kill();
+      measureMega();
 
       megaTl = gsap.timeline({
         onComplete: function () {
           mega.style.display = 'none';
+          resetMega();
           if (megaScrim) megaScrim.style.display = 'none';
           setClass('is-mega', false);
           html.classList.remove('mega-open');
           if (lenis) lenis.start();
         }
       });
-      /* omgekeerd: 3. eerst logo, contactregel en knop terug */
+      /* omgekeerd: 4. eerst weer dekkend, 3. logo, contactregel en knop terug */
+      megaTl.to(megaState, { glass: 0, duration: at(0.35), ease: 'power2.inOut', onUpdate: renderMega }, 0);
       megaTl.call(function () { setClass('is-mega-light', false); }, null, 0);
       /* 2. kaarten weg */
       megaTl.to(megaCards.slice().reverse(), { autoAlpha: 0, rotationX: -MEGA.tilt * 0.6, duration: at(0.25), ease: 'power2.in', stagger: at(0.03) }, at(0.2));
-      /* 1. krimpen naar het kader */
-      megaTl.to(mega, { clipPath: closedClip(), duration: at(0.45), ease: MEGA.easeClose }, at(0.45));
+      /* 1. krimpen naar de pil */
+      megaTl.to(megaState, { p: 0, duration: at(0.45), ease: MEGA.easeClose, onUpdate: renderMega }, at(0.45));
       if (megaScrim) megaTl.to(megaScrim, { autoAlpha: 0, duration: at(0.45), ease: 'power2.inOut' }, at(0.45));
     };
 

@@ -136,9 +136,25 @@ body::-webkit-scrollbar{width:0;height:0;display:none}
                    contactregel en knop verkleuren naar licht.
    De duur van het verkleuren (.4s) staat hieronder; trouw.js zet
    .is-mega-light op het moment MEGA.lightAt. Opmaak van paneel,
-   kaarten en waas staat in het Style-panel (.mega-menu_component, .mega-menu_card, .mega-menu_scrim). */
+   kaarten en waas staat in het Style-panel (.mega-menu_component, .mega-menu_card, .mega-menu_scrim),
+   behalve de achtergrond van het paneel: die staat hieronder, omdat
+   trouw.js hem tijdens het openen laat meegroeien en geleidelijk glas
+   laat worden (--mega-alpha, --mega-gloss, background-size en -position,
+   backdrop-filter). Het verloop is dat van de menupil (.navbar_menu). */
 .navbar_component.is-mega .navbar_menu{background-image:none}
-.mega-menu_component{will-change:clip-path}
+.navbar_component .mega-menu_component{
+  --mega-alpha:1;
+  --mega-gloss:0;
+  will-change:clip-path;
+  background-color:transparent;
+  background-image:
+    linear-gradient(180deg,rgba(241,234,224,calc(.18 * var(--mega-gloss))) 0%,rgba(241,234,224,0) 30%),
+    linear-gradient(115deg,rgba(141,160,137,var(--mega-alpha)) 0%,rgba(65,84,66,var(--mega-alpha)) 100%);
+  background-origin:border-box;
+  background-repeat:no-repeat;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
 /* Scrollslot: alleen op html. Op body maakt overflow hidden de body
    tot scrollvlak, en springt de sticky header buiten beeld. */
 html.mega-open{overflow:hidden}
