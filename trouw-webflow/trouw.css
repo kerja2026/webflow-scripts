@@ -237,10 +237,14 @@ html.mega-open{overflow:hidden}
 /* ===== INTRO-ANIMATIE: beginstand ===== */
 .js-anim .navbar_topbar,
 .js-anim .navbar_container,
-.js-anim .home-hero_media,
+.js-anim .home-hero_cards,
 .js-anim .eyebrow_wrapper,
 .js-anim h1 + p{opacity:0}
 .js-anim h1{visibility:hidden}
+
+/* ===== HERO-KAARTEN: op mobiel een schuifbare rij zonder balk ===== */
+.home-hero_cards{scrollbar-width:none}
+.home-hero_cards::-webkit-scrollbar{display:none}
 
 /* ===== BEWEGENDE ACHTERGROND: elementen maakt het script aan ===== */
 .bg__cols{position:absolute;top:0;bottom:0;left:calc(var(--stripe-shift) - var(--col));display:flex}
@@ -303,7 +307,7 @@ html.menu-open{overflow:hidden}
   .navbar_component.is-stuck .navbar_logo{transform:none}
   .js-anim .navbar_topbar,
   .js-anim .navbar_container,
-  .js-anim .home-hero_media,
+  .js-anim .home-hero_cards,
   .js-anim .eyebrow_wrapper,
   .js-anim h1 + p{opacity:1}
   .js-anim h1{visibility:visible}

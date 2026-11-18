@@ -1,7 +1,7 @@
 /* =============================================================
    PRAKTIJK TROUW — SCRIPT
    Smooth scroll, scrollbalk, header, mobiel menu, paginatransitie,
-   preloader, intro, specialisaties, schuivende secties, achtergrond, parallax
+   preloader, hero-kaarten, intro, specialisaties, schuivende secties, achtergrond, parallax
    en footer. Geladen met defer, na ScrollTrigger, SplitText en Lenis.
    GSAP zelf laadt Webflow al (voor de Webflow-interacties); de
    plugins in de footer moeten dezelfde versie hebben.
@@ -618,6 +618,135 @@
     if (lenis) lenis.start();
   });
 
+  /* ---------- 5a. HERO-KAARTEN OP HOME ----------
+     Drie kaarten onder de titel (.home-hero_card), elk een foto met een
+     link naar een behandeling. Bij elk bezoek kiest het script drie
+     willekeurige behandelingen uit de kaarten van het uitklapmenu
+     (.mega-menu_card): foto, alt-tekst en link worden overgenomen. In
+     Webflow staan drie vaste kaarten; die blijven staan als het script
+     niet draait.
+
+     Met preloader (eerste bezoek): de preloader eindigt op de foto van
+     kaart 1. Het logo vervaagt, de foto vliegt van het fotovak naar
+     kaart 1, en kaart 2 en 3 schuiven er van achteren uit tot de rij
+     staat. Zonder preloader faden de kaarten in (zie INTRO).
+
+     fly    = duur van de vlucht van fotovak naar kaart 1
+     swap   = korte overgang van de preloaderfoto naar de scherpe foto
+     slide  = duur van het uitschuiven van kaart 2 en 3
+     stagger = vertraging tussen kaart 2 en 3
+     sizes  = welke fotomaat de browser kiest (één kaart is op desktop
+              ongeveer een derde van het scherm, op mobiel 78%) */
+  var HC = {
+    fly: 1.1,
+    swap: 0.3,
+    slide: 0.9,
+    stagger: 0.15,
+    ease: 'power3.inOut',
+    sizes: '(max-width: 767px) 80vw, 30vw'
+  };
+
+  /* De kleinste maat uit srcset; die gebruikt de preloader */
+  var smallest = function (img) {
+    var best = img.getAttribute('src');
+    var bestW = Infinity;
+    (img.getAttribute('srcset') || '').split(',').forEach(function (part) {
+      var bits = part.trim().split(/\s+/);
+      var w = parseInt(bits[1], 10);
+      if (bits[0] && w && w < bestW) { best = bits[0]; bestW = w; }
+    });
+    return best;
+  };
+
+  var heroCards = gsap.utils.toArray('.home-hero_card');
+  var heroPicks = [];
+  var heroHanded = false;
+
+  if (heroCards.length) {
+    var heroPool = [];
+    document.querySelectorAll('.mega-menu_card').forEach(function (card) {
+      var img = card.querySelector('img');
+      if (img && card.getAttribute('href')) heroPool.push({ href: card.getAttribute('href'), img: img });
+    });
+    for (var hi = heroPool.length - 1; hi > 0; hi--) {
+      var hj = Math.floor(Math.random() * (hi + 1));
+      var ht = heroPool[hi]; heroPool[hi] = heroPool[hj]; heroPool[hj] = ht;
+    }
+    if (heroPool.length >= heroCards.length) {
+      heroPicks = heroPool.slice(0, heroCards.length);
+      heroCards.forEach(function (card, i) {
+        var pick = heroPicks[i];
+        var img = card.querySelector('img');
+        card.setAttribute('href', pick.href);
+        if (!img) return;
+        img.removeAttribute('loading');
+        if (pick.img.getAttribute('srcset')) {
+          img.setAttribute('srcset', pick.img.getAttribute('srcset'));
+          img.setAttribute('sizes', HC.sizes);
+        } else {
+          img.removeAttribute('srcset');
+          img.removeAttribute('sizes');
+        }
+        img.setAttribute('src', pick.img.getAttribute('src'));
+        img.setAttribute('alt', pick.img.getAttribute('alt') || '');
+      });
+    }
+  }
+
+  /* Van het fotovak van de preloader naar de rij kaarten. shot = de foto
+     die in het vak staat. Roept reveal aan (kolommen open) en laat
+     tegelijk de foto naar kaart 1 vliegen. */
+  var heroHandoff = function (media, shot, reveal) {
+    var first = heroCards[0];
+    var firstImg = first.querySelector('img');
+    var from = media.getBoundingClientRect();
+    var to = first.getBoundingClientRect();
+    var fromRad = parseFloat(getComputedStyle(media).borderTopLeftRadius) || 0;
+    var toRad = parseFloat(getComputedStyle(first).borderTopLeftRadius) || 0;
+
+    var flyer = document.createElement('div');
+    flyer.setAttribute('aria-hidden', 'true');
+    flyer.style.cssText = 'position:fixed;z-index:10000;overflow:hidden;pointer-events:none;' +
+      'left:' + from.left + 'px;top:' + from.top + 'px;width:' + from.width + 'px;height:' + from.height + 'px;' +
+      'border-radius:' + fromRad + 'px';
+    var pic = document.createElement('img');
+    pic.src = shot.currentSrc || shot.src;
+    pic.alt = '';
+    pic.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;max-width:none;object-fit:cover;display:block';
+    flyer.appendChild(pic);
+    document.body.appendChild(flyer);
+    media.style.visibility = 'hidden';
+
+    heroHanded = true;
+    var row = document.querySelector('.home-hero_cards');
+    if (row) gsap.set(row, { opacity: 1 });
+    gsap.set(heroCards, { autoAlpha: 0 });
+    heroCards.forEach(function (card, i) { card.style.zIndex = String(heroCards.length - i); });
+
+    reveal();
+
+    /* Dezelfde zoom en verschuiving als de parallax op de kaartfoto,
+       zodat de wissel naar de scherpe foto niet te zien is. */
+    var zoom = firstImg ? gsap.getProperty(firstImg, 'scale') || 1 : 1;
+    var yp = firstImg ? gsap.getProperty(firstImg, 'yPercent') || 0 : 0;
+
+    var tl = gsap.timeline();
+    tl.to(flyer, { left: to.left, top: to.top, width: to.width, height: to.height, borderRadius: toRad, duration: HC.fly, ease: HC.ease }, 0);
+    tl.to(pic, { scale: zoom, yPercent: yp, duration: HC.fly, ease: HC.ease }, 0);
+    tl.set(first, { autoAlpha: 1 });
+    tl.to(flyer, { autoAlpha: 0, duration: HC.swap, ease: 'power1.out', onComplete: function () { flyer.remove(); } });
+    /* Kaart 2 en 3 liggen achter kaart 1 en schuiven naar hun plek */
+    var rest = heroCards.slice(1);
+    if (rest.length) {
+      var x0 = first.getBoundingClientRect().left;
+      tl.set(rest, { autoAlpha: 1, x: function (i, card) { return x0 - card.getBoundingClientRect().left; } }, '<');
+      tl.to(rest, { x: 0, duration: HC.slide, ease: 'power3.out', stagger: HC.stagger }, '<');
+    }
+    tl.call(function () {
+      gsap.set(heroCards, { clearProps: 'transform,zIndex,opacity,visibility' });
+    });
+  };
+
   /* ---------- 5b. PRELOADER ----------
      Bij het eerste bezoek in een sessie dekken de kolommen de pagina af,
      net als bij de paginatransitie. In het midden staat het logo, in twee delen:
@@ -712,17 +841,7 @@
       template.style.visibility = 'hidden';
       gsap.fromTo(parts, { autoAlpha: 0 }, { autoAlpha: 1, duration: PL.appear, ease: 'power2.out' });
 
-      /* De foto's uit het menu, de kleinste maat uit srcset */
-      var smallest = function (img) {
-        var best = img.getAttribute('src');
-        var bestW = Infinity;
-        (img.getAttribute('srcset') || '').split(',').forEach(function (part) {
-          var bits = part.trim().split(/\s+/);
-          var w = parseInt(bits[1], 10);
-          if (bits[0] && w && w < bestW) { best = bits[0]; bestW = w; }
-        });
-        return best;
-      };
+      /* De foto's uit het menu, de kleinste maat uit srcset (smallest, in 5a) */
       var urls = [];
       document.querySelectorAll('.mega-menu_card img').forEach(function (img) {
         var url = smallest(img);
@@ -788,6 +907,18 @@
       Promise.all([siteLoaded, minTime, allShown]).then(function () {
         if (timer) timer.kill();
         if (!opened) { gsap.delayedCall(PL.hold, reveal); return; }
+        /* Op home: eindigen op de foto van kaart 1 en die naar de hero
+           laten vliegen (5a). Elders: vak dicht, logo samen. */
+        if (heroPicks.length && heroCards[0].getBoundingClientRect().width) {
+          var target = smallest(heroPicks[0].img);
+          var hit = -1;
+          shots.forEach(function (shot, n) { if (shot.getAttribute('src') === target) hit = n; });
+          if (hit > -1) {
+            show(hit);
+            gsap.delayedCall(PL.swap, function () { heroHandoff(media, shots[hit], reveal); });
+            return;
+          }
+        }
         gsap.to(media, {
           width: 0,
           marginLeft: 0,
@@ -834,7 +965,7 @@
 
     tl.from(split.words, { yPercent: 110, opacity: 0, duration: 1, stagger: 0.06 }, '-=.3');
 
-    if (exists('.home-hero_media')) tl.to('.home-hero_media', { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=.7');
+    if (exists('.home-hero_cards') && !heroHanded) tl.to('.home-hero_cards', { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=.7');
     if (exists('h1 + p'))       tl.to('h1 + p',       { opacity: 1, duration: .8 }, '-=.6');
   });
 
@@ -1120,43 +1251,6 @@
     });
   }
 
-  /* ---------- 10a. GROTE FOTO OP HOME ----------
-     De grote foto (.home-hero_media) opent zich bij het scrollen van
-     75% naar 100%, vanuit het midden van de onderrand: de onderkant
-     staat vast, de foto groeit naar boven en naar beide kanten. Het kader
-     opent via clip-path, zodat de hoeken altijd 1,25em rond blijven en
-     de pagina eronder niet verschuift. Loopt mee met het scrollen.
-
-     from   = beginformaat (0.75 = 75%)
-     end    = wanneer hij 100% is: als de bovenkant van de foto dit punt
-              in het scherm bereikt
-     radius = afronding van de hoeken, in em */
-  var HERO = { from: 0.75, end: 'top 15%', radius: 1.25 };
-  var heroMedia = document.querySelector('.home-hero_media');
-
-  if (heroMedia && !reduced) {
-    var heroClip = function (p) {
-      var size = HERO.from + (1 - HERO.from) * p;
-      var top = (1 - size) * 100;
-      var side = top / 2;
-      return 'inset(' + top + '% ' + side + '% 0% ' + side + '% round ' + HERO.radius + 'em)';
-    };
-    gsap.fromTo(heroMedia,
-      { clipPath: heroClip(0) },
-      {
-        clipPath: heroClip(1),
-        ease: 'none',
-        scrollTrigger: {
-          trigger: heroMedia,
-          start: 0,
-          end: HERO.end,
-          scrub: true,
-          invalidateOnRefresh: true
-        }
-      }
-    );
-  }
-
   /* ---------- 10. PARALLAX OP BEELDEN ---------- */
   /* shift = beweging in procenten van de fotohoogte, naar boven en naar
      beneden. zoom = vergroting in het kader. Houd shift onder de helft
@@ -1167,7 +1261,7 @@
   var PX = {
     shift: 8,
     zoom: 1.2,
-    frames: '.home-hero_media, .steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
+    frames: '.home-hero_card, .steps_media, .feature_media, .contract_media, .spec-card_media, .spec-detail_hero-media, .spec-detail_item-media, .spec-detail_other-media'
   };
 
   if (!reduced) {
