@@ -15,7 +15,7 @@ geregistreerd script) zijn erbij gekomen.
 | `osmo.css` | sitebreed, head, als eerste | Osmo Scaling System (root-variant). Designbreedte 1512, tablet 834, mobiel liggend 550, mobiel 390 |
 | `kerja-head.js` | sitebreed, head, zonder `defer` | zet `dl-anim`, `pt-enter` en `theme-light` op `html` voor de eerste paint en meet `--kerja-bottom-offset` op mobiel |
 | `kerja.css` | sitebreed, head | light/dark mode, menu-animatie, Lenis, scrollbalk, split-hover, dots-lines, woord-hover, pagina-overgang, fonts voor de begroetingen |
-| `kerja.js` | sitebreed, footer, na Lenis | Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon |
+| `kerja.js` | sitebreed, footer, na Lenis | Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, korrel over de achtergrond van elke pagina, hero-gradient waar `[data-haze]` staat (`data-haze="subtle"` op de vervolgpagina's) |
 | `services.js` | alleen pagina Services, footer | services-vlakken met hover, reviews met vorige/volgende |
 
 Opmaak en layout horen in het Style-panel van Webflow. Deze bestanden bevatten
@@ -30,11 +30,14 @@ classes op die op geen enkel element staan).
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kerja2026/webflow-scripts@TAG/kerja2026-webflow/osmo.min.css">
 <script src="https://cdn.jsdelivr.net/gh/kerja2026/webflow-scripts@TAG/kerja2026-webflow/kerja-head.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kerja2026/webflow-scripts@TAG/kerja2026-webflow/kerja.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kerja2026/webflow-scripts@TAG/kerja2026-webflow/kerja.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400&family=Noto+Sans+Arabic:wght@400&family=Noto+Sans+JP:wght@400&text=%20%21%D0%9F%D0%B0%D0%B2%D0%B5%D0%B8%D0%BA%D0%BE%D1%80%D1%82%D8%A7%D8%A8%D8%A9%D8%AD%D8%B1%D8%B3%D8%B9%D9%84%D9%85%E3%81%93%E3%81%9F%E3%81%A1%E3%81%AB%E3%81%AD%E3%81%AF%E3%81%BE%E3%82%93&display=swap">
 ```
+
+`kerja.css` staat bewust zonder `.min`: jsDelivr kan dit bestand niet verkleinen
+(door `@property`) en geeft dan een 404 op `kerja.min.css`.
 
 `kerja-head.js` staat bewust zonder `defer`: het moet de classes op `html`
 zetten voordat de pagina zichtbaar wordt, anders flitsen lijnen en teksten.

@@ -1034,7 +1034,7 @@
   window.addEventListener('scroll', function () { l.style.opacity = '0'; }, { passive: true });
 })();
 
-/* Hero-gradient op Home: een abstracte, korrelige gradient achter de hero ([data-haze]).
+/* Hero-gradient en korrel: een abstracte, korrelige gradient achter de hero ([data-haze]).
    - WebGL: drie donkere massa's en een lichtvlek, met korrel die ±12 keer per seconde ververst
    - ademen: de vormen zwellen langzaam op en af, elk in een eigen tempo (± 20 s)
    - volgen: de middelste massa en een zachte lichtvlek volgen de muis, met veel vertraging (EASE)
@@ -1045,15 +1045,60 @@
    - alleen tekenen als de hero in beeld is; bij 'reduced motion' een stilstaand beeld
    - zonder WebGL: een gewone CSS-gradient
    - doorloop: [data-haze] steekt in Webflow onder de hero uit (bottom negatief). De vormen blijven
-     op de hero afgestemd; onderaan lost de gradient korrelig op in de achtergrondkleur
+     op de hero afgestemd; onderaan lost de gradient op in de korrelige achtergrond
+   - korrel over de hele pagina, op elke pagina: een vaste laag achter alles (.haze-grain, z-index -2)
+     met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
+   - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
+     en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
      (FADE_FROM: waar het oplossen begint, in hero-hoogtes vanaf de onderkant van de hero)
    Aanpassen: de vormen staan twee keer, in de shader en in field(). Houd die gelijk. */
 (function () {
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var light = function () { return root.classList.contains('theme-light'); };
+
+  /* korrel over de hele pagina: tegels met precies de kleuren van de shader */
+  function ramp(v, light) {
+    var c0 = light ? [.918, .89, .855] : [.933, .941, 1], c1 = [.682, .714, .98], c2 = [.298, .235, .949], c3 = [.18, .047, .949], c4 = [.086, .024, .525];
+    var m = function (a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; };
+    if (v < .35) return m(c0, c1, v / .35);
+    if (v < .62) return m(c1, c2, (v - .35) / .27);
+    if (v < .82) return m(c2, c3, (v - .62) / .2);
+    return m(c3, c4, (v - .82) / .18);
+  }
+  var TILE = 192, tiles = { dark: [], light: [] };
+  ['dark', 'light'].forEach(function (mode) {
+    for (var k = 0; k < 4; k++) {
+      var c = document.createElement('canvas'); c.width = c.height = TILE;
+      var x = c.getContext('2d'), img = x.createImageData(TILE, TILE);
+      for (var i = 0; i < TILE * TILE; i++) {
+        var n = Math.random();
+        var v = mode === 'light' ? Math.max(0, (n - .5) * .24) : .82 + (n - .5) * .24;
+        var col = ramp(v, mode === 'light');
+        img.data[i * 4] = col[0] * 255; img.data[i * 4 + 1] = col[1] * 255; img.data[i * 4 + 2] = col[2] * 255; img.data[i * 4 + 3] = 255;
+      }
+      x.putImageData(img, 0, 0);
+      tiles[mode].push('url(' + c.toDataURL('image/png') + ')');
+    }
+  });
+  var grainLayer = document.createElement('div');
+  grainLayer.className = 'haze-grain';
+  grainLayer.setAttribute('aria-hidden', 'true');
+  grainLayer.style.cssText = 'position:fixed;inset:0;z-index:-2;pointer-events:none;image-rendering:pixelated;background-size:' + (TILE * 1.5) + 'px ' + (TILE * 1.5) + 'px;';
+  document.body.insertBefore(grainLayer, document.body.firstChild);
+  var grainFrame = 0;
+  function grain() { grainLayer.style.backgroundImage = tiles[light() ? 'light' : 'dark'][grainFrame % 4]; }
+  grain();
+  if (!reduce) setInterval(function () { grainFrame++; grain(); }, 83);
+  new MutationObserver(grain).observe(root, { attributes: true, attributeFilter: ['class'] });
+
   var host = document.querySelector('[data-haze]');
   if (!host) return;
   var hero = host.parentElement;
-  var root = document.documentElement;
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* Home: volle gradient. data-haze="subtle" (vervolgpagina's): het licht alleen zwak, bovenaan */
+  var SUBTLE = host.getAttribute('data-haze') === 'subtle';
+  var L_AMT = SUBTLE ? .45 : 1.05, L_Y = SUBTLE ? 1.02 : .7, L_W = SUBTLE ? .55 : .42, GLOW = SUBTLE ? .1 : .28;
+  var BASE = SUBTLE ? .68 : .5;   // hoger = donkerder basis
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
@@ -1094,7 +1139,9 @@
     targets = [];
     Array.prototype.forEach.call(document.querySelectorAll('.hero_logo, .hero_payoff, .theme-switch_component'), function (el) { targets.push(el); });
     Array.prototype.forEach.call(hero.querySelectorAll('.statement_heading'), function (h) { targets = targets.concat(words(h)); });
-    Array.prototype.forEach.call(hero.querySelectorAll('[data-greeting], .dots-line_component, .text-size-small, .email_link'), function (el) { targets.push(el); });
+    Array.prototype.forEach.call(hero.querySelectorAll('[data-greeting], .heading-style-h6, .dots-line_component, .text-size-small, .email_link, p:not(.statement_heading)'), function (el) {
+      if (targets.indexOf(el) < 0 && !el.querySelector('.pt-word, .word-hover_word')) targets.push(el);
+    });
     targets.forEach(function (el) { el.classList.add('haze-target'); });
   }
   collect();
@@ -1109,10 +1156,10 @@
     var d = blob(px, py, .52 * a + (mmx - .52 * a) * .07, -.18 + (mmy - .5) * .03, .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
     d += blob(px, py, .4 * a + (mmx - .4 * a) * .16 + .035 * Math.sin(t * .21), .5 + (mmy - .5) * .16 + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
     d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
-    var l = blob(px, py, .74 * a + .05 * Math.sin(t * .09), .7 + .05 * Math.cos(t * .12), .42 * a * (1 + .06 * br), .36 * (1 + .06 * br)) * 1.05;
-    var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += .25 * s * s * (3 - 2 * s);
-    l += .28 * blob(px, py, mmx + .08, mmy + .06, .42, .42);
-    var v = Math.min(1, Math.max(0, .5 + d * .82 - l * .72));
+    var l = blob(px, py, .74 * a + .05 * Math.sin(t * .09), L_Y + .05 * Math.cos(t * .12), L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
+    var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += (SUBTLE ? 0 : .25) * s * s * (3 - 2 * s);
+    l += GLOW * blob(px, py, mmx + .08, mmy + .06, .42, .42);
+    var v = Math.min(1, Math.max(0, BASE + d * .82 - l * .72));
     return v + (1 - 2 * v) * f;
   }
 
@@ -1120,7 +1167,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v){',
@@ -1135,10 +1182,11 @@
       '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(.07,.03),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
       '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
       '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
-      '  float l=blob(p,vec2(.74*a,.7)+.05*vec2(sin(t*.09),cos(t*.12)),vec2(.42*a,.36)*(1.+.06*br))*1.05;',
-      '  l+=.25*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
-      '  l+=.28*blob(p,mm+vec2(.08,.06),vec2(.42,.42));',
-      '  float v=clamp(.5+d*.82-l*.72,0.,1.);',
+      // lt = (sterkte, hoogte, breedte, gloed van de muis) van het licht
+      '  float l=blob(p,vec2(.74*a,lt.y)+.05*vec2(sin(t*.09),cos(t*.12)),vec2(lt.z*a,.36)*(1.+.06*br))*lt.x;',
+      '  l+=(lt.x<.5?0.:.25)*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
+      '  l+=lt.w*blob(p,mm+vec2(.08,.06),vec2(.42,.42));',
+      '  float v=clamp(base+d*.82-l*.72,0.,1.);',
       '  v=mix(v,1.-v,flip);',
       '  vec2 cell=floor(gl_FragCoord.xy/grain);',
       '  v=clamp(v+(hash(cell+seed)-.5)*.24,0.,1.);',
@@ -1148,7 +1196,9 @@
       '  float f=ext>0.?clamp((fadeFrom-uv.y)/(fadeFrom+ext),0.,1.):0.;',
       '  f=f*f*(3.-2.*f);',
       '  f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
-      '  col=mix(col,mix(vec3(.18,.047,.949),vec3(.918,.89,.855),flip),f);',
+      // eindkleur = achtergrond met dezelfde korrel als de laag .haze-grain
+      '  float bv=flip>.5?max(0.,(hash(cell*2.9+seed)-.5)*.24):.82+(hash(cell*2.9+seed)-.5)*.24;',
+      '  col=mix(col,ramp(bv),f);',
       '  gl_FragColor=vec4(col,1.);}'
     ].join('\n');
     var sh = function (type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
@@ -1162,7 +1212,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1178,7 +1228,6 @@
   }
   size();
 
-  var light = function () { return root.classList.contains('theme-light'); };
   var target = REST.slice(), cur = REST.slice();
   var flip = light() ? 1 : 0, flipGoal = flip, t = 0;
   var cx = -1, cy = -1, cursorDia = false;
@@ -1238,6 +1287,8 @@
       gl.uniform1f(U.flip, flip);
       gl.uniform1f(U.frac, Math.min(1, hero.offsetHeight / Math.max(1, host.offsetHeight)));
       gl.uniform1f(U.fadeFrom, FADE_FROM);
+      gl.uniform4f(U.lt, L_AMT, L_Y, L_W, GLOW);
+      gl.uniform1f(U.base, BASE);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
