@@ -7,8 +7,13 @@
 if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.documentElement.classList.add('dl-anim');
 }
-/* Pagina-overgang: komt deze pagina na een overgang, dan alles verborgen starten */
-try { if (sessionStorage.getItem('kerja-pt') === '1') document.documentElement.classList.add('pt-enter'); } catch (e) {}
+/* Pagina-overgang: elke pagina start verborgen (ook bij een eerste bezoek of vernieuwen), zodat eerst
+   de gradient kan groeien en daarna de onderdelen worden opgebouwd. Niet bij 'reduced motion'.
+   Vangnet: draait kerja.js niet, dan komt alles na 4 s alsnog in beeld. */
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.documentElement.classList.add('pt-enter');
+  setTimeout(function () { document.documentElement.classList.remove('pt-enter'); }, 4000);
+}
 /* Thema: dark is standaard, ook als de computer op licht staat. Alleen een eigen keuze voor light wordt onthouden. */
 try { if (localStorage.getItem('kerja-theme') === 'light') document.documentElement.classList.add('theme-light'); } catch (e) {}
 /* Mobiel: meten hoeveel het vaste beeld verder loopt dan het zichtbare scherm (zie de CSS bij --kerja-bottom-offset).

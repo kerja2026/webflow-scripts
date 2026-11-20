@@ -635,7 +635,10 @@
    - bij aankomst op Home verschijnt de begroeting als eerste, daarna pas de rest
    Nooit twee keer achter elkaar dezelfde tekst.
    Geldt voor links naar een andere pagina op dezelfde site (ook vanuit het menu).
-   Ankers op dezelfde pagina, nieuwe tabbladen en mailto blijven zoals ze waren. */
+   Ankers op dezelfde pagina, nieuwe tabbladen en mailto blijven zoals ze waren.
+   Hero-gradient: bij aankomst (elke keer, ook bij een eerste bezoek of vernieuwen) groeit de gradient
+   eerst vanaf de onderrand van het venster naar zijn plek, daarna pas de opbouw. Bij vertrek en bij
+   de light/dark-wissel zakt hij na het verdwijnen van de onderdelen terug naar de onderrand. */
 (function () {
   var root = document.documentElement;
   var KEY = 'kerja-pt';
@@ -715,6 +718,10 @@
     })(block);
     return out;
   }
+  /* hero-gradient (script verderop): eerst groeien, dan pas opbouwen; bij vertrek eerst wegzakken.
+     Zonder gradient op de pagina gaat het meteen door. */
+  function grow(next) { if (window.kerjaHaze && window.kerjaHaze.grow) window.kerjaHaze.grow(next); else next(); }
+  function sink(next) { if (window.kerjaHaze && window.kerjaHaze.sink) window.kerjaHaze.sink(next); else next(); }
   function isWord(el) { return el.classList.contains('word-hover_word') || el.classList.contains('pt-word'); }
 
   /* alle onderdelen, alleen de buitenste (een link met een titel erin telt als één).
@@ -794,7 +801,7 @@
       setTimeout(function () {
         if (greet) greet.classList.add('pt-hide');
         store(KEY, '1');
-        window.location.href = url;
+        sink(function () { window.location.href = url; });
       }, greetShown ? GREET_HOLD : 0);
     });
   }
@@ -805,8 +812,9 @@
     try { sessionStorage.removeItem(KEY); } catch (err) {}
     items().forEach(function (el) { el.classList.add('pt-hide'); });
     root.classList.remove('pt-enter');
+    window.kerjaPtEnter = true; // voor de hero-gradient: start weggezakt
     busy = true;
-    setTimeout(build, 100);
+    setTimeout(function () { grow(build); }, 100);
   }
 
   /* light/dark mode */
@@ -843,8 +851,10 @@
       busy = true;
       setTimeout(function () {
         scatter(items().filter(inView), true, OUT, function () {
-          setTheme(light); // kleuren wisselen als alles in beeld verdwenen is
-          build();
+          sink(function () {
+            setTheme(light); // kleuren wisselen als alles in beeld verdwenen is en de gradient weg is
+            grow(build);
+          });
         });
       }, spun ? 0 : SPIN);
     };
@@ -884,6 +894,7 @@
     if (!e.persisted) return;
     Array.prototype.forEach.call(document.querySelectorAll('.pt-hide'), function (el) { el.classList.remove('pt-hide'); });
     if (greet) say(pick(HELLO, 'kerja-hello'));
+    if (window.kerjaHaze && window.kerjaHaze.show) window.kerjaHaze.show();
     var saved = null;
     try { saved = localStorage.getItem(THEME_KEY); } catch (err) {}
     root.classList.toggle('theme-light', saved === 'light');
@@ -1050,6 +1061,7 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
+   - groeien/wegzakken bij de pagina-overgang: zie kerjaHaze.grow/sink (RISE ms)
    - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
@@ -1338,7 +1350,34 @@
     if (y < r.top || y > r.bottom || x < r.left || x > r.right) return -1;
     return field((x - r.left) / r.width, 1 - (y - r.top) / r.height, r.width / r.height, t, cur[0], cur[1], flip);
   }
-  window.kerjaHaze = { dia: function () { return cursorDia; } };
+  /* groeien en wegzakken (pagina-overgang): de gradient rekt uit vanaf de onderrand van het venster.
+     rise 0 = weggezakt (een lijn op de onderrand), 1 = op zijn plek. RISE ms per beweging. */
+  var RISE = 1200;
+  var rise = window.kerjaPtEnter && !reduce ? 0 : 1;
+  function applyRise() {
+    if (rise >= 1) { canvas.style.transform = ''; return; }
+    var oy = window.innerHeight - host.getBoundingClientRect().top;
+    canvas.style.transformOrigin = '50% ' + oy.toFixed(1) + 'px';
+    canvas.style.transform = 'scaleY(' + Math.max(rise, 0.0001).toFixed(4) + ')';
+  }
+  function animateRise(to, ease, done) {
+    if (reduce) { rise = to; applyRise(); if (done) done(); return; }
+    var from = rise, t0 = performance.now();
+    kick();
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / RISE);
+      rise = from + (to - from) * ease(k);
+      applyRise();
+      if (k < 1) requestAnimationFrame(step); else if (done) done();
+    })(t0);
+  }
+  applyRise();
+  window.kerjaHaze = {
+    dia: function () { return cursorDia; },
+    grow: function (done) { animateRise(1, function (k) { return 1 - Math.pow(1 - k, 3); }, done); },
+    sink: function (done) { animateRise(0, function (k) { return k * k * k; }, done); },
+    show: function () { rise = 1; applyRise(); }
+  };
   /* de rechthoek van het hero-deel van de gradient: schuift door de parallax mee met de laag */
   function heroRect() {
     var h = host.getBoundingClientRect(), H = hero.offsetHeight;
