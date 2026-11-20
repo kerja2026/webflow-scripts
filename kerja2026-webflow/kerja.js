@@ -1050,6 +1050,7 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
+   - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
      leesbaarheid komt van diapositief. Zet ze op 1 om ze weer aan te zetten.
@@ -1120,6 +1121,7 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
+  var PARALLAX = 0.3;       // gradient blijft 30% achter bij het scrollen (0 = uit)
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
@@ -1318,7 +1320,7 @@
     window.addEventListener('pointermove', function (e) {
       if (e.pointerType !== 'mouse') return;
       cx = e.clientX; cy = e.clientY;
-      var r = hero.getBoundingClientRect();
+      var r = heroRect();
       if (cy < r.top || cy > r.bottom) return;
       target = [(cx - r.left) / r.width, 1 - (cy - r.top) / r.height];
     }, { passive: true });
@@ -1335,6 +1337,11 @@
     return field((x - r.left) / r.width, 1 - (y - r.top) / r.height, r.width / r.height, t, cur[0], cur[1], flip);
   }
   window.kerjaHaze = { dia: function () { return cursorDia; } };
+  /* de rechthoek van het hero-deel van de gradient: schuift door de parallax mee met de laag */
+  function heroRect() {
+    var h = host.getBoundingClientRect(), H = hero.offsetHeight;
+    return { left: h.left, right: h.right, width: h.width, top: h.top, bottom: h.top + H, height: H };
+  }
 
   /* diapositief nodig? dark mode: tekst is licht, dus omslaan op licht (v laag).
      light mode: tekst is blauw, dus omslaan op donker (v hoog). Met marge tegen flikkeren. */
@@ -1345,7 +1352,7 @@
   }
   function update() {
     if (stale()) collect();
-    var r = hero.getBoundingClientRect();
+    var r = heroRect();
     measureBoxes(r);
     if (!pushStarted) {
       pushStarted = true;
@@ -1402,6 +1409,12 @@
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
     if (!reduce && visible) kick();
   }
+  /* parallax: de gradient schuift mee met de pagina, maar trager (PARALLAX = deel van de scroll dat
+     hij achterblijft). De laag steekt onder de hero uit, dus er komt geen rand in beeld. */
+  function parallax() {
+    if (reduce) return;
+    host.style.transform = 'translate3d(0,' + (window.scrollY * PARALLAX).toFixed(1) + 'px,0)';
+  }
   function kick() { if (!running) { running = true; requestAnimationFrame(frame); } }
 
   /* buiten beeld niet tekenen; de vaste onderdelen (logo, switch) wel terugzetten */
@@ -1411,7 +1424,8 @@
       if (visible) kick(); else update();
     }).observe(host);
   }
-  window.addEventListener('scroll', function () { if (!visible || reduce) update(); }, { passive: true });
+  window.addEventListener('scroll', function () { parallax(); if (!visible || reduce) update(); }, { passive: true });
+  parallax();
   window.addEventListener('resize', function () { size(); kick(); });
   kick();
 })();

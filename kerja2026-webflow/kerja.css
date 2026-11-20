@@ -15,6 +15,12 @@ html.theme-light {
 /* Switch: het rechter bolletje toont de modus (dark = blauw rechts, light = licht rechts).
    In light mode staat hij 180 graden gedraaid. Het script neemt het draaien over. */
 html.theme-light .theme-switch_component { transform: rotate(180deg); }
+/* Logo, payoff en switch schuiven tijdens scrollen naar boven uit beeld en komen terug zodra de
+   pagina stilstaat, net als het menu (html.is-scrolling, zelfde moment en zelfde easing).
+   Via translate, zodat de draaiing van de switch (transform) blijft werken. */
+.hero_logo, .hero_payoff { transition: translate 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
+.theme-switch_component { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), translate 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
+html.is-scrolling :is(.hero_logo, .hero_payoff, .theme-switch_component) { translate: 0 -7rem; }
 /* Groter klikvlak dan de 37 x 7 px van de switch zelf */
 .theme-switch_component::before { content: ""; position: absolute; inset: -0.75rem; }
 .theme-switch_component:focus-visible { outline: 1px solid var(--light); outline-offset: 0.75rem; }
@@ -158,7 +164,8 @@ html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, 
 html .haze-target { color: var(--light); }
 .haze-target { transition: --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 .word-hover_word.haze-target { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
-.theme-switch_component.haze-target { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.theme-switch_component.haze-target { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), translate 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.hero_logo.haze-target, .hero_payoff.haze-target { transition: translate 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 html:not(.theme-light) .is-haze-dia { --light: #2e0cf2; --bright-blue: #eae3da; --white: #2e0cf2; }
 html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --white: #eae3da; }
 /* de bolletjes van de switch hebben een vaste vulkleur in Webflow; diapositief volgen ze de variabelen */
