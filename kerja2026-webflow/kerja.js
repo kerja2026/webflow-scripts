@@ -1058,8 +1058,8 @@
    - zonder WebGL: een gewone CSS-gradient
    - doorloop: [data-haze] steekt in Webflow onder de hero uit (bottom negatief). De vormen blijven
      op de hero afgestemd; onderaan lost de gradient op in de korrelige achtergrond
-   - korrel over de hele pagina, op elke pagina: achtergrond van body (loopt ook onder de scrollbalk)
-     met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
+   - korrel over de hele pagina, op elke pagina: een vaste laag (.haze-grain) met dezelfde korrel
+     op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
    - olievlek bij de pagina-overgang: zie kerjaHaze.grow/sink (OIL ms)
@@ -1087,13 +1087,15 @@
     if (v < .82) return m(c2, c3, (v - .62) / .2);
     return m(c3, c4, (v - .82) / .18);
   }
-  /* De korrel staat als achtergrond op body. Die achtergrond loopt door onder de scrollbalk (een vaste
-     laag deed dat niet: daar bleef rechts een vlakke blauwe strook staan). Elke korrel is precies een
-     blok hele schermpixels, zodat het beeld scherp blijft zonder image-rendering (dat zou erven). */
+  /* De korrel ligt op een vaste laag achter alles (.haze-grain). Eén tegel per thema; de laag
+     verspringt ±12 keer per seconde een willekeurig stukje (transform). Dat doet de videokaart zonder
+     opnieuw te tekenen, en het ziet eruit als steeds nieuwe ruis. (Eerder stond de korrel als vaste
+     achtergrond op body: die moest bij elke scrollstap opnieuw getekend worden en maakte de site traag.)
+     Elke korrel is precies een blok hele schermpixels, zodat het beeld scherp blijft. */
   var TILE = 128, tiles = { dark: [], light: [] };
   var gdpr = window.devicePixelRatio || 1, CELL = Math.max(1, Math.round(1.5 * gdpr));
   ['dark', 'light'].forEach(function (mode) {
-    for (var k = 0; k < 4; k++) {
+    for (var k = 0; k < 1; k++) {
       var small = document.createElement('canvas'); small.width = small.height = TILE;
       var sx = small.getContext('2d'), img = sx.createImageData(TILE, TILE);
       for (var i = 0; i < TILE * TILE; i++) {
@@ -1124,16 +1126,21 @@
     x.putImageData(img, 0, 0);
     c.toBlob(function (blob) { if (blob) root.style.setProperty('--kerja-grain', 'url(' + URL.createObjectURL(blob) + ')'); });
   })();
-  var bodyStyle = document.body.style;
-  bodyStyle.backgroundSize = (TILE * CELL / gdpr) + 'px ' + (TILE * CELL / gdpr) + 'px';
-  bodyStyle.backgroundAttachment = 'fixed';
-  bodyStyle.backgroundRepeat = 'repeat';
-  var grainFrame = 0;
+  var TS = TILE * CELL / gdpr;   // maat van een tegel in CSS-pixels
+  var grainLayer = document.createElement('div');
+  grainLayer.className = 'haze-grain';
+  grainLayer.setAttribute('aria-hidden', 'true');
+  grainLayer.style.cssText = 'position:fixed;top:' + (-TS) + 'px;left:' + (-TS) + 'px;right:0;bottom:0;z-index:-2;pointer-events:none;will-change:transform;background-repeat:repeat;background-size:' + TS + 'px ' + TS + 'px;';
+  document.body.insertBefore(grainLayer, document.body.firstChild);
   function grain() {
-    var t = tiles[light() ? 'light' : 'dark'][grainFrame % 4];
-    if (t) bodyStyle.backgroundImage = t;
+    var t = tiles[light() ? 'light' : 'dark'][0];
+    if (t) grainLayer.style.backgroundImage = t;
   }
-  if (!reduce) setInterval(function () { grainFrame++; grain(); }, 83);
+  var STEP = CELL / gdpr;   // verspringen in hele korrels, zodat het scherp blijft
+  if (!reduce) setInterval(function () {
+    var n = TILE;
+    grainLayer.style.transform = 'translate3d(' + (Math.floor(Math.random() * n) * STEP) + 'px,' + (Math.floor(Math.random() * n) * STEP) + 'px,0)';
+  }, 83);
   new MutationObserver(grain).observe(root, { attributes: true, attributeFilter: ['class'] });
 
   /* zonder gradient op de pagina: overgang zonder olievlek (zie verderop voor de echte) */
@@ -1362,7 +1369,7 @@
 
   var dpr = 1;
   function size() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = 1;   // op CSS-pixels rekenen, niet op Retina: 4x minder werk, de korrel blijft even groot
     canvas.width = Math.max(1, Math.round(canvas.clientWidth * dpr));
     canvas.height = Math.max(1, Math.round(canvas.clientHeight * dpr));
     if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
@@ -1474,9 +1481,12 @@
   if (window.kerjaPtEnter && !reduce && gl) { oilP = 0; oilUnder = under('opposite'); oilMode(true); }
   else root.classList.remove('pt-oil');
 
-  var visible = true, running = false, start = performance.now(), lastSeed = 0, lastUpdate = 0, seed = 7;
+  var lastDraw = 0, visible = true, running = false, start = performance.now(), lastSeed = 0, lastUpdate = 0, seed = 7;
   function frame(now) {
     running = false;
+    /* hooguit 30 beelden per seconde: ademen en volgen zijn traag genoeg */
+    if (!reduce && now - lastDraw < 32) { if (visible || oilOn) kick(); return; }
+    lastDraw = now;
     t = reduce ? 4 : (now - start) / 1000;
     var k = reduce ? 1 : EASE;
     cur[0] += (target[0] - cur[0]) * k; cur[1] += (target[1] - cur[1]) * k;
@@ -1516,7 +1526,7 @@
       gl.uniform2f(U.gc, gc[0], gc[1]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
-    if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
+    if (reduce || now - lastUpdate > 250) { update(); lastUpdate = now; }
     if (oilOn && root.classList.contains('pt-oil')) root.classList.remove('pt-oil');
     if (!reduce && (visible || oilOn)) kick();
   }

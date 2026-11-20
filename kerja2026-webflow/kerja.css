@@ -25,7 +25,7 @@ html.is-scrolling :is(.hero_logo, .hero_payoff, .theme-switch_component) { trans
    dan het thema), tot het script de vlek overneemt. Zo flitst de pagina niet eerst in de eigen kleur. */
 html.pt-oil:not(.theme-light) body { background-color: #eae3da !important; }
 html.pt-oil.theme-light body { background-color: #2e0cf2 !important; }
-html.pt-oil body { background-image: none !important; }
+html.pt-oil .haze-grain { display: none; }
 /* Groter klikvlak dan de 37 x 7 px van de switch zelf */
 .theme-switch_component::before { content: ""; position: absolute; inset: -0.75rem; }
 .theme-switch_component:focus-visible { outline: 1px solid var(--light); outline-offset: 0.75rem; }
@@ -179,17 +179,18 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
 @media (prefers-reduced-motion: reduce) { .haze-target { transition: none; } }
 
 /* Menu als matglas: de vlakjes (ook het coming soon- en reviews-label) laten de pagina wazig
-   doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script). De bolletjes
-   op de hoeken krijgen hetzelfde glas in plaats van een dichte blauwe rand. */
+   doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script). */
 /* dark mode: de donkere tint van de gradient (#1b08a6), zodat het glas wegvalt in de achtergrond;
    light mode: creme */
-.menu_cell-frame,
-.menu_cell-dot {
+.menu_cell-frame {
   --menu-glass: color-mix(in srgb, #1b08a6 45%, transparent);
   background-color: var(--menu-glass);
-  -webkit-backdrop-filter: blur(1rem);
-  backdrop-filter: blur(1rem);
+  background-image: var(--kerja-grain, none);
+  background-size: 192px 192px;
+  -webkit-backdrop-filter: blur(0.75rem);
+  backdrop-filter: blur(0.75rem);
 }
-.menu_cell-frame { background-image: var(--kerja-grain, none); background-size: 192px 192px; }
-.menu_cell-dot { outline-width: 0; }
-html.theme-light :is(.menu_cell-frame, .menu_cell-dot) { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
+html.theme-light .menu_cell-frame { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
+/* bolletjes dicht (glas op elk bolletje maakte de site traag), in een tint die bij het glas past */
+.menu_cell-dot { background-color: #1d0b9e; outline-color: #1d0b9e; }
+html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-color: var(--bright-blue); }
