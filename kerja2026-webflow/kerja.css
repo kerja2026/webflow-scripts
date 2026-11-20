@@ -147,6 +147,9 @@ html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, 
    Onderdelen die zelf al een transition hebben, krijgen die hier opnieuw mee. */
 @property --light { syntax: '<color>'; inherits: true; initial-value: #eae3da; }
 @property --bright-blue { syntax: '<color>'; inherits: true; initial-value: #2e0cf2; }
+/* color opnieuw uit de variabele halen: anders erft het element de kleur van zijn ouder en ziet het
+   de omgewisselde variabele niet (tekst die alleen via color: inherit gekleurd wordt) */
+.haze-target { color: var(--light); }
 .haze-target { transition: --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 .word-hover_word.haze-target { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 .theme-switch_component.haze-target { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }

@@ -1050,6 +1050,7 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
+   - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE)
    - leesbaarheid: onder de tekstblokken (BLOCKS, FIXED_BLOCKS) legt de gradient een zachte donkere
      massa (TEXT_SHADE); het licht wijkt daardoor uit naar de lege delen. In light mode wordt dat licht.
      (FADE_FROM: waar het oplossen begint, in hero-hoogtes vanaf de onderkant van de hero)
@@ -1104,7 +1105,10 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
-  var TEXT_SHADE = 1.35;     // hoe sterk de gradient onder tekst donker (light: licht) wordt
+  var PUSH = 1;             // hoe ver het licht wijkt (1 = tot de rand van de vlek het blok raakt)
+  var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
+  var PUSH_EASE = .04;       // hoe snel het licht wegschuift
+  var TEXT_SHADE = 1.0;      // hoe sterk de gradient onder tekst donker (light: licht) wordt
   var FADE_FROM = 0.2;       // oplossen begint 20% van de hero-hoogte boven de onderkant van de hero
 
   var canvas = document.createElement('canvas');
@@ -1154,7 +1158,7 @@
 
   /* tekstblokken waar de gradient voor uitwijkt: onder deze blokken komt een zachte donkere massa
      (in light mode een lichte), zodat tekst altijd op een rustige ondergrond staat */
-  var NB = 10, PAD = 12, SOFT = 64;   // max. aantal blokken, marge en zachtheid van de rand in px
+  var NB = 10, PAD = 12, SOFT = 150;  // max. aantal blokken, marge en uitloop van de zachte vlek in px
   var BLOCKS = '.statement_heading, .section-title_component, .hero_statement, .email_link, .services-hero_content, .connect-hero_content, .faq-hero_nav';
   var FIXED_BLOCKS = '.hero_logo, .hero_payoff';
   var boxGoal = new Float32Array(NB * 4), box = new Float32Array(NB * 4), soft = .08;
@@ -1176,13 +1180,32 @@
     }
     for (; n < NB; n++) { boxGoal[n * 4 + 2] = -1; box[n * 4 + 2] = -1; }
   }
+  /* wegduwen: de lichtvlek (en de muisgloed) schuift weg van de tekstblokken, als een magneet die
+     afstoot. rx/ry = straal van de vlek; overlapt die een blok, dan schuift het midden zo ver weg
+     dat de rand het blok net raakt (PUSH). Drie rondes, zodat meerdere blokken samen tellen. */
+  var lc = [0, 0], gc = [0, 0], pushStarted = false;
+  function push(x, y, rx, ry) {
+    for (var it = 0; it < 3; it++) {
+      for (var i = 0; i < NB; i++) {
+        var o = i * 4; if (box[o + 2] <= 0) continue;
+        var nx = Math.min(Math.max(x, box[o] - box[o + 2]), box[o] + box[o + 2]);
+        var ny = Math.min(Math.max(y, box[o + 1] - box[o + 3]), box[o + 1] + box[o + 3]);
+        var dx = (x - nx) / rx, dy = (y - ny) / ry, len = Math.sqrt(dx * dx + dy * dy);
+        if (len >= 1) continue;
+        if (len < 1e-4) { dx = x - box[o]; dy = y - box[o + 1]; len = Math.sqrt(dx * dx + dy * dy) || 1; dx /= len; dy /= len; len = 0; }
+        else { dx /= len; dy /= len; }
+        x += dx * (1 - len) * rx * PUSH; y += dy * (1 - len) * ry * PUSH;
+      }
+    }
+    return [x, y];
+  }
   function boxShade(px, py) {
     var m = 0;
     for (var i = 0; i < NB; i++) {
       var o = i * 4; if (box[o + 2] <= 0) continue;
-      var qx = Math.max(Math.abs(px - box[o]) - box[o + 2], 0), qy = Math.max(Math.abs(py - box[o + 1]) - box[o + 3], 0);
-      var dd = Math.sqrt(qx * qx + qy * qy) / soft;
-      m = Math.max(m, Math.exp(-dd * dd));
+      /* een ronde, zachte vlek (geen rechthoek): ellips met de maat van het blok plus de uitloop */
+      var u = (px - box[o]) / (box[o + 2] + soft), w = (py - box[o + 1]) / (box[o + 3] + soft), e = u * u + w * w;
+      m = Math.max(m, Math.exp(-e * e * 2.2));
     }
     return m;
   }
@@ -1196,9 +1219,9 @@
     d += blob(px, py, .4 * a + (mmx - .4 * a) * .16 + .035 * Math.sin(t * .21), .5 + (mmy - .5) * .16 + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
     d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
     d += boxShade(px, py) * TEXT_SHADE;
-    var l = blob(px, py, .74 * a + .05 * Math.sin(t * .09), L_Y + .05 * Math.cos(t * .12), L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
+    var l = blob(px, py, lc[0], lc[1], L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
     var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += (SUBTLE ? 0 : .25) * s * s * (3 - 2 * s);
-    l += GLOW * blob(px, py, mmx + .08, mmy + .06, .42, .42);
+    l += GLOW * blob(px, py, gc[0], gc[1], .42, .42);
     var v = Math.min(1, Math.max(0, BASE + d * .82 - l * .72));
     return v + (1 - 2 * v) * f;
   }
@@ -1207,7 +1230,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v){',
@@ -1223,12 +1246,13 @@
       '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
       '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
       // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
-      '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=max(abs(p-b.xy)-b.zw,0.);float dd=length(q)/soft;tb=max(tb,exp(-dd*dd));}}',
+      '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=(p-b.xy)/(b.zw+soft);float e=dot(q,q);tb=max(tb,exp(-e*e*2.2));}}',
       '  d+=tb*shade;',
       // lt = (sterkte, hoogte, breedte, gloed van de muis) van het licht
-      '  float l=blob(p,vec2(.74*a,lt.y)+.05*vec2(sin(t*.09),cos(t*.12)),vec2(lt.z*a,.36)*(1.+.06*br))*lt.x;',
+      // lc en gc = midden van de lichtvlek en van de muisgloed, al weggeduwd van de tekst (zie push)
+      '  float l=blob(p,lc,vec2(lt.z*a,.36)*(1.+.06*br))*lt.x;',
       '  l+=(lt.x<.5?0.:.25)*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
-      '  l+=lt.w*blob(p,mm+vec2(.08,.06),vec2(.42,.42));',
+      '  l+=lt.w*blob(p,gc,vec2(.42,.42));',
       '  float v=clamp(base+d*.82-l*.72,0.,1.);',
       '  v=mix(v,1.-v,flip);',
       '  vec2 cell=floor(gl_FragCoord.xy/grain);',
@@ -1255,7 +1279,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1308,6 +1332,12 @@
     if (stale()) collect();
     var r = hero.getBoundingClientRect();
     measureBoxes(r);
+    if (!pushStarted) {
+      pushStarted = true;
+      var asp0 = r.width / Math.max(1, r.height);
+      lc = push(.74 * asp0, L_Y, L_W * asp0 * PUSH_R, .36 * PUSH_R);
+      gc = push(cur[0] * asp0 + .08, cur[1] + .06, .42 * PUSH_R, .42 * PUSH_R);
+    }
     for (var i = 0; i < targets.length; i++) {
       var el = targets[i], b = el.getBoundingClientRect();
       var v = at(b.left + b.width / 2, b.top + b.height / 2, r);
@@ -1327,6 +1357,12 @@
     var k = reduce ? 1 : EASE;
     cur[0] += (target[0] - cur[0]) * k; cur[1] += (target[1] - cur[1]) * k;
     for (var bj = 0; bj < NB * 4; bj++) box[bj] += (boxGoal[bj] - box[bj]) * (reduce ? 1 : .2);
+    var asp = hero.offsetWidth / Math.max(1, hero.offsetHeight);
+    var lGoal = push(.74 * asp + .05 * Math.sin(t * .09), L_Y + .05 * Math.cos(t * .12), L_W * asp * PUSH_R, .36 * PUSH_R);
+    var gGoal = push(cur[0] * asp + .08, cur[1] + .06, .42 * PUSH_R, .42 * PUSH_R);
+    var pk = reduce ? 1 : PUSH_EASE;
+    lc[0] += (lGoal[0] - lc[0]) * pk; lc[1] += (lGoal[1] - lc[1]) * pk;
+    gc[0] += (gGoal[0] - gc[0]) * pk; gc[1] += (gGoal[1] - gc[1]) * pk;
     flip += (flipGoal - flip) * (reduce ? 1 : 0.06);
     if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
     if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
@@ -1344,6 +1380,8 @@
       gl.uniform4fv(U.bx, box);
       gl.uniform1f(U.soft, soft);
       gl.uniform1f(U.shade, TEXT_SHADE);
+      gl.uniform2f(U.lc, lc[0], lc[1]);
+      gl.uniform2f(U.gc, gc[0], gc[1]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
