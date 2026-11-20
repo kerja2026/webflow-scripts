@@ -1,6 +1,6 @@
 /* Kerja 2026 — kerja.js
    Geladen: sitebreed, footer, na lenis.min.js
-   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient.
+   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
 
 /* Lenis smooth scroll */
@@ -1050,7 +1050,9 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
-   - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE)
+   - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
+     Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
+     leesbaarheid komt van diapositief. Zet ze op 1 om ze weer aan te zetten.
    - leesbaarheid: onder de tekstblokken (BLOCKS, FIXED_BLOCKS) legt de gradient een zachte donkere
      massa (TEXT_SHADE); het licht wijkt daardoor uit naar de lege delen. In light mode wordt dat licht.
      (FADE_FROM: waar het oplossen begint, in hero-hoogtes vanaf de onderkant van de hero)
@@ -1059,6 +1061,8 @@
   var root = document.documentElement;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var light = function () { return root.classList.contains('theme-light'); };
+  var GRAIN = .14;           // sterkte van de korrel, op de gradient en op de achtergrond (was .24)
+  var G = GRAIN.toFixed(3);  // dezelfde waarde als tekst, voor in de shader
 
   /* korrel over de hele pagina: tegels met precies de kleuren van de shader */
   function ramp(v, light) {
@@ -1080,7 +1084,7 @@
       var sx = small.getContext('2d'), img = sx.createImageData(TILE, TILE);
       for (var i = 0; i < TILE * TILE; i++) {
         var n = Math.random();
-        var v = mode === 'light' ? Math.max(0, (n - .5) * .24) : .82 + (n - .5) * .24;
+        var v = mode === 'light' ? Math.max(0, (n - .5) * GRAIN) : .82 + (n - .5) * GRAIN;
         var col = ramp(v, mode === 'light');
         img.data[i * 4] = col[0] * 255; img.data[i * 4 + 1] = col[1] * 255; img.data[i * 4 + 2] = col[2] * 255; img.data[i * 4 + 3] = 255;
       }
@@ -1116,10 +1120,10 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
-  var PUSH = 1;             // hoe ver het licht wijkt (1 = tot de rand van de vlek het blok raakt)
+  var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
-  var TEXT_SHADE = 1.0;      // hoe sterk de gradient onder tekst donker (light: licht) wordt
+  var TEXT_SHADE = 0;        // hoe sterk de gradient onder tekst donker (light: licht) wordt (0 = uit, 1 = aan)
   var FADE_FROM = 0.2;       // oplossen begint 20% van de hero-hoogte boven de onderkant van de hero
 
   var canvas = document.createElement('canvas');
@@ -1267,7 +1271,7 @@
       '  float v=clamp(base+d*.82-l*.72,0.,1.);',
       '  v=mix(v,1.-v,flip);',
       '  vec2 cell=floor(gl_FragCoord.xy/grain);',
-      '  v=clamp(v+(hash(cell+seed)-.5)*.24,0.,1.);',
+      '  v=clamp(v+(hash(cell+seed)-.5)*' + G + ',0.,1.);',
       '  vec3 col=ramp(v)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05);',
       // onder de hero: korrelig oplossen in de achtergrondkleur (dark: Kerja-blauw, light: creme)
       '  float ext=(1.-frac)/frac;',
@@ -1275,7 +1279,7 @@
       '  f=f*f*(3.-2.*f);',
       '  f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
       // eindkleur = achtergrond met dezelfde korrel als de korrel op body
-      '  float bv=flip>.5?max(0.,(hash(cell*2.9+seed)-.5)*.24):.82+(hash(cell*2.9+seed)-.5)*.24;',
+      '  float bv=flip>.5?max(0.,(hash(cell*2.9+seed)-.5)*' + G + '):.82+(hash(cell*2.9+seed)-.5)*' + G + ';',
       '  col=mix(col,ramp(bv),f);',
       '  gl_FragColor=vec4(col,1.);}'
     ].join('\n');
@@ -1410,4 +1414,29 @@
   window.addEventListener('scroll', function () { if (!visible || reduce) update(); }, { passive: true });
   window.addEventListener('resize', function () { size(); kick(); });
   kick();
+})();
+
+/* Zwevende scrollbalk: vervangt de echte scrollbalk (verborgen in kerja.css), zodat er rechts geen
+   strook meer is. Positie en lengte volgen de pagina; zichtbaar tijdens scrollen (is-scrolling). */
+(function () {
+  var bar = document.createElement('div');
+  bar.className = 'kerja-scrollbar';
+  bar.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(bar);
+  var queued = false;
+  function place() {
+    queued = false;
+    var vh = window.innerHeight, dh = document.documentElement.scrollHeight;
+    if (dh <= vh + 1) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    var h = Math.max(32, vh * vh / dh);
+    var y = window.scrollY / (dh - vh) * (vh - h);
+    bar.style.height = h + 'px';
+    bar.style.transform = 'translateY(' + y + 'px)';
+  }
+  function queue() { if (!queued) { queued = true; requestAnimationFrame(place); } }
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  if ('ResizeObserver' in window) new ResizeObserver(queue).observe(document.body);
+  queue();
 })();

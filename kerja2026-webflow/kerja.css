@@ -40,13 +40,19 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
 .lenis.lenis-stopped { overflow: hidden; }
 
-/* Scrollbar alleen zichtbaar tijdens scrollen (class is-scrolling via script) */
-html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
-html.is-scrolling { scrollbar-color: var(--light) transparent; }
-html::-webkit-scrollbar { width: 6px; }
-html::-webkit-scrollbar-track { background: transparent; }
-html::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
-html.is-scrolling::-webkit-scrollbar-thumb { background: var(--light); }
+/* Scrollbalk: de echte scrollbalk is verborgen (die nam rechts een strook in waar de achtergrond
+   vlak bleef). Een zwevende balk (.kerja-scrollbar, script) neemt het over, alleen zichtbaar
+   tijdens scrollen (class is-scrolling via script). */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+.kerja-scrollbar {
+  position: fixed; top: 0; right: 2px; z-index: 9997;
+  width: 4px; border-radius: 2px;
+  background: var(--light);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+html.is-scrolling .kerja-scrollbar { opacity: 1; }
 
 /* Menu uitklappen: blok voor blok, elk blok schuift uit het blok ernaast of eronder.
    Volgorde open: FAQ > Instagram > LinkedIn > Expertise > Connect > Work > About.
@@ -149,7 +155,7 @@ html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, 
 @property --bright-blue { syntax: '<color>'; inherits: true; initial-value: #2e0cf2; }
 /* color opnieuw uit de variabele halen: anders erft het element de kleur van zijn ouder en ziet het
    de omgewisselde variabele niet (tekst die alleen via color: inherit gekleurd wordt) */
-.haze-target { color: var(--light); }
+html .haze-target { color: var(--light); }
 .haze-target { transition: --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 .word-hover_word.haze-target { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 .theme-switch_component.haze-target { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
