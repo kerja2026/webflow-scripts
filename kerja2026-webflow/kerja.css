@@ -1,0 +1,141 @@
+/* Kerja 2026 — kerja.css
+   Geladen: sitebreed, head (na osmo.css)
+   Light/dark mode, menu, Lenis, scrollbalk, split-hover, dots-lines, woord-hover, pagina-overgang, fonts voor begroetingen. Standen die alleen scripts zetten (Webflow ruimt ongebruikte combo classes op).
+   Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
+
+/* Light mode: html.theme-light (gezet door het script hieronder en door de switch).
+   De kleurvariabelen wisselen om, zodat alles wat --light gebruikt blauw wordt
+   en alles wat --bright-blue gebruikt (achtergrond, bolletjes) licht wordt.
+   Dark mode (standaard) = de waarden uit Webflow. */
+html.theme-light {
+  --light: #2e0cf2;
+  --bright-blue: #eae3da;
+  --white: #2e0cf2;
+}
+/* Switch: het rechter bolletje toont de modus (dark = blauw rechts, light = licht rechts).
+   In light mode staat hij 180 graden gedraaid. Het script neemt het draaien over. */
+html.theme-light .theme-switch_component { transform: rotate(180deg); }
+/* Groter klikvlak dan de 37 x 7 px van de switch zelf */
+.theme-switch_component::before { content: ""; position: absolute; inset: -0.75rem; }
+.theme-switch_component:focus-visible { outline: 1px solid var(--light); outline-offset: 0.75rem; }
+/* Logo: het script zet de afbeelding om naar inline SVG in de themakleur. In light mode tot die tijd verbergen. */
+html.theme-light img.hero_logo { opacity: 0; }
+
+/* Standen die alleen het script aanzet. Ze staan hier en niet als combo class in Webflow,
+   omdat Webflow combo classes die op geen enkel element staan opruimt.
+   is-hidden = menu uit beeld tijdens scrollen. is-open = FAQ-antwoord uitgeklapt. */
+.menu_component.is-hidden { transform: translate(0, calc(100% + 40px + var(--kerja-bottom-offset, 0px) + var(--menu-lift, 0px))); }
+.faq_answer.is-open { grid-template-rows: 1fr; }
+
+/* Hoogte van de menuknop (in Webflow: bottom 40px), aangevuld met twee waarden uit de scripts:
+   --kerja-bottom-offset = mobiel: hoeveel het vaste beeld onder de werkbalk van de browser doorloopt
+     (nieuwere iPhones). Het script hieronder meet dat; overal waar dat niet zo is, is het 0.
+   --menu-lift = onderaan de pagina: de knop schuift mee omhoog zodat hij altijd 1.5rem boven
+     de legal-navigatie van de footer (.footer_bottom) staat. Het menuscript in de footer zet dit. */
+.menu_component { bottom: calc(40px + var(--kerja-bottom-offset, 0px) + var(--menu-lift, 0px)); }
+
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* Scrollbar alleen zichtbaar tijdens scrollen (class is-scrolling via script) */
+html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+html.is-scrolling { scrollbar-color: var(--light) transparent; }
+html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar-track { background: transparent; }
+html::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+html.is-scrolling::-webkit-scrollbar-thumb { background: var(--light); }
+
+/* Menu uitklappen: blok voor blok, elk blok schuift uit het blok ernaast of eronder.
+   Volgorde open: FAQ > Instagram > LinkedIn > Expertise > Connect > Work > About.
+   Sluiten gaat in omgekeerde volgorde. Bij scrollen sluit alles tegelijk (is-instant).
+   --menu-dur = duur per blok, --menu-step = tijd tussen de starts.
+   step kleiner dan dur = overlap (nu 0.04s). Gelijk = geen overlap.
+   --menu-pitch = afstand tussen twee cellen (cel 6.875rem min overlap 0.4375rem).
+   Script zet is-open en is-instant op .menu_component. */
+.menu_component {
+  --menu-dur: 0.15s;
+  --menu-step: 0.08s;
+  --menu-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --menu-pitch: 6.4375rem;
+}
+.menu_faq {
+  transform: translate(calc(-100% - 0.25rem), 0);
+  transition: transform var(--menu-dur) var(--menu-ease) calc(var(--menu-step) * 6);
+}
+.menu_component.is-open .menu_faq {
+  transform: translate(0, 0);
+  transition-delay: 0s;
+}
+.menu_list .menu_cell {
+  visibility: hidden;
+  transition:
+    transform var(--menu-dur) var(--menu-ease) calc(var(--menu-step) * var(--close)),
+    visibility 0s linear calc(var(--menu-step) * var(--close) + var(--menu-dur));
+}
+.menu_component.is-open .menu_list .menu_cell {
+  visibility: visible;
+  transform: translate(0, 0);
+  transition:
+    transform var(--menu-dur) var(--menu-ease) calc(var(--menu-step) * var(--open)),
+    visibility 0s linear calc(var(--menu-step) * var(--open));
+}
+.menu_component.is-instant .menu_faq { transition-delay: 0s; }
+.menu_component.is-instant .menu_list .menu_cell {
+  transition:
+    transform var(--menu-dur) var(--menu-ease) 0s,
+    visibility 0s linear var(--menu-dur);
+}
+/* volgorde in de DOM: 1 work, 2 about, 3 expertise, 4 connect, 5 instagram, 6 linkedin */
+.menu_list .menu_cell:nth-child(5) { --open: 1; --close: 5; z-index: 6; transform: translate(0, calc(100% + 0.25rem)); }
+.menu_list .menu_cell:nth-child(6) { --open: 2; --close: 4; z-index: 5; transform: translate(calc(var(--menu-pitch) * -1), 0); }
+.menu_list .menu_cell:nth-child(3) { --open: 3; --close: 3; z-index: 4; transform: translate(0, var(--menu-pitch)); }
+.menu_list .menu_cell:nth-child(4) { --open: 4; --close: 2; z-index: 3; transform: translate(calc(var(--menu-pitch) * -1), 0); }
+.menu_list .menu_cell:nth-child(1) { --open: 5; --close: 1; z-index: 2; transform: translate(0, var(--menu-pitch)); }
+.menu_list .menu_cell:nth-child(2) { --open: 6; --close: 0; z-index: 1; transform: translate(calc(var(--menu-pitch) * -1), 0); }
+
+/* Split-hover: letters worden door het script gemaakt en schuiven via transform.
+   menu_label-letter = menulabels, link-split_letter = overige links.
+   text-decoration: inherit houdt een eventuele onderstreping per letter zichtbaar.
+   text-indent: 0 is nodig, anders erft elke letter de inspringing van een statement (16rem). */
+.menu_label-letter,
+.link-split_letter {
+  display: inline-block;
+  text-indent: 0;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-split_letter { text-decoration: inherit; }
+
+/* Dots-lines groeien van links naar rechts zodra ze in beeld komen.
+   De lijn groeit via flex-grow, zodat het rechter bolletje vanzelf meeschuift.
+   Alleen actief als html de class dl-anim heeft (zie script hieronder). */
+html.dl-anim .dots-line_line {
+  flex-grow: 0;
+  transition: flex-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.dl-anim .dots-line_component.is-in .dots-line_line { flex-grow: 1; }
+
+/* Woord-hover op de statements: spans worden door het script gemaakt.
+   text-indent: 0 is nodig, anders erft elk woord de inspringing van 16rem van de alinea. */
+.word-hover_word {
+  display: inline-block;
+  text-indent: 0;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Pagina-overgang (script in de footer).
+   pt-hide = onderdeel abrupt weg, zonder fade.
+   html.pt-enter = nieuwe pagina na een overgang: alles verborgen tot het script het overneemt,
+   zodat er geen flits is voordat de onderdelen een voor een verschijnen.
+   [data-greeting] = begroeting op Home, doet ook mee. */
+.pt-hide { visibility: hidden !important; }
+html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, .menu_component, .text-size-tiny, [data-greeting], .hero_payoff, .theme-switch_component) { visibility: hidden !important; }
+
+/* Begroeting en afscheid in een ander schrift: Articulat CF heeft geen Japanse, Arabische of Cyrillische tekens.
+   Het script zet lang (en dir voor Arabisch) op [data-greeting]. Fonts: Noto Sans via Google Fonts,
+   alleen de tekens van die begroetingen en afscheiden (zie de link hieronder). */
+[data-greeting][lang="ja"] { font-family: 'Noto Sans JP', sans-serif; }
+[data-greeting][lang="ar"] { font-family: 'Noto Sans Arabic', sans-serif; text-align: left; }
+[data-greeting][lang="ru"] { font-family: 'Noto Sans', sans-serif; }

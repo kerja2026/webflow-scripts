@@ -12,6 +12,7 @@ Antwoord in het Nederlands.
 | Map | Site | Tags |
 |---|---|---|
 | `trouw-webflow/` | Praktijk Trouw (trouw-manueel-therapie.webflow.io) | `trouw-vX.Y.Z` |
+| `kerja2026-webflow/` | Kerja 2026 (kerja-2026-ff1731.webflow.io) | `kerja2026-vX.Y.Z` |
 
 Wijzig alleen bestanden in de map van de site waar de opdracht over gaat.
 Zet nooit bestanden van een andere site in die map, en niets in de hoofdmap.
@@ -28,6 +29,18 @@ Zet nooit bestanden van een andere site in die map, en niets in de hoofdmap.
 - Alle vier verwijzen altijd naar dezelfde tag.
 - Opmaak en layout horen in het Style-panel van Webflow. Code alleen voor
   beweging en gedrag. Maten in em (Osmo-schaling), niet in px.
+
+## Kerja 2026
+
+- Webflow site-ID: `69fb0ba3e84d63f239880b74`
+- Bestanden: `osmo.css`, `kerja-head.js`, `kerja.css`, `kerja.js`, `services.js`
+  (de oudere map `kerja/` hoort bij een eerdere versie van de site; niet gebruiken)
+- Scriptlinks in Webflow staan op drie plekken:
+  1. Site, head: `osmo.css`, `kerja-head.js` (zonder defer) en `kerja.css`
+  2. Site, footer: Lenis en `kerja.js`
+  3. Pagina Services (`6b00459b48fe968f9b994c21`), footer: `services.js`
+- Alle drie verwijzen altijd naar dezelfde tag.
+- Maten in rem (Osmo-schaling, designbreedte 1512), niet in px.
 
 ## Proces bij elke wijziging
 
