@@ -1046,7 +1046,7 @@
    - zonder WebGL: een gewone CSS-gradient
    - doorloop: [data-haze] steekt in Webflow onder de hero uit (bottom negatief). De vormen blijven
      op de hero afgestemd; onderaan lost de gradient op in de korrelige achtergrond
-   - korrel over de hele pagina, op elke pagina: een vaste laag achter alles (.haze-grain, z-index -2)
+   - korrel over de hele pagina, op elke pagina: achtergrond van body (loopt ook onder de scrollbalk)
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
@@ -1069,29 +1069,40 @@
     if (v < .82) return m(c2, c3, (v - .62) / .2);
     return m(c3, c4, (v - .82) / .18);
   }
-  var TILE = 192, tiles = { dark: [], light: [] };
+  /* De korrel staat als achtergrond op body. Die achtergrond loopt door onder de scrollbalk (een vaste
+     laag deed dat niet: daar bleef rechts een vlakke blauwe strook staan). Elke korrel is precies een
+     blok hele schermpixels, zodat het beeld scherp blijft zonder image-rendering (dat zou erven). */
+  var TILE = 128, tiles = { dark: [], light: [] };
+  var gdpr = window.devicePixelRatio || 1, CELL = Math.max(1, Math.round(1.5 * gdpr));
   ['dark', 'light'].forEach(function (mode) {
     for (var k = 0; k < 4; k++) {
-      var c = document.createElement('canvas'); c.width = c.height = TILE;
-      var x = c.getContext('2d'), img = x.createImageData(TILE, TILE);
+      var small = document.createElement('canvas'); small.width = small.height = TILE;
+      var sx = small.getContext('2d'), img = sx.createImageData(TILE, TILE);
       for (var i = 0; i < TILE * TILE; i++) {
         var n = Math.random();
         var v = mode === 'light' ? Math.max(0, (n - .5) * .24) : .82 + (n - .5) * .24;
         var col = ramp(v, mode === 'light');
         img.data[i * 4] = col[0] * 255; img.data[i * 4 + 1] = col[1] * 255; img.data[i * 4 + 2] = col[2] * 255; img.data[i * 4 + 3] = 255;
       }
-      x.putImageData(img, 0, 0);
-      tiles[mode].push('url(' + c.toDataURL('image/png') + ')');
+      sx.putImageData(img, 0, 0);
+      var big = document.createElement('canvas'); big.width = big.height = TILE * CELL;
+      var bx2 = big.getContext('2d'); bx2.imageSmoothingEnabled = false;
+      bx2.drawImage(small, 0, 0, TILE * CELL, TILE * CELL);
+      tiles[mode].push(null);
+      (function (m, idx) {
+        big.toBlob(function (blob) { if (blob) { tiles[m][idx] = 'url(' + URL.createObjectURL(blob) + ')'; grain(); } });
+      })(mode, k);
     }
   });
-  var grainLayer = document.createElement('div');
-  grainLayer.className = 'haze-grain';
-  grainLayer.setAttribute('aria-hidden', 'true');
-  grainLayer.style.cssText = 'position:fixed;inset:0;z-index:-2;pointer-events:none;image-rendering:pixelated;background-size:' + (TILE * 1.5) + 'px ' + (TILE * 1.5) + 'px;';
-  document.body.insertBefore(grainLayer, document.body.firstChild);
+  var bodyStyle = document.body.style;
+  bodyStyle.backgroundSize = (TILE * CELL / gdpr) + 'px ' + (TILE * CELL / gdpr) + 'px';
+  bodyStyle.backgroundAttachment = 'fixed';
+  bodyStyle.backgroundRepeat = 'repeat';
   var grainFrame = 0;
-  function grain() { grainLayer.style.backgroundImage = tiles[light() ? 'light' : 'dark'][grainFrame % 4]; }
-  grain();
+  function grain() {
+    var t = tiles[light() ? 'light' : 'dark'][grainFrame % 4];
+    if (t) bodyStyle.backgroundImage = t;
+  }
   if (!reduce) setInterval(function () { grainFrame++; grain(); }, 83);
   new MutationObserver(grain).observe(root, { attributes: true, attributeFilter: ['class'] });
 
@@ -1263,7 +1274,7 @@
       '  float f=ext>0.?clamp((fadeFrom-uv.y)/(fadeFrom+ext),0.,1.):0.;',
       '  f=f*f*(3.-2.*f);',
       '  f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
-      // eindkleur = achtergrond met dezelfde korrel als de laag .haze-grain
+      // eindkleur = achtergrond met dezelfde korrel als de korrel op body
       '  float bv=flip>.5?max(0.,(hash(cell*2.9+seed)-.5)*.24):.82+(hash(cell*2.9+seed)-.5)*.24;',
       '  col=mix(col,ramp(bv),f);',
       '  gl_FragColor=vec4(col,1.);}'
