@@ -1044,6 +1044,9 @@
      zie kerja.css). Ook het cursorbolletje doet mee (window.kerjaHaze.dia).
    - alleen tekenen als de hero in beeld is; bij 'reduced motion' een stilstaand beeld
    - zonder WebGL: een gewone CSS-gradient
+   - doorloop: [data-haze] steekt in Webflow onder de hero uit (bottom negatief). De vormen blijven
+     op de hero afgestemd; onderaan lost de gradient korrelig op in de achtergrondkleur
+     (FADE_FROM: waar het oplossen begint, in hero-hoogtes vanaf de onderkant van de hero)
    Aanpassen: de vormen staan twee keer, in de shader en in field(). Houd die gelijk. */
 (function () {
   var host = document.querySelector('[data-haze]');
@@ -1054,6 +1057,7 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
+  var FADE_FROM = 0.2;       // oplossen begint 20% van de hero-hoogte boven de onderkant van de hero
 
   var canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
@@ -1116,7 +1120,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v){',
@@ -1126,7 +1130,7 @@
       '  if(v<.82)return mix(c2,c3,(v-.62)/.2);',
       '  return mix(c3,c4,(v-.82)/.18);}',
       'void main(){',
-      '  vec2 uv=gl_FragCoord.xy/res;float a=res.x/res.y;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
+      '  vec2 cv=gl_FragCoord.xy/res;vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=res.x/(res.y*frac);vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
       '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(.07,.03),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
       '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
@@ -1138,7 +1142,14 @@
       '  v=mix(v,1.-v,flip);',
       '  vec2 cell=floor(gl_FragCoord.xy/grain);',
       '  v=clamp(v+(hash(cell+seed)-.5)*.24,0.,1.);',
-      '  gl_FragColor=vec4(ramp(v)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05),1.);}'
+      '  vec3 col=ramp(v)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05);',
+      // onder de hero: korrelig oplossen in de achtergrondkleur (dark: Kerja-blauw, light: creme)
+      '  float ext=(1.-frac)/frac;',
+      '  float f=ext>0.?clamp((fadeFrom-uv.y)/(fadeFrom+ext),0.,1.):0.;',
+      '  f=f*f*(3.-2.*f);',
+      '  f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
+      '  col=mix(col,mix(vec3(.18,.047,.949),vec3(.918,.89,.855),flip),f);',
+      '  gl_FragColor=vec4(col,1.);}'
     ].join('\n');
     var sh = function (type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
     var prog = gl.createProgram();
@@ -1151,7 +1162,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1225,6 +1236,8 @@
       gl.uniform1f(U.seed, seed);
       gl.uniform1f(U.grain, 1.5 * dpr);
       gl.uniform1f(U.flip, flip);
+      gl.uniform1f(U.frac, Math.min(1, hero.offsetHeight / Math.max(1, host.offsetHeight)));
+      gl.uniform1f(U.fadeFrom, FADE_FROM);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
@@ -1237,7 +1250,7 @@
     new IntersectionObserver(function (e) {
       visible = e[0].isIntersecting;
       if (visible) kick(); else update();
-    }).observe(hero);
+    }).observe(host);
   }
   window.addEventListener('scroll', function () { if (!visible || reduce) update(); }, { passive: true });
   window.addEventListener('resize', function () { size(); kick(); });
