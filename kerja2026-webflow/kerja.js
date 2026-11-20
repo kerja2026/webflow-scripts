@@ -1,6 +1,6 @@
 /* Kerja 2026 — kerja.js
    Geladen: sitebreed, footer, na lenis.min.js
-   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk.
+   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk, muziek.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
 
 /* Lenis smooth scroll */
@@ -1205,7 +1205,7 @@
     targets = [];
     Array.prototype.forEach.call(document.querySelectorAll('.hero_logo, .hero_payoff, .theme-switch_component'), function (el) { targets.push(el); });
     Array.prototype.forEach.call(hero.querySelectorAll('.statement_heading'), function (h) { targets = targets.concat(words(h)); });
-    Array.prototype.forEach.call(hero.querySelectorAll('[data-greeting], .heading-style-h6, .dots-line_component, .text-size-small, .email_link, p:not(.statement_heading)'), function (el) {
+    Array.prototype.forEach.call(hero.querySelectorAll('[data-greeting], .heading-style-h6, .dots-line_component, .text-size-small, .email_link, .volume_component, p:not(.statement_heading)'), function (el) {
       if (targets.indexOf(el) < 0 && !el.querySelector('.pt-word, .word-hover_word')) targets.push(el);
     });
     targets.forEach(function (el) { el.classList.add('haze-target'); });
@@ -1574,4 +1574,141 @@
   window.addEventListener('resize', queue);
   if ('ResizeObserver' in window) new ResizeObserver(queue).observe(document.body);
   queue();
+})();
+
+/* Muziek ([data-volume], onderin het midden van de hero, op elke pagina).
+   - speelt the-procedure.mp3 in een lus, start met een fade-in (FADE_IN ms, ease-in) en stopt met
+     een fade-out (FADE_OUT ms, ease-out)
+   - browsers laten geluid pas toe na een handeling van de bezoeker: lukt starten bij het laden niet,
+     dan start de muziek bij de eerste klik, tik of toets ergens op de pagina
+   - de knop: vier verticale lijntjes met bolletjes die als een equalizer willekeurig op en neer gaan;
+     klik = muziek uit (de lijntjes zakken in tot vier bolletjes naast elkaar), nog een klik = verder
+     vanaf waar hij stopte
+   - doorlopend over alle pagina's: het tijdstip en of hij uit staat worden onthouden (sessionStorage)
+   - volume via Web Audio (ook op iPhone in te faden); lukt dat niet, dan via audio.volume
+   - bij 'reduced motion' staat de equalizer stil */
+(function () {
+  var btn = document.querySelector('[data-volume]');
+  if (!btn) return;
+  var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b00b046413278ab3741a3fd_the-procedure.mp3';
+  var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, TICK = 170;
+  var KEY_T = 'kerja-music-t', KEY_OFF = 'kerja-music-off';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var bars = Array.prototype.slice.call(btn.querySelectorAll('.volume_bar'));
+  function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
+
+  btn.setAttribute('role', 'button');
+  btn.setAttribute('tabindex', '0');
+  btn.setAttribute('aria-label', 'Music');
+
+  /* equalizer: per lijntje een niveau 0 (alleen een bolletje) tot 1 (volle hoogte) */
+  function level(bar, lvl) {
+    bar.style.setProperty('--lvl', lvl.toFixed(3));
+    /* lijn tussen de bolletjes: 0 tot 1 van de vrije ruimte (1.875rem baan, 0.4375rem bolletje) */
+    bar.style.setProperty('--line', Math.max(0, (lvl * 1.875 - 0.4375) / 1.4375).toFixed(3));
+  }
+  var eq = null;
+  function ui(on) {
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('is-off', !on);
+    clearInterval(eq); eq = null;
+    if (!on) { bars.forEach(function (b) { level(b, 0); }); return; }
+    if (reduce) { bars.forEach(function (b, i) { level(b, [.55, .9, .7, .45][i % 4]); }); return; }
+    var tick = function () { bars.forEach(function (b) { level(b, .25 + Math.random() * .75); }); };
+    tick();
+    eq = setInterval(tick, TICK);
+  }
+
+  /* geluid */
+  var audio = new Audio();
+  audio.loop = true;
+  audio.preload = 'auto';
+  var ctx = null, gain = null, triedCors = false;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (AC) { audio.crossOrigin = 'anonymous'; triedCors = true; }
+  audio.src = SRC;
+  audio.addEventListener('error', function () {
+    /* Web Audio vraagt CORS; geeft de server dat niet, dan zonder (volume via audio.volume) */
+    if (!triedCors || ctx) return;
+    triedCors = false;
+    audio.removeAttribute('crossorigin');
+    audio.src = SRC;
+    if (want) start();
+  });
+  function graph() {
+    if (ctx || !triedCors) return;
+    try {
+      ctx = new AC();
+      gain = ctx.createGain();
+      gain.gain.value = 0;
+      ctx.createMediaElementSource(audio).connect(gain);
+      gain.connect(ctx.destination);
+    } catch (e) { ctx = null; gain = null; }
+  }
+  var vol = 0;
+  function setVol(v) { vol = v; if (gain) gain.gain.value = v; else audio.volume = Math.max(0, Math.min(1, v)); }
+  var fadeId = 0;
+  function fade(to, dur, ease, done) {
+    var id = ++fadeId, from = vol, t0 = performance.now();
+    (function step(now) {
+      if (id !== fadeId) return;
+      var k = Math.min(1, (now - t0) / dur);
+      setVol(from + (to - from) * ease(k));
+      if (k < 1) requestAnimationFrame(step); else if (done) done();
+    })(t0);
+  }
+  function easeIn(k) { return k * k * k; }
+  function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
+
+  var want = store(KEY_OFF) !== '1';  // staat de muziek aan (volgens de bezoeker)?
+  var playing = false, waiting = false;
+  var resumeAt = parseFloat(store(KEY_T)) || 0;
+  audio.addEventListener('loadedmetadata', function () {
+    if (resumeAt && resumeAt < audio.duration) { try { audio.currentTime = resumeAt; } catch (e) {} }
+  });
+  function save() { if (audio.currentTime) store(KEY_T, String(audio.currentTime)); }
+  setInterval(function () { if (playing) save(); }, 1000);
+  window.addEventListener('pagehide', save);
+
+  function start() {
+    graph();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    if (!vol) setVol(0);
+    var p = audio.play();
+    if (p && p.then) p.then(started, blocked); else started();
+  }
+  function started() {
+    playing = true; waiting = false;
+    ui(true);
+    fade(VOL, FADE_IN, easeIn);
+  }
+  /* geblokkeerd: wachten op de eerste handeling van de bezoeker */
+  function blocked() {
+    if (waiting) return;
+    waiting = true;
+    ui(false);
+    var go = function (e) {
+      if (e && btn.contains(e.target)) return; // een klik op de knop zelf regelt de knop
+      ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.removeEventListener(t, go, true); });
+      waiting = false;
+      if (want && !playing) start();
+    };
+    ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.addEventListener(t, go, true); });
+  }
+  function stop() {
+    playing = false;
+    ui(false);
+    fade(0, FADE_OUT, easeOut, function () { if (!playing) { audio.pause(); save(); } });
+  }
+  function toggle() {
+    if (playing) { want = false; store(KEY_OFF, '1'); stop(); }
+    else { want = true; store(KEY_OFF, ''); start(); }
+  }
+  btn.addEventListener('click', function (e) { e.preventDefault(); toggle(); });
+  btn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  ui(false);
+  if (want) start();
 })();
