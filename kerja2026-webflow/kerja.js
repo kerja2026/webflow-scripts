@@ -1124,105 +1124,16 @@
   if (!reduce) setInterval(function () { grainFrame++; grain(); }, 83);
   new MutationObserver(grain).observe(root, { attributes: true, attributeFilter: ['class'] });
 
-  /* Olievlek (pagina-overgang): een vaste laag boven alles toont de 'ondergrond' (in dark mode creme,
-     in light mode blauw, met dezelfde korrel). De pagina zelf is de olievlek: bij aankomst groeit hij
-     met een golvende, korrelige rand van onder naar boven over de ondergrond heen, bij vertrek trekt
-     hij zich van boven naar onder terug. Werkt over het hele venster, waar je ook gescrold bent.
-     Bij de light/dark-wissel: de vlek trekt zich terug, het thema wisselt, en de nieuwe pagina groeit
-     terug over een ondergrond in de eigen achtergrondkleur (de wissel is dan meteen zichtbaar).
-     OIL ms per beweging; OIL_EDGE = hoe grillig de rand is. */
-  var OIL = 1200, OIL_EDGE = .25;
-  var oil = document.createElement('canvas');
-  oil.setAttribute('aria-hidden', 'true');
-  oil.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9990;pointer-events:none;display:none;';
-  document.body.appendChild(oil);
-  var ogl = reduce ? null : oil.getContext('webgl', { antialias: false, premultipliedAlpha: true });
-  var OU = {};
-  if (ogl) {
-    var ofs = [
-      'precision highp float;',
-      'uniform vec2 res;uniform float p;uniform float t;uniform float seed;uniform float grain;uniform float under;',
-      'float hash(vec2 q){q=fract(q*vec2(123.34,456.21));q+=dot(q,q+45.32);return fract(q.x*q.y);}',
-      'float noise(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);',
-      '  return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}',
-      'float fbm(vec2 q){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(q);q*=2.03;a*=.5;}return v;}',
-      'vec3 ramp(float v,float fl){',
-      '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),fl),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
-      '  if(v<.35)return mix(c0,c1,v/.35);if(v<.62)return mix(c1,c2,(v-.35)/.27);if(v<.82)return mix(c2,c3,(v-.62)/.2);return mix(c3,c4,(v-.82)/.18);}',
-      'void main(){',
-      '  vec2 uv=gl_FragCoord.xy/res;vec2 q=vec2(uv.x*res.x/res.y,uv.y);',
-      '  float A=' + OIL_EDGE.toFixed(3) + ';',
-      // hoogte van de vlek op dit punt: voortgang plus een grillige, langzaam stromende rand
-      '  float n=fbm(q*vec2(1.1,.9)+vec2(t*.12,-t*.3));',
-      '  float edge=p*(1.+4.*A+.1)-2.*A-.05+(n-.5)*4.*A;',
-      '  vec2 cell=floor(gl_FragCoord.xy/grain);',
-      '  float cover=smoothstep(-.025,.025,edge-uv.y+(hash(cell*3.1+seed)-.5)*.04);',
-      '  float h=hash(cell*2.9+seed);',
-      '  float v=under>.5?max(0.,(h-.5)*' + G + '):.82+(h-.5)*' + G + ';',
-      '  float al=1.-cover;',
-      '  gl_FragColor=vec4(ramp(v,under)*al,al);}'
-    ].join('\n');
-    var osh = function (type, src) { var x = ogl.createShader(type); ogl.shaderSource(x, src); ogl.compileShader(x); return x; };
-    var oprog = ogl.createProgram();
-    ogl.attachShader(oprog, osh(ogl.VERTEX_SHADER, 'attribute vec2 p2;void main(){gl_Position=vec4(p2,0.,1.);}'));
-    ogl.attachShader(oprog, osh(ogl.FRAGMENT_SHADER, ofs));
-    ogl.linkProgram(oprog);
-    if (!ogl.getProgramParameter(oprog, ogl.LINK_STATUS)) ogl = null;
-    else {
-      ogl.useProgram(oprog);
-      ogl.bindBuffer(ogl.ARRAY_BUFFER, ogl.createBuffer());
-      ogl.bufferData(ogl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), ogl.STATIC_DRAW);
-      var oloc = ogl.getAttribLocation(oprog, 'p2'); ogl.enableVertexAttribArray(oloc); ogl.vertexAttribPointer(oloc, 2, ogl.FLOAT, false, 0, 0);
-      ['res', 'p', 't', 'seed', 'grain', 'under'].forEach(function (k) { OU[k] = ogl.getUniformLocation(oprog, k); });
-    }
-  }
-  var oilP = 1, oilUnder = 0, oilSeed = 7, oilSeedAt = 0, oilT0 = performance.now();
-  function drawOil(now) {
-    var d = Math.min(window.devicePixelRatio || 1, 2);
-    var w = Math.max(1, Math.round(oil.clientWidth * d)), h = Math.max(1, Math.round(oil.clientHeight * d));
-    if (!ogl) { oil.style.background = oilUnder ? '#eae3da' : '#2e0cf2'; oil.style.opacity = String(1 - oilP); return; }
-    if (oil.width !== w || oil.height !== h) { oil.width = w; oil.height = h; ogl.viewport(0, 0, w, h); }
-    if (now - oilSeedAt > 83) { oilSeed = Math.random() * 100; oilSeedAt = now; }
-    ogl.uniform2f(OU.res, w, h);
-    ogl.uniform1f(OU.p, oilP);
-    ogl.uniform1f(OU.t, (now - oilT0) / 1000);
-    ogl.uniform1f(OU.seed, oilSeed);
-    ogl.uniform1f(OU.grain, 1.5 * d);
-    ogl.uniform1f(OU.under, oilUnder);
-    ogl.clearColor(0, 0, 0, 0); ogl.clear(ogl.COLOR_BUFFER_BIT);
-    ogl.drawArrays(ogl.TRIANGLES, 0, 3);
-  }
-  function inOut(k) { return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
-  /* naar 'to' (1 = pagina bedekt alles, 0 = alleen ondergrond); under 1 = creme, 0 = blauw */
-  function runOil(to, under, done) {
-    oilUnder = under;
-    if (reduce) { oilP = to; oil.style.display = 'none'; if (done) done(); return; }
-    oil.style.display = 'block';
-    var from = oilP, t0 = performance.now();
-    (function step(now) {
-      var k = Math.min(1, (now - t0) / OIL);
-      oilP = from + (to - from) * inOut(k);
-      drawOil(now);
-      if (k < 1) { requestAnimationFrame(step); return; }
-      if (to >= 1) oil.style.display = 'none';
-      if (done) done();
-    })(t0);
-  }
-  /* ondergrond: 'opposite' = de andere kleur dan het huidige thema, 'same' = de eigen achtergrond */
-  function under(mode) { var l = light(); return (mode === 'same' ? l : !l) ? 1 : 0; }
+  /* zonder gradient op de pagina: overgang zonder olievlek (zie verderop voor de echte) */
   window.kerjaHaze = {
     dia: function () { return false; },
-    grow: function (done, mode) { runOil(1, under(mode || 'opposite'), done); },
-    sink: function (done) { runOil(0, under('opposite'), done); },
-    show: function () { oilP = 1; oil.style.display = 'none'; }
+    grow: function (done) { if (done) done(); },
+    sink: function (done) { if (done) done(); },
+    show: function () {}
   };
-  /* aankomst: meteen alleen de ondergrond tonen, de groei start vanuit de pagina-overgang */
-  if (window.kerjaPtEnter && !reduce) {
-    oilP = 0; oilUnder = under('opposite'); oil.style.display = 'block'; drawOil(performance.now());
-  }
 
   var host = document.querySelector('[data-haze]');
-  if (!host) return;
+  if (!host) { root.classList.remove('pt-oil'); return; }
   var hero = host.parentElement;
   /* Home: volle gradient. data-haze="subtle" (vervolgpagina's): het licht alleen zwak, bovenaan */
   var SUBTLE = host.getAttribute('data-haze') === 'subtle';
@@ -1359,17 +1270,19 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
-      'vec3 ramp(float v){',
-      '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),flip),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
+      'vec3 ramp(float v,float cr){',
+      '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),cr),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
       '  if(v<.35)return mix(c0,c1,v/.35);',
       '  if(v<.62)return mix(c1,c2,(v-.35)/.27);',
       '  if(v<.82)return mix(c2,c3,(v-.62)/.2);',
       '  return mix(c3,c4,(v-.82)/.18);}',
-      'void main(){',
-      '  vec2 cv=gl_FragCoord.xy/res;vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=res.x/(res.y*frac);vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
+      // scene: de gradient op een punt van de laag (cv: 0-1 over de hele laag, y van onder).
+      // Geeft de waarde v (0 licht, 1 donker, al omgedraaid in light mode) en het oplossen f onderaan.
+      'float scene(vec2 cv,out float f){',
+      '  vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=heroA;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
       '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + '),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
       '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
@@ -1377,25 +1290,45 @@
       // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
       '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=(p-b.xy)/(b.zw+soft);float e=dot(q,q);tb=max(tb,exp(-e*e*2.2));}}',
       '  d+=tb*shade;',
-      // lt = (sterkte, hoogte, breedte, gloed van de muis) van het licht
-      // lc en gc = midden van de lichtvlek en van de muisgloed, al weggeduwd van de tekst (zie push)
+      // lt = (sterkte, hoogte, breedte, gloed van de muis); lc en gc = midden van lichtvlek en muisgloed
       '  float l=blob(p,lc,vec2(lt.z*a,.36)*(1.+.06*br))*lt.x;',
       '  l+=(lt.x<.5?0.:.25)*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
       '  l+=lt.w*blob(p,gc,vec2(.42,.42));',
       '  float v=clamp(base+d*.82-l*.72,0.,1.);',
       '  v=mix(v,1.-v,flip);',
-      '  vec2 cell=floor(gl_FragCoord.xy/grain);',
-      '  v=clamp(v+(hash(cell+seed)-.5)*' + G + ',0.,1.);',
-      '  vec3 col=ramp(v)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05);',
-      // onder de hero: korrelig oplossen in de achtergrondkleur (dark: Kerja-blauw, light: creme)
       '  float ext=(1.-frac)/frac;',
-      '  float f=ext>0.?clamp((fadeFrom-uv.y)/(fadeFrom+ext),0.,1.):0.;',
+      '  f=ext>0.?clamp((fadeFrom-uv.y)/(fadeFrom+ext),0.,1.):0.;',
       '  f=f*f*(3.-2.*f);',
-      '  f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
-      // eindkleur = achtergrond met dezelfde korrel als de korrel op body
+      '  return v;}',
+      // de rand van de olievlek: vloeiende golven, sommige delen lopen voor
+      'float front(float x){',
+      '  return (.55*sin(x*5.1+t*1.3)+.35*sin(x*9.7-t*1.9+1.3)+.25*sin(x*2.3+t*.7+2.1)+.15*sin(x*17.-t*2.6))*.09;}',
+      'void main(){',
+      '  vec2 cell=floor(gl_FragCoord.xy/grain);float g=hash(cell+seed);',
       '  float bv=flip>.5?max(0.,(hash(cell*2.9+seed)-.5)*' + G + '):.82+(hash(cell*2.9+seed)-.5)*' + G + ';',
-      '  col=mix(col,ramp(bv),f);',
-      '  gl_FragColor=vec4(col,1.);}'
+      '  if(oilOn<.5){',
+      // gewone stand: de laag ligt in de hero
+      '    float f;float v=scene(gl_FragCoord.xy/res,f);',
+      '    v=clamp(v+(g-.5)*' + G + ',0.,1.);',
+      '    vec3 col=ramp(v,flip)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05);',
+      '    f=clamp(f+(hash(cell*2.3+seed+7.7)-.5)*.5*f*(1.-f)*4.,0.,1.);',
+      '    gl_FragColor=vec4(mix(col,ramp(bv,flip),f),1.);return;}',
+      // olievlek: de laag beslaat het hele venster; de pagina is de vloeistof
+      '  vec2 s=gl_FragCoord.xy/res;float A=res.x/res.y;',
+      '  float H=oilP*1.35-.2+front(s.x*A)*(1.-abs(oilP*2.-1.)*.6);',
+      // binnen de vlek: alles wat in beeld was, samengedrukt tot de hoogte van de vlek
+      '  float sy=s.y/max(min(H,1.),.001);',
+      '  float top=(1.-sy)*res.y-hostTop;',
+      '  vec2 cv=vec2(s.x,1.-top/hostH);',
+      '  float f=1.;float v=(cv.y>=0.&&cv.y<=1.)?scene(cv,f):0.;',
+      '  float pagebg=flip>.5?0.:.82;',
+      '  v=mix(v,pagebg,f);',
+      // rand: geen lijn, de vloeistof gaat via zijn eigen kleuren over in de ondergrond
+      '  float uv0=oilUnder>.5?0.:.82;',
+      '  float e=smoothstep(H-.16,H+.02,s.y+(g-.5)*.06);',
+      '  float vv=clamp(mix(v,uv0,e)+(g-.5)*' + G + ',0.,1.);',
+      '  float cr=oilUnder>.5?mix(flip,1.,e):flip;',
+      '  gl_FragColor=vec4(ramp(vv,cr)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05),1.);}'
     ].join('\n');
     var sh = function (type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
     var prog = gl.createProgram();
@@ -1408,7 +1341,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1440,7 +1373,7 @@
   } else if (mouse) {
     window.addEventListener('pointermove', function (e) { cx = e.clientX; cy = e.clientY; }, { passive: true });
   }
-  new MutationObserver(function () { flipGoal = light() ? 1 : 0; if (reduce) { flip = flipGoal; kick(); } })
+  new MutationObserver(function () { flipGoal = light() ? 1 : 0; if (reduce || (oilOn && oilP < .01)) { flip = flipGoal; kick(); } })
     .observe(root, { attributes: true, attributeFilter: ['class'] });
 
   /* donkerte op een schermpunt, of -1 als het punt niet op de hero ligt */
@@ -1484,6 +1417,51 @@
     if (next !== cursorDia) { cursorDia = next; window.dispatchEvent(new Event('kerja-haze')); }
   }
 
+  /* Olievlek (pagina-overgang): de gradient zelf is de vloeistof. Tijdens de overgang wordt de laag
+     even vast over het hele venster gelegd (oilOn). Bij vertrek loopt de pagina als vloeistof weg naar
+     de onderrand: alles in beeld wordt samengedrukt tot de hoogte van de vlek, en aan de golvende rand
+     gaat de gradient via zijn eigen kleuren over in de ondergrond (in dark mode creme, in light mode
+     blauw). Bij aankomst welt hij van onderen op en stroomt naar zijn plek. Bij de light/dark-wissel
+     groeit de nieuwe pagina terug over een ondergrond in de eigen achtergrondkleur.
+     OIL ms per beweging. */
+  var OIL = 1200;
+  var oilOn = false, oilP = 1, oilUnder = 1;
+  function oilMode(on) {
+    if (on === oilOn) return;
+    oilOn = on;
+    if (on) {
+      canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:block;z-index:9990;pointer-events:none;';
+      document.body.appendChild(canvas);
+    } else {
+      canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;';
+      host.appendChild(canvas);
+    }
+    size();
+  }
+  function inOut(k) { return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
+  function runOil(to, under, done) {
+    oilUnder = under;
+    if (reduce || !gl) { oilP = to; oilMode(false); root.classList.remove('pt-oil'); if (done) done(); return; }
+    oilMode(true);
+    kick();
+    var from = oilP, t0 = performance.now();
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / OIL);
+      oilP = from + (to - from) * inOut(k);
+      if (k < 1) { requestAnimationFrame(step); return; }
+      if (to >= 1) oilMode(false);
+      if (done) done();
+    })(t0);
+  }
+  /* ondergrond: 'opposite' = de andere kleur dan het huidige thema, 'same' = de eigen achtergrond */
+  function under(mode) { var l = light(); return (mode === 'same' ? l : !l) ? 1 : 0; }
+  window.kerjaHaze.grow = function (done, mode) { runOil(1, under(mode || 'opposite'), done); };
+  window.kerjaHaze.sink = function (done) { runOil(0, under('opposite'), done); };
+  window.kerjaHaze.show = function () { oilP = 1; oilMode(false); };
+  /* aankomst: meteen alleen de ondergrond, de groei start vanuit de pagina-overgang */
+  if (window.kerjaPtEnter && !reduce && gl) { oilP = 0; oilUnder = under('opposite'); oilMode(true); }
+  else root.classList.remove('pt-oil');
+
   var visible = true, running = false, start = performance.now(), lastSeed = 0, lastUpdate = 0, seed = 7;
   function frame(now) {
     running = false;
@@ -1508,6 +1486,14 @@
       gl.uniform1f(U.grain, 1.5 * dpr);
       gl.uniform1f(U.flip, flip);
       gl.uniform1f(U.frac, Math.min(1, hero.offsetHeight / Math.max(1, host.offsetHeight)));
+      gl.uniform1f(U.heroA, hero.offsetWidth / Math.max(1, hero.offsetHeight));
+      gl.uniform1f(U.oilOn, oilOn ? 1 : 0);
+      gl.uniform1f(U.oilP, oilP);
+      gl.uniform1f(U.oilUnder, oilUnder);
+      if (oilOn) {
+        gl.uniform1f(U.hostTop, host.getBoundingClientRect().top * dpr);
+        gl.uniform1f(U.hostH, host.offsetHeight * dpr);
+      }
       gl.uniform1f(U.fadeFrom, FADE_FROM);
       gl.uniform4f(U.lt, L_AMT, L_Y, L_W, GLOW);
       gl.uniform1f(U.base, BASE);
@@ -1519,7 +1505,8 @@
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
-    if (!reduce && visible) kick();
+    if (oilOn && root.classList.contains('pt-oil')) root.classList.remove('pt-oil');
+    if (!reduce && (visible || oilOn)) kick();
   }
   /* parallax: de gradient schuift mee met de pagina, maar trager (PARALLAX = deel van de scroll dat
      hij achterblijft). De laag steekt onder de hero uit, dus er komt geen rand in beeld. */

@@ -11,8 +11,8 @@ if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-mot
    de gradient kan groeien en daarna de onderdelen worden opgebouwd. Niet bij 'reduced motion'.
    Vangnet: draait kerja.js niet, dan komt alles na 4 s alsnog in beeld. */
 if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  document.documentElement.classList.add('pt-enter');
-  setTimeout(function () { document.documentElement.classList.remove('pt-enter'); }, 4000);
+  document.documentElement.classList.add('pt-enter', 'pt-oil');
+  setTimeout(function () { document.documentElement.classList.remove('pt-enter', 'pt-oil'); }, 4000);
 }
 /* Thema: dark is standaard, ook als de computer op licht staat. Alleen een eigen keuze voor light wordt onthouden. */
 try { if (localStorage.getItem('kerja-theme') === 'light') document.documentElement.classList.add('theme-light'); } catch (e) {}
