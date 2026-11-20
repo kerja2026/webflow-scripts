@@ -1121,7 +1121,7 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
-  var PARALLAX = 0.3;       // gradient blijft 30% achter bij het scrollen (0 = uit)
+  var PARALLAX = 0.55;      // gradient blijft 55% achter bij het scrollen (0 = uit)
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
