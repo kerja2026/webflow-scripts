@@ -1112,6 +1112,18 @@
       })(mode, k);
     }
   });
+  /* doorzichtige korrel voor het matglas van het menu (kerja.css: --kerja-grain) */
+  (function () {
+    var N = 128, c = document.createElement('canvas'); c.width = c.height = N;
+    var x = c.getContext('2d'), img = x.createImageData(N, N);
+    for (var i = 0; i < N * N; i++) {
+      var n = Math.random(), lightDot = n > .5;
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = lightDot ? 255 : 0;
+      img.data[i * 4 + 3] = Math.round(Math.abs(n - .5) * 2 * 255 * GRAIN * .55);
+    }
+    x.putImageData(img, 0, 0);
+    c.toBlob(function (blob) { if (blob) root.style.setProperty('--kerja-grain', 'url(' + URL.createObjectURL(blob) + ')'); });
+  })();
   var bodyStyle = document.body.style;
   bodyStyle.backgroundSize = (TILE * CELL / gdpr) + 'px ' + (TILE * CELL / gdpr) + 'px';
   bodyStyle.backgroundAttachment = 'fixed';

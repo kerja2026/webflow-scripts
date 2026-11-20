@@ -177,3 +177,19 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
 .theme-switch_component.is-haze-dia .theme-switch_dot { background-color: var(--bright-blue); }
 .theme-switch_component.is-haze-dia .theme-switch_dot.is-light { background-color: var(--light); }
 @media (prefers-reduced-motion: reduce) { .haze-target { transition: none; } }
+
+/* Menu als matglas: de vlakjes (ook het coming soon- en reviews-label) laten de pagina wazig
+   doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script). De bolletjes
+   op de hoeken krijgen hetzelfde glas in plaats van een dichte blauwe rand. */
+/* dark mode: de donkere tint van de gradient (#1b08a6), zodat het glas wegvalt in de achtergrond;
+   light mode: creme */
+.menu_cell-frame,
+.menu_cell-dot {
+  --menu-glass: color-mix(in srgb, #1b08a6 45%, transparent);
+  background-color: var(--menu-glass);
+  -webkit-backdrop-filter: blur(1rem);
+  backdrop-filter: blur(1rem);
+}
+.menu_cell-frame { background-image: var(--kerja-grain, none); background-size: 192px 192px; }
+.menu_cell-dot { outline-width: 0; }
+html.theme-light :is(.menu_cell-frame, .menu_cell-dot) { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
