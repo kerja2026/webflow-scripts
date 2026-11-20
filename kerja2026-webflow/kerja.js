@@ -1119,7 +1119,9 @@
   var L_AMT = SUBTLE ? .45 : 1.05, L_Y = SUBTLE ? 1.02 : .7, L_W = SUBTLE ? .55 : .42, GLOW = SUBTLE ? .1 : .28;
   var BASE = SUBTLE ? .68 : .5;   // hoger = donkerder basis
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
+  var EASE = 0.035;          // volgsnelheid per frame (lager = trager; was .025)
+  var FOLLOW = 0.24;         // hoe ver de middelste massa de muis volgt (was .16)
+  var FOLLOW_LOW = [0.1, 0.05]; // idem voor de onderste massa, x en y (was .07 en .03)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
   var PARALLAX = 0.55;      // gradient blijft 55% achter bij het scrollen (0 = uit)
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
@@ -1232,8 +1234,8 @@
   function field(ux, uy, a, t, mx, my, f) {
     var px = ux * a, py = uy, mmx = mx * a, mmy = my;
     var br = Math.sin(t * .29) * .5 + .5, br2 = Math.sin(t * .19 + 1.7);
-    var d = blob(px, py, .52 * a + (mmx - .52 * a) * .07, -.18 + (mmy - .5) * .03, .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
-    d += blob(px, py, .4 * a + (mmx - .4 * a) * .16 + .035 * Math.sin(t * .21), .5 + (mmy - .5) * .16 + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
+    var d = blob(px, py, .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0], -.18 + (mmy - .5) * FOLLOW_LOW[1], .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
+    d += blob(px, py, .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21), .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
     d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
     d += boxShade(px, py) * TEXT_SHADE;
     var l = blob(px, py, lc[0], lc[1], L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
@@ -1259,8 +1261,8 @@
       'void main(){',
       '  vec2 cv=gl_FragCoord.xy/res;vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=res.x/(res.y*frac);vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
-      '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(.07,.03),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
-      '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
+      '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + '),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
+      '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
       '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
       // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
       '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=(p-b.xy)/(b.zw+soft);float e=dot(q,q);tb=max(tb,exp(-e*e*2.2));}}',
