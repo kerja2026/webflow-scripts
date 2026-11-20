@@ -997,6 +997,7 @@
 /* Coming soon: menuknop met data-coming-soon (nu: work).
    Een klik doet niets (het menu blijft open). Met een muis volgt een vlakje in de stijl van de
    menuknop de cursor, rechtsonder, met de tekst "coming soon" (zelfde classes als het reviews-label).
+   Zonder muis staat dat vlakje vast onderin de knop.
    Weer laten werken: haal data-coming-soon weg van de link in het Menu-component. */
 (function () {
   var a = document.querySelector('[data-coming-soon]');
@@ -1005,13 +1006,18 @@
   document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('[data-coming-soon]')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
-  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   var OFFSET = 0.75; // rem rechtsonder de cursor
   var l = document.createElement('div');
   l.className = 'reviews_label';
   l.setAttribute('aria-hidden', 'true');
   l.innerHTML = '<div class="menu_cell-frame"></div><div class="menu_cell-dot is-tl"></div><div class="menu_cell-dot is-tr"></div>' +
     '<div class="menu_cell-dot is-bl"></div><div class="menu_cell-dot is-br"></div><span class="menu_label">coming soon</span>';
+  // Zonder muis (telefoon, tablet): het vlakje staat vast onderin de knop en gaat mee met het menu.
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    l.style.cssText = 'position:absolute;left:0;top:auto;bottom:0;z-index:2;opacity:1;transform:none';
+    a.appendChild(l);
+    return;
+  }
   document.body.appendChild(l);
   function rem() { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; }
   a.addEventListener('pointermove', function (e) {
