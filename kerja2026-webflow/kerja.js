@@ -1,6 +1,6 @@
 /* Kerja 2026 — kerja.js
    Geladen: sitebreed, footer, na lenis.min.js
-   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon.
+   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
 
 /* Lenis smooth scroll */
@@ -962,7 +962,9 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     if (inside) {
-      var c = getComputedStyle(root).getPropertyValue('--light').trim() || '#eae3da';
+      /* op het lichte deel van de hero-gradient wordt het bolletje diapositief */
+      var dia = window.kerjaHaze && window.kerjaHaze.dia(px, py);
+      var c = getComputedStyle(root).getPropertyValue(dia ? '--bright-blue' : '--light').trim() || (dia ? '#2e0cf2' : '#eae3da');
       var r = CURSOR * rem;
       if (fill > 0) {
         ctx.fillStyle = c;
@@ -992,6 +994,8 @@
   document.addEventListener('mouseleave', function () { inside = false; setGoal(0); fill = 0; queue(); });
   /* kleur bijwerken als light/dark mode wisselt terwijl de muis stilstaat */
   new MutationObserver(queue).observe(root, { attributes: true, attributeFilter: ['class'] });
+  /* de hero-gradient meldt het als de kleur onder de cursor omslaat */
+  window.addEventListener('kerja-haze', queue);
 })();
 
 /* Coming soon: menuknop met data-coming-soon (nu: work).
@@ -1028,4 +1032,214 @@
   });
   a.addEventListener('pointerleave', function () { l.style.opacity = '0'; });
   window.addEventListener('scroll', function () { l.style.opacity = '0'; }, { passive: true });
+})();
+
+/* Hero-gradient op Home: een abstracte, korrelige gradient achter de hero ([data-haze]).
+   - WebGL: drie donkere massa's en een lichtvlek, met korrel die ±12 keer per seconde ververst
+   - ademen: de vormen zwellen langzaam op en af, elk in een eigen tempo (± 20 s)
+   - volgen: de middelste massa en een zachte lichtvlek volgen de muis, met veel vertraging (EASE)
+   - light mode (html.theme-light): de gradient draait om in ± 0,8 s; de lichtste toon wordt creme
+   - diapositief: logo, payoff, switch, begroeting, lijnen, teksten en elk woord van de kop kijken
+     wat er onder hun midden ligt. Op het lichte deel krijgen ze is-haze-dia (kleuren omgewisseld,
+     zie kerja.css). Ook het cursorbolletje doet mee (window.kerjaHaze.dia).
+   - alleen tekenen als de hero in beeld is; bij 'reduced motion' een stilstaand beeld
+   - zonder WebGL: een gewone CSS-gradient
+   Aanpassen: de vormen staan twee keer, in de shader en in field(). Houd die gelijk. */
+(function () {
+  var host = document.querySelector('[data-haze]');
+  if (!host) return;
+  var hero = host.parentElement;
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
+  var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
+
+  var canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;';
+  host.appendChild(canvas);
+  var gl = canvas.getContext('webgl', { antialias: false });
+
+  /* doelen voor diapositief: woorden van de kop als losse spans (zelfde classes als de pagina-overgang) */
+  function words(block) {
+    var ws = block.querySelectorAll('.word-hover_word, .pt-word');
+    if (ws.length) return Array.prototype.slice.call(ws);
+    var out = [];
+    (function split(node) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+        if (child.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          child.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            var s = document.createElement('span');
+            s.className = 'pt-word';
+            s.textContent = part;
+            frag.appendChild(s);
+            out.push(s);
+          });
+          node.replaceChild(frag, child);
+        } else if (child.nodeType === 1 && child.tagName !== 'BR') split(child);
+      });
+    })(block);
+    return out;
+  }
+  var targets = [];
+  function collect() {
+    targets = [];
+    Array.prototype.forEach.call(document.querySelectorAll('.hero_logo, .hero_payoff, .theme-switch_component'), function (el) { targets.push(el); });
+    Array.prototype.forEach.call(hero.querySelectorAll('.statement_heading'), function (h) { targets = targets.concat(words(h)); });
+    Array.prototype.forEach.call(hero.querySelectorAll('[data-greeting], .dots-line_component, .text-size-small, .email_link'), function (el) { targets.push(el); });
+    targets.forEach(function (el) { el.classList.add('haze-target'); });
+  }
+  collect();
+  /* het logo wordt later vervangen door inline SVG: opnieuw verzamelen als dat gebeurt */
+  new MutationObserver(function () { if (!document.contains(targets[0])) collect(); }).observe(document.body, { childList: true, subtree: true });
+
+  /* veld: dezelfde wiskunde als de shader, zonder korrel. Donkerte op een punt (0 licht, 1 donker) */
+  function blob(px, py, cx, cy, sx, sy) { var dx = (px - cx) / sx, dy = (py - cy) / sy; return Math.exp(-(dx * dx + dy * dy)); }
+  function field(ux, uy, a, t, mx, my, f) {
+    var px = ux * a, py = uy, mmx = mx * a, mmy = my;
+    var br = Math.sin(t * .29) * .5 + .5, br2 = Math.sin(t * .19 + 1.7);
+    var d = blob(px, py, .52 * a + (mmx - .52 * a) * .07, -.18 + (mmy - .5) * .03, .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
+    d += blob(px, py, .4 * a + (mmx - .4 * a) * .16 + .035 * Math.sin(t * .21), .5 + (mmy - .5) * .16 + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
+    d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
+    var l = blob(px, py, .74 * a + .05 * Math.sin(t * .09), .7 + .05 * Math.cos(t * .12), .42 * a * (1 + .06 * br), .36 * (1 + .06 * br)) * 1.05;
+    var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += .25 * s * s * (3 - 2 * s);
+    l += .28 * blob(px, py, mmx + .08, mmy + .06, .42, .42);
+    var v = Math.min(1, Math.max(0, .5 + d * .82 - l * .72));
+    return v + (1 - 2 * v) * f;
+  }
+
+  var U = {};
+  if (gl) {
+    var fs = [
+      'precision highp float;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;',
+      'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
+      'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
+      'vec3 ramp(float v){',
+      '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),flip),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
+      '  if(v<.35)return mix(c0,c1,v/.35);',
+      '  if(v<.62)return mix(c1,c2,(v-.35)/.27);',
+      '  if(v<.82)return mix(c2,c3,(v-.62)/.2);',
+      '  return mix(c3,c4,(v-.82)/.18);}',
+      'void main(){',
+      '  vec2 uv=gl_FragCoord.xy/res;float a=res.x/res.y;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
+      '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
+      '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(.07,.03),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
+      '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
+      '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
+      '  float l=blob(p,vec2(.74*a,.7)+.05*vec2(sin(t*.09),cos(t*.12)),vec2(.42*a,.36)*(1.+.06*br))*1.05;',
+      '  l+=.25*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
+      '  l+=.28*blob(p,mm+vec2(.08,.06),vec2(.42,.42));',
+      '  float v=clamp(.5+d*.82-l*.72,0.,1.);',
+      '  v=mix(v,1.-v,flip);',
+      '  vec2 cell=floor(gl_FragCoord.xy/grain);',
+      '  v=clamp(v+(hash(cell+seed)-.5)*.24,0.,1.);',
+      '  gl_FragColor=vec4(ramp(v)*(1.+(hash(cell*1.7+seed+3.1)-.5)*.05),1.);}'
+    ].join('\n');
+    var sh = function (type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+    var prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) gl = null;
+    else {
+      gl.useProgram(prog);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      ['res', 't', 'm', 'seed', 'grain', 'flip'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+    }
+  }
+  if (!gl) {
+    canvas.style.background = 'radial-gradient(60% 60% at 75% 25%, #eef0ff, #aeb6fa 40%, #2e0cf2 75%, #160686)';
+  }
+
+  var dpr = 1;
+  function size() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    canvas.height = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  size();
+
+  var light = function () { return root.classList.contains('theme-light'); };
+  var target = REST.slice(), cur = REST.slice();
+  var flip = light() ? 1 : 0, flipGoal = flip, t = 0;
+  var cx = -1, cy = -1, cursorDia = false;
+
+  if (mouse && !reduce) {
+    window.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      cx = e.clientX; cy = e.clientY;
+      var r = hero.getBoundingClientRect();
+      if (cy < r.top || cy > r.bottom) return;
+      target = [(cx - r.left) / r.width, 1 - (cy - r.top) / r.height];
+    }, { passive: true });
+    document.addEventListener('mouseleave', function () { target = REST.slice(); cx = cy = -1; });
+  } else if (mouse) {
+    window.addEventListener('pointermove', function (e) { cx = e.clientX; cy = e.clientY; }, { passive: true });
+  }
+  new MutationObserver(function () { flipGoal = light() ? 1 : 0; if (reduce) { flip = flipGoal; kick(); } })
+    .observe(root, { attributes: true, attributeFilter: ['class'] });
+
+  /* donkerte op een schermpunt, of -1 als het punt niet op de hero ligt */
+  function at(x, y, r) {
+    if (y < r.top || y > r.bottom || x < r.left || x > r.right) return -1;
+    return field((x - r.left) / r.width, 1 - (y - r.top) / r.height, r.width / r.height, t, cur[0], cur[1], flip);
+  }
+  window.kerjaHaze = { dia: function () { return cursorDia; } };
+
+  function update() {
+    var r = hero.getBoundingClientRect();
+    for (var i = 0; i < targets.length; i++) {
+      var el = targets[i], b = el.getBoundingClientRect();
+      var v = at(b.left + b.width / 2, b.top + b.height / 2, r);
+      var on = el.classList.contains('is-haze-dia');
+      if (v < 0) { if (on) el.classList.remove('is-haze-dia'); }
+      else if (!on && v < .44) el.classList.add('is-haze-dia');
+      else if (on && v > .56) el.classList.remove('is-haze-dia');
+    }
+    var c = cx < 0 ? -1 : at(cx, cy, r);
+    var next = c < 0 ? false : (cursorDia ? c < .56 : c < .44);
+    if (next !== cursorDia) { cursorDia = next; window.dispatchEvent(new Event('kerja-haze')); }
+  }
+
+  var visible = true, running = false, start = performance.now(), lastSeed = 0, lastUpdate = 0, seed = 7;
+  function frame(now) {
+    running = false;
+    t = reduce ? 4 : (now - start) / 1000;
+    var k = reduce ? 1 : EASE;
+    cur[0] += (target[0] - cur[0]) * k; cur[1] += (target[1] - cur[1]) * k;
+    flip += (flipGoal - flip) * (reduce ? 1 : 0.06);
+    if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
+    if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
+    if (gl) {
+      gl.uniform2f(U.res, canvas.width, canvas.height);
+      gl.uniform1f(U.t, t);
+      gl.uniform2f(U.m, cur[0], cur[1]);
+      gl.uniform1f(U.seed, seed);
+      gl.uniform1f(U.grain, 1.5 * dpr);
+      gl.uniform1f(U.flip, flip);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
+    if (!reduce && visible) kick();
+  }
+  function kick() { if (!running) { running = true; requestAnimationFrame(frame); } }
+
+  /* buiten beeld niet tekenen; de vaste onderdelen (logo, switch) wel terugzetten */
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) {
+      visible = e[0].isIntersecting;
+      if (visible) kick(); else update();
+    }).observe(hero);
+  }
+  window.addEventListener('scroll', function () { if (!visible || reduce) update(); }, { passive: true });
+  window.addEventListener('resize', function () { size(); kick(); });
+  kick();
 })();

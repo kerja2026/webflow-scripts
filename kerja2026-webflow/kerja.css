@@ -139,3 +139,20 @@ html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, 
 [data-greeting][lang="ja"] { font-family: 'Noto Sans JP', sans-serif; }
 [data-greeting][lang="ar"] { font-family: 'Noto Sans Arabic', sans-serif; text-align: left; }
 [data-greeting][lang="ru"] { font-family: 'Noto Sans', sans-serif; }
+
+/* Hero-gradient op Home ([data-haze], script in de footer).
+   Onderdelen die op het lichte deel van de gradient liggen, worden diapositief (is-haze-dia):
+   de twee kleurvariabelen wisselen om, met een overgang van 0,6 s. Daarvoor zijn --light en
+   --bright-blue als kleur geregistreerd, anders kan een variabele niet geleidelijk wisselen.
+   Onderdelen die zelf al een transition hebben, krijgen die hier opnieuw mee. */
+@property --light { syntax: '<color>'; inherits: true; initial-value: #eae3da; }
+@property --bright-blue { syntax: '<color>'; inherits: true; initial-value: #2e0cf2; }
+.haze-target { transition: --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.word-hover_word.haze-target { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.theme-switch_component.haze-target { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+html:not(.theme-light) .is-haze-dia { --light: #2e0cf2; --bright-blue: #eae3da; --white: #2e0cf2; }
+html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --white: #eae3da; }
+/* de bolletjes van de switch hebben een vaste vulkleur in Webflow; diapositief volgen ze de variabelen */
+.theme-switch_component.is-haze-dia .theme-switch_dot { background-color: var(--bright-blue); }
+.theme-switch_component.is-haze-dia .theme-switch_dot.is-light { background-color: var(--light); }
+@media (prefers-reduced-motion: reduce) { .haze-target { transition: none; } }
