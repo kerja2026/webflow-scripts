@@ -802,6 +802,7 @@
       setTimeout(function () {
         if (greet) greet.classList.add('pt-hide');
         store(KEY, '1');
+        if (window.kerjaMusic) window.kerjaMusic.leave(); // muziek fadet uit, tegelijk met de olievlek
         sink(function () { window.location.href = url; });
       }, greetShown ? GREET_HOLD : 0);
     });
@@ -1584,14 +1585,16 @@
    - de knop: vier verticale lijntjes met bolletjes die als een equalizer willekeurig op en neer gaan;
      klik = muziek uit (de lijntjes zakken in tot vier bolletjes naast elkaar), nog een klik = verder
      vanaf waar hij stopte
-   - doorlopend over alle pagina's: het tijdstip en of hij uit staat worden onthouden (sessionStorage)
+   - doorlopend over alle pagina's: het tijdstip en of hij uit staat worden onthouden (sessionStorage).
+     Bij vertrek fadet de muziek uit tegelijk met de olievlek (LEAVE ms), op de nieuwe pagina weer in,
+     zodat de onvermijdelijke stilte bij het laden als een adempauze voelt
    - volume via Web Audio (ook op iPhone in te faden); lukt dat niet, dan via audio.volume
    - bij 'reduced motion' staat de equalizer stil */
 (function () {
   var btn = document.querySelector('[data-volume]');
   if (!btn) return;
   var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b00b046413278ab3741a3fd_the-procedure.mp3';
-  var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, TICK = 170;
+  var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, LEAVE = 1200, TICK = 170;
   var KEY_T = 'kerja-music-t', KEY_OFF = 'kerja-music-off';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var bars = Array.prototype.slice.call(btn.querySelectorAll('.volume_bar'));
@@ -1708,6 +1711,16 @@
   btn.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
   });
+
+  /* vertrek naar een andere pagina: uitfaden tegelijk met de olievlek (de keuze 'aan' blijft staan,
+     zodat de muziek op de volgende pagina weer infadet) */
+  window.kerjaMusic = {
+    leave: function () {
+      if (!playing) return;
+      save();
+      fade(0, LEAVE, easeOut, save);
+    }
+  };
 
   ui(false);
   if (want) start();
