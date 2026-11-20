@@ -1050,6 +1050,8 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
+   - leesbaarheid: onder de tekstblokken (BLOCKS, FIXED_BLOCKS) legt de gradient een zachte donkere
+     massa (TEXT_SHADE); het licht wijkt daardoor uit naar de lege delen. In light mode wordt dat licht.
      (FADE_FROM: waar het oplossen begint, in hero-hoogtes vanaf de onderkant van de hero)
    Aanpassen: de vormen staan twee keer, in de shader en in field(). Houd die gelijk. */
 (function () {
@@ -1102,6 +1104,7 @@
   var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var EASE = 0.025;          // volgsnelheid per frame (lager = trager)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
+  var TEXT_SHADE = 1.35;     // hoe sterk de gradient onder tekst donker (light: licht) wordt
   var FADE_FROM = 0.2;       // oplossen begint 20% van de hero-hoogte boven de onderkant van de hero
 
   var canvas = document.createElement('canvas');
@@ -1145,8 +1148,44 @@
     targets.forEach(function (el) { el.classList.add('haze-target'); });
   }
   collect();
-  /* het logo wordt later vervangen door inline SVG: opnieuw verzamelen als dat gebeurt */
-  new MutationObserver(function () { if (!document.contains(targets[0])) collect(); }).observe(document.body, { childList: true, subtree: true });
+  /* het logo wordt vervangen door inline SVG en de pagina-overgang knipt de kop opnieuw in woorden:
+     zodra een doel niet meer op de pagina staat, opnieuw verzamelen (zie update) */
+  function stale() { for (var i = 0; i < targets.length; i++) if (!targets[i].isConnected) return true; return false; }
+
+  /* tekstblokken waar de gradient voor uitwijkt: onder deze blokken komt een zachte donkere massa
+     (in light mode een lichte), zodat tekst altijd op een rustige ondergrond staat */
+  var NB = 10, PAD = 12, SOFT = 64;   // max. aantal blokken, marge en zachtheid van de rand in px
+  var BLOCKS = '.statement_heading, .section-title_component, .hero_statement, .email_link, .services-hero_content, .connect-hero_content, .faq-hero_nav';
+  var FIXED_BLOCKS = '.hero_logo, .hero_payoff';
+  var boxGoal = new Float32Array(NB * 4), box = new Float32Array(NB * 4), soft = .08;
+  for (var bi = 0; bi < NB; bi++) { boxGoal[bi * 4 + 2] = -1; box[bi * 4 + 2] = -1; }
+  function measureBoxes(r) {
+    var els = Array.prototype.slice.call(document.querySelectorAll(FIXED_BLOCKS)).concat(Array.prototype.slice.call(hero.querySelectorAll(BLOCKS)));
+    var n = 0, H = r.height || 1;
+    soft = SOFT / H;
+    for (var i = 0; i < els.length && n < NB; i++) {
+      var b = els[i].getBoundingClientRect();
+      if (!b.width || !b.height || b.bottom < r.top || b.top > r.bottom) continue;
+      var o = n * 4;
+      boxGoal[o] = (b.left + b.width / 2 - r.left) / H;
+      boxGoal[o + 1] = 1 - (b.top + b.height / 2 - r.top) / H;
+      boxGoal[o + 2] = b.width / 2 / H + PAD / H;
+      boxGoal[o + 3] = b.height / 2 / H + PAD / H;
+      if (box[o + 2] < 0) { box[o] = boxGoal[o]; box[o + 1] = boxGoal[o + 1]; box[o + 2] = boxGoal[o + 2]; box[o + 3] = boxGoal[o + 3]; }
+      n++;
+    }
+    for (; n < NB; n++) { boxGoal[n * 4 + 2] = -1; box[n * 4 + 2] = -1; }
+  }
+  function boxShade(px, py) {
+    var m = 0;
+    for (var i = 0; i < NB; i++) {
+      var o = i * 4; if (box[o + 2] <= 0) continue;
+      var qx = Math.max(Math.abs(px - box[o]) - box[o + 2], 0), qy = Math.max(Math.abs(py - box[o + 1]) - box[o + 3], 0);
+      var dd = Math.sqrt(qx * qx + qy * qy) / soft;
+      m = Math.max(m, Math.exp(-dd * dd));
+    }
+    return m;
+  }
 
   /* veld: dezelfde wiskunde als de shader, zonder korrel. Donkerte op een punt (0 licht, 1 donker) */
   function blob(px, py, cx, cy, sx, sy) { var dx = (px - cx) / sx, dy = (py - cy) / sy; return Math.exp(-(dx * dx + dy * dy)); }
@@ -1156,6 +1195,7 @@
     var d = blob(px, py, .52 * a + (mmx - .52 * a) * .07, -.18 + (mmy - .5) * .03, .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
     d += blob(px, py, .4 * a + (mmx - .4 * a) * .16 + .035 * Math.sin(t * .21), .5 + (mmy - .5) * .16 + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
     d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
+    d += boxShade(px, py) * TEXT_SHADE;
     var l = blob(px, py, .74 * a + .05 * Math.sin(t * .09), L_Y + .05 * Math.cos(t * .12), L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
     var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += (SUBTLE ? 0 : .25) * s * s * (3 - 2 * s);
     l += GLOW * blob(px, py, mmx + .08, mmy + .06, .42, .42);
@@ -1167,7 +1207,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v){',
@@ -1182,6 +1222,9 @@
       '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(.07,.03),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
       '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*.16+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
       '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
+      // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
+      '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=max(abs(p-b.xy)-b.zw,0.);float dd=length(q)/soft;tb=max(tb,exp(-dd*dd));}}',
+      '  d+=tb*shade;',
       // lt = (sterkte, hoogte, breedte, gloed van de muis) van het licht
       '  float l=blob(p,vec2(.74*a,lt.y)+.05*vec2(sin(t*.09),cos(t*.12)),vec2(lt.z*a,.36)*(1.+.06*br))*lt.x;',
       '  l+=(lt.x<.5?0.:.25)*smoothstep(.2,1.,uv.x*.6+uv.y*.4);',
@@ -1212,7 +1255,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1254,18 +1297,26 @@
   }
   window.kerjaHaze = { dia: function () { return cursorDia; } };
 
+  /* diapositief nodig? dark mode: tekst is licht, dus omslaan op licht (v laag).
+     light mode: tekst is blauw, dus omslaan op donker (v hoog). Met marge tegen flikkeren. */
+  function wantDia(v, on) {
+    if (v < 0) return false;
+    var other = flip > .5 ? v : 1 - v;   // hoe sterk de ondergrond afwijkt van de gewone achtergrond
+    return on ? other > .44 : other > .56;
+  }
   function update() {
+    if (stale()) collect();
     var r = hero.getBoundingClientRect();
+    measureBoxes(r);
     for (var i = 0; i < targets.length; i++) {
       var el = targets[i], b = el.getBoundingClientRect();
       var v = at(b.left + b.width / 2, b.top + b.height / 2, r);
       var on = el.classList.contains('is-haze-dia');
-      if (v < 0) { if (on) el.classList.remove('is-haze-dia'); }
-      else if (!on && v < .44) el.classList.add('is-haze-dia');
-      else if (on && v > .56) el.classList.remove('is-haze-dia');
+      var want = wantDia(v, on);
+      if (want !== on) el.classList.toggle('is-haze-dia', want);
     }
     var c = cx < 0 ? -1 : at(cx, cy, r);
-    var next = c < 0 ? false : (cursorDia ? c < .56 : c < .44);
+    var next = wantDia(c, cursorDia);
     if (next !== cursorDia) { cursorDia = next; window.dispatchEvent(new Event('kerja-haze')); }
   }
 
@@ -1275,6 +1326,7 @@
     t = reduce ? 4 : (now - start) / 1000;
     var k = reduce ? 1 : EASE;
     cur[0] += (target[0] - cur[0]) * k; cur[1] += (target[1] - cur[1]) * k;
+    for (var bj = 0; bj < NB * 4; bj++) box[bj] += (boxGoal[bj] - box[bj]) * (reduce ? 1 : .2);
     flip += (flipGoal - flip) * (reduce ? 1 : 0.06);
     if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
     if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
@@ -1289,6 +1341,9 @@
       gl.uniform1f(U.fadeFrom, FADE_FROM);
       gl.uniform4f(U.lt, L_AMT, L_Y, L_W, GLOW);
       gl.uniform1f(U.base, BASE);
+      gl.uniform4fv(U.bx, box);
+      gl.uniform1f(U.soft, soft);
+      gl.uniform1f(U.shade, TEXT_SHADE);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 120) { update(); lastUpdate = now; }
