@@ -21,6 +21,10 @@ html.theme-light .theme-switch_component { transform: rotate(180deg); }
 .hero_logo, .hero_payoff { transition: translate 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
 .theme-switch_component { transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), translate 0.5s cubic-bezier(0.65, 0, 0.35, 1); }
 html.is-scrolling :is(.hero_logo, .hero_payoff, .theme-switch_component) { translate: 0 -7rem; }
+/* Eerste beeld bij aankomst: de ondergrond van de olievlek (andere kleur dan het thema), tot het
+   script de vlek overneemt. Zo flitst de pagina niet eerst in de eigen kleur. */
+html.pt-enter:not(.theme-light) body { background-color: #eae3da !important; }
+html.pt-enter.theme-light body { background-color: #2e0cf2 !important; }
 /* Groter klikvlak dan de 37 x 7 px van de switch zelf */
 .theme-switch_component::before { content: ""; position: absolute; inset: -0.75rem; }
 .theme-switch_component:focus-visible { outline: 1px solid var(--light); outline-offset: 0.75rem; }

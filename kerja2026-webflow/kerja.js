@@ -636,9 +636,10 @@
    Nooit twee keer achter elkaar dezelfde tekst.
    Geldt voor links naar een andere pagina op dezelfde site (ook vanuit het menu).
    Ankers op dezelfde pagina, nieuwe tabbladen en mailto blijven zoals ze waren.
-   Hero-gradient: bij aankomst (elke keer, ook bij een eerste bezoek of vernieuwen) groeit de gradient
-   eerst vanaf de onderrand van het venster naar zijn plek, daarna pas de opbouw. Bij vertrek en bij
-   de light/dark-wissel zakt hij na het verdwijnen van de onderdelen terug naar de onderrand. */
+   Olievlek: bij aankomst (elke keer, ook bij een eerste bezoek of vernieuwen) groeit de pagina als een
+   olievlek van onder naar boven over de ondergrond in de andere kleur, daarna pas de opbouw. Bij
+   vertrek en bij de light/dark-wissel trekt hij zich na het verdwijnen van de onderdelen terug van
+   boven naar onder (script: hero-gradient en korrel). */
 (function () {
   var root = document.documentElement;
   var KEY = 'kerja-pt';
@@ -720,7 +721,7 @@
   }
   /* hero-gradient (script verderop): eerst groeien, dan pas opbouwen; bij vertrek eerst wegzakken.
      Zonder gradient op de pagina gaat het meteen door. */
-  function grow(next) { if (window.kerjaHaze && window.kerjaHaze.grow) window.kerjaHaze.grow(next); else next(); }
+  function grow(next, mode) { if (window.kerjaHaze && window.kerjaHaze.grow) window.kerjaHaze.grow(next, mode); else next(); }
   function sink(next) { if (window.kerjaHaze && window.kerjaHaze.sink) window.kerjaHaze.sink(next); else next(); }
   function isWord(el) { return el.classList.contains('word-hover_word') || el.classList.contains('pt-word'); }
 
@@ -853,7 +854,7 @@
         scatter(items().filter(inView), true, OUT, function () {
           sink(function () {
             setTheme(light); // kleuren wisselen als alles in beeld verdwenen is en de gradient weg is
-            grow(build);
+            grow(build, 'same');
           });
         });
       }, spun ? 0 : SPIN);
@@ -1061,7 +1062,7 @@
      met dezelfde korrel op de achtergrondkleur. Vier tegels per thema, ±12 keer per seconde gewisseld.
    - data-haze="subtle" (vervolgpagina's): zelfde gradient, maar het licht is zwak en zit bovenaan
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
-   - groeien/wegzakken bij de pagina-overgang: zie kerjaHaze.grow/sink (RISE ms)
+   - olievlek bij de pagina-overgang: zie kerjaHaze.grow/sink (OIL ms)
    - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
@@ -1122,6 +1123,103 @@
   }
   if (!reduce) setInterval(function () { grainFrame++; grain(); }, 83);
   new MutationObserver(grain).observe(root, { attributes: true, attributeFilter: ['class'] });
+
+  /* Olievlek (pagina-overgang): een vaste laag boven alles toont de 'ondergrond' (in dark mode creme,
+     in light mode blauw, met dezelfde korrel). De pagina zelf is de olievlek: bij aankomst groeit hij
+     met een golvende, korrelige rand van onder naar boven over de ondergrond heen, bij vertrek trekt
+     hij zich van boven naar onder terug. Werkt over het hele venster, waar je ook gescrold bent.
+     Bij de light/dark-wissel: de vlek trekt zich terug, het thema wisselt, en de nieuwe pagina groeit
+     terug over een ondergrond in de eigen achtergrondkleur (de wissel is dan meteen zichtbaar).
+     OIL ms per beweging; OIL_EDGE = hoe grillig de rand is. */
+  var OIL = 1200, OIL_EDGE = .25;
+  var oil = document.createElement('canvas');
+  oil.setAttribute('aria-hidden', 'true');
+  oil.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9990;pointer-events:none;display:none;';
+  document.body.appendChild(oil);
+  var ogl = reduce ? null : oil.getContext('webgl', { antialias: false, premultipliedAlpha: true });
+  var OU = {};
+  if (ogl) {
+    var ofs = [
+      'precision highp float;',
+      'uniform vec2 res;uniform float p;uniform float t;uniform float seed;uniform float grain;uniform float under;',
+      'float hash(vec2 q){q=fract(q*vec2(123.34,456.21));q+=dot(q,q+45.32);return fract(q.x*q.y);}',
+      'float noise(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);',
+      '  return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}',
+      'float fbm(vec2 q){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(q);q*=2.03;a*=.5;}return v;}',
+      'vec3 ramp(float v,float fl){',
+      '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),fl),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
+      '  if(v<.35)return mix(c0,c1,v/.35);if(v<.62)return mix(c1,c2,(v-.35)/.27);if(v<.82)return mix(c2,c3,(v-.62)/.2);return mix(c3,c4,(v-.82)/.18);}',
+      'void main(){',
+      '  vec2 uv=gl_FragCoord.xy/res;vec2 q=vec2(uv.x*res.x/res.y,uv.y);',
+      '  float A=' + OIL_EDGE.toFixed(3) + ';',
+      // hoogte van de vlek op dit punt: voortgang plus een grillige, langzaam stromende rand
+      '  float n=fbm(q*vec2(1.1,.9)+vec2(t*.12,-t*.3));',
+      '  float edge=p*(1.+4.*A+.1)-2.*A-.05+(n-.5)*4.*A;',
+      '  vec2 cell=floor(gl_FragCoord.xy/grain);',
+      '  float cover=smoothstep(-.025,.025,edge-uv.y+(hash(cell*3.1+seed)-.5)*.04);',
+      '  float h=hash(cell*2.9+seed);',
+      '  float v=under>.5?max(0.,(h-.5)*' + G + '):.82+(h-.5)*' + G + ';',
+      '  float al=1.-cover;',
+      '  gl_FragColor=vec4(ramp(v,under)*al,al);}'
+    ].join('\n');
+    var osh = function (type, src) { var x = ogl.createShader(type); ogl.shaderSource(x, src); ogl.compileShader(x); return x; };
+    var oprog = ogl.createProgram();
+    ogl.attachShader(oprog, osh(ogl.VERTEX_SHADER, 'attribute vec2 p2;void main(){gl_Position=vec4(p2,0.,1.);}'));
+    ogl.attachShader(oprog, osh(ogl.FRAGMENT_SHADER, ofs));
+    ogl.linkProgram(oprog);
+    if (!ogl.getProgramParameter(oprog, ogl.LINK_STATUS)) ogl = null;
+    else {
+      ogl.useProgram(oprog);
+      ogl.bindBuffer(ogl.ARRAY_BUFFER, ogl.createBuffer());
+      ogl.bufferData(ogl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), ogl.STATIC_DRAW);
+      var oloc = ogl.getAttribLocation(oprog, 'p2'); ogl.enableVertexAttribArray(oloc); ogl.vertexAttribPointer(oloc, 2, ogl.FLOAT, false, 0, 0);
+      ['res', 'p', 't', 'seed', 'grain', 'under'].forEach(function (k) { OU[k] = ogl.getUniformLocation(oprog, k); });
+    }
+  }
+  var oilP = 1, oilUnder = 0, oilSeed = 7, oilSeedAt = 0, oilT0 = performance.now();
+  function drawOil(now) {
+    var d = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(1, Math.round(oil.clientWidth * d)), h = Math.max(1, Math.round(oil.clientHeight * d));
+    if (!ogl) { oil.style.background = oilUnder ? '#eae3da' : '#2e0cf2'; oil.style.opacity = String(1 - oilP); return; }
+    if (oil.width !== w || oil.height !== h) { oil.width = w; oil.height = h; ogl.viewport(0, 0, w, h); }
+    if (now - oilSeedAt > 83) { oilSeed = Math.random() * 100; oilSeedAt = now; }
+    ogl.uniform2f(OU.res, w, h);
+    ogl.uniform1f(OU.p, oilP);
+    ogl.uniform1f(OU.t, (now - oilT0) / 1000);
+    ogl.uniform1f(OU.seed, oilSeed);
+    ogl.uniform1f(OU.grain, 1.5 * d);
+    ogl.uniform1f(OU.under, oilUnder);
+    ogl.clearColor(0, 0, 0, 0); ogl.clear(ogl.COLOR_BUFFER_BIT);
+    ogl.drawArrays(ogl.TRIANGLES, 0, 3);
+  }
+  function inOut(k) { return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
+  /* naar 'to' (1 = pagina bedekt alles, 0 = alleen ondergrond); under 1 = creme, 0 = blauw */
+  function runOil(to, under, done) {
+    oilUnder = under;
+    if (reduce) { oilP = to; oil.style.display = 'none'; if (done) done(); return; }
+    oil.style.display = 'block';
+    var from = oilP, t0 = performance.now();
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / OIL);
+      oilP = from + (to - from) * inOut(k);
+      drawOil(now);
+      if (k < 1) { requestAnimationFrame(step); return; }
+      if (to >= 1) oil.style.display = 'none';
+      if (done) done();
+    })(t0);
+  }
+  /* ondergrond: 'opposite' = de andere kleur dan het huidige thema, 'same' = de eigen achtergrond */
+  function under(mode) { var l = light(); return (mode === 'same' ? l : !l) ? 1 : 0; }
+  window.kerjaHaze = {
+    dia: function () { return false; },
+    grow: function (done, mode) { runOil(1, under(mode || 'opposite'), done); },
+    sink: function (done) { runOil(0, under('opposite'), done); },
+    show: function () { oilP = 1; oil.style.display = 'none'; }
+  };
+  /* aankomst: meteen alleen de ondergrond tonen, de groei start vanuit de pagina-overgang */
+  if (window.kerjaPtEnter && !reduce) {
+    oilP = 0; oilUnder = under('opposite'); oil.style.display = 'block'; drawOil(performance.now());
+  }
 
   var host = document.querySelector('[data-haze]');
   if (!host) return;
@@ -1350,34 +1448,7 @@
     if (y < r.top || y > r.bottom || x < r.left || x > r.right) return -1;
     return field((x - r.left) / r.width, 1 - (y - r.top) / r.height, r.width / r.height, t, cur[0], cur[1], flip);
   }
-  /* groeien en wegzakken (pagina-overgang): de gradient rekt uit vanaf de onderrand van het venster.
-     rise 0 = weggezakt (een lijn op de onderrand), 1 = op zijn plek. RISE ms per beweging. */
-  var RISE = 1200;
-  var rise = window.kerjaPtEnter && !reduce ? 0 : 1;
-  function applyRise() {
-    if (rise >= 1) { canvas.style.transform = ''; return; }
-    var oy = window.innerHeight - host.getBoundingClientRect().top;
-    canvas.style.transformOrigin = '50% ' + oy.toFixed(1) + 'px';
-    canvas.style.transform = 'scaleY(' + Math.max(rise, 0.0001).toFixed(4) + ')';
-  }
-  function animateRise(to, ease, done) {
-    if (reduce) { rise = to; applyRise(); if (done) done(); return; }
-    var from = rise, t0 = performance.now();
-    kick();
-    (function step(now) {
-      var k = Math.min(1, (now - t0) / RISE);
-      rise = from + (to - from) * ease(k);
-      applyRise();
-      if (k < 1) requestAnimationFrame(step); else if (done) done();
-    })(t0);
-  }
-  applyRise();
-  window.kerjaHaze = {
-    dia: function () { return cursorDia; },
-    grow: function (done) { animateRise(1, function (k) { return 1 - Math.pow(1 - k, 3); }, done); },
-    sink: function (done) { animateRise(0, function (k) { return k * k * k; }, done); },
-    show: function () { rise = 1; applyRise(); }
-  };
+  window.kerjaHaze.dia = function () { return cursorDia; };
   /* de rechthoek van het hero-deel van de gradient: schuift door de parallax mee met de laag */
   function heroRect() {
     var h = host.getBoundingClientRect(), H = hero.offsetHeight;
