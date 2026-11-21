@@ -195,20 +195,19 @@ html.theme-light .menu_cell-frame { --menu-glass: color-mix(in srgb, var(--brigh
 .menu_cell-dot { background-color: #1d0b9e; outline-color: #1d0b9e; }
 html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-color: var(--bright-blue); }
 
-/* Muziekknop ([data-volume]): elk lijntje heeft een niveau --lvl (script) van 0 (alleen een bolletje)
-   tot 1 (volle hoogte). Het onderste bolletje staat vast, het bovenste schuift omhoog en de lijn
-   groeit ertussen. Maten: knop 2.3125rem hoog, bolletje 0.4375rem. */
-.volume_bar { position: relative; --lvl: 0; --span: calc(2.3125rem - 0.4375rem); }
-.volume_bar > .dots-line_dot { position: absolute; left: 0; bottom: 0; }
-.volume_bar > .dots-line_dot:first-child { transform: translateY(calc(var(--lvl) * var(--span) * -1)); transition: transform 0.17s ease; }
+/* Muziekknop ([data-volume]), rechts naast de menuknop: vier lijntjes van 1px, 5px uit elkaar.
+   Elk lijntje heeft een niveau --lvl (script) van 0 tot 1: 0 = stompje van 3px (muziek uit),
+   1 = volle hoogte (2.3125rem). De lijntjes staan onderaan vast en groeien omhoog.
+   Menu open: de knop verdwijnt achter de FAQ-knop, die eroverheen schuift. */
+.volume_bar { --lvl: 0; }
 .volume_bar > .volume_line {
-  position: absolute; left: calc(50% - 0.5px); bottom: 0.4375rem; margin: 0;
-  height: calc(2.3125rem - 0.875rem); transform-origin: 50% 100%;
-  transform: scaleY(var(--line, 0));
-  transition: transform 0.17s ease;
+  position: absolute; left: 0; bottom: 0; margin: 0;
+  height: calc(3px + var(--lvl) * (100% - 3px));
+  transition: height 0.17s ease;
 }
-.volume_component.is-off .volume_bar > .dots-line_dot:first-child,
 .volume_component.is-off .volume_bar > .volume_line { transition-duration: 0.6s; transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+.volume_component { transition: opacity var(--menu-dur, 0.15s) linear calc(var(--menu-step, 0.08s) * 6); }
+.menu_component.is-open .volume_component { opacity: 0; pointer-events: none; transition-delay: 0s; }
 @media (prefers-reduced-motion: reduce) { .volume_bar > * { transition: none !important; } }
 
 /* Menu past altijd in het venster: het script zet --menu-fit (1 = ware grootte) als er boven of

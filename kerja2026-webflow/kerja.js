@@ -1594,25 +1594,25 @@
   queue();
 })();
 
-/* Muziek ([data-volume], onderin het midden van de hero, op elke pagina).
-   - speelt the-procedure.mp3 in een lus, start met een fade-in (FADE_IN ms, ease-in) en stopt met
-     een fade-out (FADE_OUT ms, ease-out)
+/* Muziek ([data-volume], rechts naast de menuknop, op elke pagina; staat in de Menu-component,
+   dus verdwijnt tijdens scrollen mee met het menu en schuift achter de FAQ-knop als het menu opent).
+   - speelt all-corrupt-everything.mp3 in een lus, start met een fade-in (FADE_IN ms, ease-in) en stopt
+     met een fade-out (FADE_OUT ms, ease-out)
    - browsers laten geluid pas toe na een handeling van de bezoeker: lukt starten bij het laden niet,
      dan start de muziek bij de eerste klik, tik of toets ergens op de pagina
-   - de knop: vier verticale lijntjes met bolletjes die als een equalizer willekeurig op en neer gaan;
-     klik = muziek uit (de lijntjes zakken in tot vier bolletjes naast elkaar), nog een klik = verder
+   - de knop: vier verticale lijntjes die als een equalizer willekeurig op en neer gaan;
+     klik = muziek uit (de lijntjes zakken in tot vier stompjes van 3px), nog een klik = verder
      vanaf waar hij stopte
    - doorlopend over alle pagina's: het tijdstip en of hij uit staat worden onthouden (sessionStorage).
-     Bij vertrek fadet de muziek uit tegelijk met de olievlek (LEAVE ms), op de nieuwe pagina weer in,
-     zodat de onvermijdelijke stilte bij het laden als een adempauze voelt
+     Bij vertrek fadet de muziek uit tegelijk met de olievlek (LEAVE ms), op de nieuwe pagina weer in
    - volume via Web Audio (ook op iPhone in te faden); lukt dat niet, dan via audio.volume
    - bij 'reduced motion' staat de equalizer stil */
 (function () {
   var btn = document.querySelector('[data-volume]');
   if (!btn) return;
-  var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b00b046413278ab3741a3fd_the-procedure.mp3';
+  var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b020985d653dc340d7e89cf_all-corrupt-everything.mp3';
   var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, LEAVE = 1200, TICK = 170;
-  var KEY_T = 'kerja-music-t', KEY_OFF = 'kerja-music-off';
+  var KEY_T = 'kerja-music-t-ace', KEY_OFF = 'kerja-music-off'; // KEY_T per nummer: geen tijdstip van een ander nummer
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var bars = Array.prototype.slice.call(btn.querySelectorAll('.volume_bar'));
   function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
@@ -1621,12 +1621,8 @@
   btn.setAttribute('tabindex', '0');
   btn.setAttribute('aria-label', 'Music');
 
-  /* equalizer: per lijntje een niveau 0 (alleen een bolletje) tot 1 (volle hoogte) */
-  function level(bar, lvl) {
-    bar.style.setProperty('--lvl', lvl.toFixed(3));
-    /* lijn tussen de bolletjes: 0 tot 1 van de vrije ruimte (1.875rem baan, 0.4375rem bolletje) */
-    bar.style.setProperty('--line', Math.max(0, (lvl * 1.875 - 0.4375) / 1.4375).toFixed(3));
-  }
+  /* equalizer: per lijntje een niveau 0 (stompje van 3px) tot 1 (volle hoogte), CSS in de head */
+  function level(bar, lvl) { bar.style.setProperty('--lvl', lvl.toFixed(3)); }
   var eq = null;
   function ui(on) {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
