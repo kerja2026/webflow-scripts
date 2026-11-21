@@ -12,7 +12,8 @@
    - alleen op desktop met een muis (MQ)
    Tablet en mobiel (ACC, tot 991px): harmonica op scroll
    - de vlakken staan onder elkaar, ingeklapt tot SHUT rem (150px), alleen de titel in beeld
-   - het vlak dat het midden van het scherm raakt klapt open (terug omhoog met GAP rem speling) (DUR ms) en toont zijn tekst
+   - een vlak klapt open zodra zijn bovenkant de openlijn passeert, op LINE van de schermhoogte
+     (75%, dus in het onderste kwart; terug omhoog met GAP rem speling) (DUR ms) en toont zijn tekst
      in woordgroepen, net als op desktop; het vorige vlak klapt weer in en de tekst verdwijnt
    - boven het eerste vlak staat alles dicht; voorbij het laatste blijft het laatste open
    - geen tik-bediening, alleen scrollen
@@ -26,6 +27,7 @@
   var DUR = 600;   // ms voor verschuiven en tekst
   var GROW = 5.25; // breedte van het actieve vlak t.o.v. de andere
   var SHUT = 9.375; // rem, ingeklapte hoogte op tablet en mobiel (150px)
+  var LINE = 0.75;  // openlijn: een vlak opent zodra zijn bovenkant hier komt (deel van de schermhoogte, van boven)
   var GAP = 6;      // rem speling terug omhoog, zodat vlakken niet heen en weer springen rond het midden
   var MQ = window.matchMedia('(min-width: 992px) and (hover: hover) and (pointer: fine)');
   var ACC = window.matchMedia('(max-width: 991px)');
@@ -132,7 +134,7 @@
   }
   function pick() {
     if (!ACC.matches) return;
-    var mid = window.innerHeight / 2, hit = null, cur = items.indexOf(active);
+    var mid = window.innerHeight * LINE, hit = null, cur = items.indexOf(active);
     for (var i = 0; i < items.length; i++) {
       var r = items[i].getBoundingClientRect();
       if (r.top <= mid + (i <= cur ? rem() * GAP : 0)) hit = items[i];
