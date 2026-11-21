@@ -12,13 +12,15 @@
    - alleen op desktop met een muis (MQ)
    Tablet en mobiel (ACC, tot 991px): harmonica op scroll
    - de vlakken staan onder elkaar, ingeklapt tot SHUT rem (150px), alleen de titel in beeld
-   - een vlak klapt open zodra zijn bovenkant de openlijn passeert, op LINE van de schermhoogte
-     (75%, dus in het onderste kwart; terug omhoog met GAP rem speling) (DUR ms) en toont zijn tekst
-     in woordgroepen, net als op desktop; het vorige vlak klapt weer in en de tekst verdwijnt
+   - naar beneden: een vlak klapt open (DUR ms) zodra zijn bovenkant de onderlijn passeert, op DOWN
+     van de schermhoogte (90%, dus net als het in beeld komt); het vorige vlak klapt tegelijk in,
+     waardoor de vlakken eronder soepel omhoog schuiven
+   - omhoog: een vlak klapt open zodra zijn onderkant de bovenlijn passeert, op UP van de schermhoogte
+     (25%); het vlak eronder klapt in
+   - de tekst verschijnt in woordgroepen, net als op desktop, en verdwijnt zo bij het inklappen
    - boven het eerste vlak staat alles dicht; voorbij het laatste blijft het laatste open
    - geen tik-bediening, alleen scrollen
-   - tijdens het in- en uitklappen corrigeert het script de scrollpositie, zodat het open vlak
-     niet verspringt als een vlak erboven kleiner wordt
+   - het script schuift de pagina niet zelf: dat liet de scroll op de iPhone haperen (v1.13.1)
    Overige schermen (breed, zonder muis): tekst altijd zichtbaar.
    is-active, is-acc en svc-hide worden alleen door dit script gezet; de CSS staat hieronder. */
 (function () {
@@ -27,8 +29,8 @@
   var DUR = 600;   // ms voor verschuiven en tekst
   var GROW = 5.25; // breedte van het actieve vlak t.o.v. de andere
   var SHUT = 9.375; // rem, ingeklapte hoogte op tablet en mobiel (150px)
-  var LINE = 0.75;  // openlijn: een vlak opent zodra zijn bovenkant hier komt (deel van de schermhoogte, van boven)
-  var GAP = 6;      // rem speling terug omhoog, zodat vlakken niet heen en weer springen rond het midden
+  var DOWN = 0.9;   // onderlijn bij naar beneden scrollen (deel van de schermhoogte, van boven)
+  var UP = 0.25;    // bovenlijn bij omhoog scrollen
   var MQ = window.matchMedia('(min-width: 992px) and (hover: hover) and (pointer: fine)');
   var ACC = window.matchMedia('(max-width: 991px)');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -101,43 +103,30 @@
   }
   function size(it, open) { it.style.height = (open ? full(it) : rem() * SHUT) + 'px'; }
 
-  /* houd het open vlak op zijn plek terwijl de hoogtes veranderen */
-  var anchor = null, anchorY = 0, until = 0, hold = 0;
-  function docY(el) { return el.getBoundingClientRect().top + window.pageYOffset; }
-  function shift(d) {
-    window.scrollBy(0, d);
-    var l = window.lenis;
-    if (l && typeof l.animatedScroll === 'number') { l.animatedScroll += d; l.targetScroll += d; }
-  }
-  function keep() {
-    if (anchor) {
-      var y = docY(anchor), d = y - anchorY;
-      if (Math.abs(d) > 0.5) shift(d);
-      anchorY = docY(anchor);
-    }
-    hold = performance.now() < until ? requestAnimationFrame(keep) : 0;
-  }
-  function pin(it) {
-    anchor = it;
-    anchorY = it ? docY(it) : 0;
-    until = performance.now() + DUR + 80;
-    if (!hold) hold = requestAnimationFrame(keep);
-  }
-
   function open(it) {
     if (it === active) return;
-    pin(it || active);
     if (active) { active.classList.remove('is-active'); size(active, false); show(active, false, DUR / 2); }
     active = it;
     if (it) { it.classList.add('is-active'); size(it, true); show(it, true, DUR); }
-    if (reduce) keep(); // zonder animatie: meteen corrigeren
   }
+  var lastY = window.pageYOffset, dir = 1;
   function pick() {
     if (!ACC.matches) return;
-    var mid = window.innerHeight * LINE, hit = null, cur = items.indexOf(active);
-    for (var i = 0; i < items.length; i++) {
-      var r = items[i].getBoundingClientRect();
-      if (r.top <= mid + (i <= cur ? rem() * GAP : 0)) hit = items[i];
+    var y = window.pageYOffset, h = window.innerHeight, hit = active, i, r;
+    if (y > lastY + 1) dir = 1; else if (y < lastY - 1) dir = -1;
+    lastY = y;
+    if (dir > 0) {
+      /* het laatste vlak waarvan de bovenkant boven de onderlijn staat */
+      hit = null;
+      for (i = 0; i < items.length; i++) if (items[i].getBoundingClientRect().top <= h * DOWN) hit = items[i];
+      if (items.indexOf(hit) < items.indexOf(active)) hit = active; // naar beneden nooit terug
+    } else {
+      /* het eerste vlak waarvan de onderkant onder de bovenlijn staat */
+      for (i = 0; i < items.length; i++) {
+        r = items[i].getBoundingClientRect();
+        if (r.bottom > h * UP) { hit = r.top <= h * DOWN ? items[i] : null; break; }
+      }
+      if (active && items.indexOf(hit) > items.indexOf(active)) hit = active; // omhoog nooit vooruit
     }
     open(hit);
   }
@@ -148,7 +137,7 @@
     requestAnimationFrame(function () { queued = false; pick(); });
   }
 
-  /* desktop: tekst verborgen tot hover; harmonica: alles dicht tot het midden; anders: alles zichtbaar */
+  /* desktop: tekst verborgen tot hover; harmonica: alles dicht tot de onderlijn; anders: alles zichtbaar */
   function setup() {
     activate(null);
     active = null;
