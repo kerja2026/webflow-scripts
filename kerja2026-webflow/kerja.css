@@ -210,3 +210,42 @@ html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-
 .volume_component.is-off .volume_bar > .dots-line_dot:first-child,
 .volume_component.is-off .volume_bar > .volume_line { transition-duration: 0.6s; transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) { .volume_bar > * { transition: none !important; } }
+
+/* Menu past altijd in het venster: het script zet --menu-fit (1 = ware grootte) als er boven of
+   naast de knop te weinig ruimte is. Het blok met cellen krimpt vanuit de knop. */
+.menu_list-mask { scale: var(--menu-fit, 1); transform-origin: 0 100%; }
+
+/* Telefoon liggend (liggend, hooguit 479px hoog, touchscherm; een laag desktopvenster valt er niet onder).
+   Webflow-breakpoints gaan op breedte: een liggende iPhone is 844 tot 932px breed en valt daarmee
+   in het tablet-breakpoint, niet in Mobile landscape (480-767px). Daarom staat dit hier.
+   - Schaal: de rem rekent vanaf de korte kant van het scherm, net als staand (390 = 16px).
+   - Notch: de pagina loopt door tot de schermrand (viewport-fit=cover in de head), tekst, logo en
+     menu blijven buiten de notch via de veilige marge van het toestel.
+   - Heading: zelfde maat als staand.
+   - Menu: drie kolommen en twee rijen in plaats van twee kolommen en drie rijen. */
+@media (orientation: landscape) and (max-height: 479px) and (pointer: coarse) {
+  :root {
+    --size-container-ideal: 390;
+    --size-container-min: 320px;
+    --size-container-max: 479px;
+    --size-container: clamp(var(--size-container-min), 100vh, var(--size-container-max));
+  }
+  .padding-global {
+    padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
+    padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+  }
+  .menu_component { left: calc(1.25rem + env(safe-area-inset-left, 0px)); }
+  .kerja-scrollbar { right: calc(2px + env(safe-area-inset-right, 0px)); }
+  .statement_heading { margin-top: 1.5rem; font-size: 1.5rem; line-height: 1.5; text-indent: 0rem; }
+
+  /* menu 3 x 2: volgorde in de DOM 1 work, 2 about, 3 expertise (boven), 4 connect, 5 instagram, 6 linkedin (onder).
+     Open: 4 schuift uit de knop omhoog, 5 en 6 naar rechts, 3 omhoog, 2 en 1 naar links. */
+  .menu_list-mask { width: 20.1875rem; height: 13.75rem; }
+  .menu_list { width: 19.75rem; }
+  .menu_list .menu_cell:nth-child(4) { --open: 1; --close: 5; z-index: 6; transform: translate(0, calc(100% + 0.25rem)); }
+  .menu_list .menu_cell:nth-child(5) { --open: 2; --close: 4; z-index: 5; transform: translate(calc(var(--menu-pitch) * -1), 0); }
+  .menu_list .menu_cell:nth-child(6) { --open: 3; --close: 3; z-index: 4; transform: translate(calc(var(--menu-pitch) * -1), 0); }
+  .menu_list .menu_cell:nth-child(3) { --open: 4; --close: 2; z-index: 3; transform: translate(0, var(--menu-pitch)); }
+  .menu_list .menu_cell:nth-child(2) { --open: 5; --close: 1; z-index: 2; transform: translate(var(--menu-pitch), 0); }
+  .menu_list .menu_cell:nth-child(1) { --open: 6; --close: 0; z-index: 1; transform: translate(var(--menu-pitch), 0); }
+}

@@ -47,12 +47,16 @@
    zo blijft hij tijdens het scrollen volledig weg en schuift hij in één beweging naar zijn plek.
    Klik op een menulink: het menu klapt eerst helemaal in, daarna pas navigeren of scrollen.
    Naar een andere pagina gaat via de pagina-overgang (laatste script).
-   Links die in een nieuw tabblad openen (Instagram, LinkedIn) gaan direct, anders blokkeert de browser ze. */
+   Links die in een nieuw tabblad openen (Instagram, LinkedIn) gaan direct, anders blokkeert de browser ze.
+   Passen: bij elke schermmaat blijft het uitgeklapte menu binnen het venster. Is er te weinig ruimte
+   boven of naast de knop, dan verkleint fit() het blok met cellen (--menu-fit, CSS in de head) tot het
+   past, met FIT_GAP rem marge tot de rand. Gemeten bij openen en bij het draaien van het scherm. */
 (function () {
   var STOP_DELAY = 250; // ms zonder scroll = stilstand
   var AUTO_CLOSE = 5000; // ms zonder keuze, daarna klapt het menu vanzelf in
   var LIFT_GAP = 1.5; // rem tussen de onderkant van de menuknop en de legal-navigatie
   var MENU_BOTTOM = 40; // px, gelijk aan bottom van .menu_component in Webflow
+  var FIT_GAP = 0.75; // rem marge tussen het uitgeklapte menu en de rand van het venster
   var root = document.documentElement;
   var menu = document.querySelector('[data-menu]');
   var toggle = document.querySelector('[data-menu-toggle]');
@@ -100,8 +104,20 @@
     }, AUTO_CLOSE);
   }
 
+  /* verklein het cellenblok als het niet in het venster past */
+  function fit() {
+    if (!hasMenu) return;
+    var mask = list.closest('.menu_list-mask') || list.parentElement;
+    var rem = parseFloat(getComputedStyle(root).fontSize) || 16, gap = FIT_GAP * rem;
+    var m = mask.getBoundingClientRect();
+    var top = m.bottom - mask.offsetHeight; // bovenkant op ware grootte (de schaal begint onderaan)
+    var s = Math.min(1, (m.bottom - gap) / (m.bottom - top), (window.innerWidth - m.left - gap) / mask.offsetWidth);
+    menu.style.setProperty('--menu-fit', Math.max(0.4, s).toFixed(3));
+  }
+
   function setOpen(open, instant) {
     if (!hasMenu) return;
+    if (open) fit();
     menu.classList.toggle('is-instant', !!instant);
     menu.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -162,6 +178,7 @@
     });
     lift();
     window.addEventListener('resize', queueLift);
+    window.addEventListener('resize', function () { if (isOpen()) fit(); });
     window.addEventListener('load', queueLift);
   }
 
