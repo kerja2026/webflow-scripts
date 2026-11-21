@@ -9,38 +9,20 @@
      de andere vlakken schuiven opzij en worden smal; de verschuiving duurt DUR ms (ease-out)
    - de tekst in het actieve vlak ([data-services-text]) verschijnt zoals bij een pagina-overgang:
      willekeurige groepjes van 3 of 4 woorden, abrupt, binnen DUR ms; in het vorige vlak verdwijnt hij zo
-   - alleen op desktop met een muis (MQ)
-   Tablet en mobiel (ACC, tot 991px): harmonica op scroll
-   - de vlakken staan onder elkaar, ingeklapt tot SHUT rem (150px), alleen de titel in beeld
-   - naar beneden: een vlak klapt open (DUR ms) zodra zijn bovenkant de onderlijn passeert, op DOWN
-     van de schermhoogte (90%, dus net als het in beeld komt); het vorige vlak klapt tegelijk in,
-     waardoor de vlakken eronder soepel omhoog schuiven
-   - omhoog: een vlak klapt open zodra zijn onderkant de bovenlijn passeert, op UP van de schermhoogte
-     (25%); het vlak eronder klapt in
-   - de tekst verschijnt in woordgroepen, net als op desktop, en verdwijnt zo bij het inklappen
-   - boven het eerste vlak staat alles dicht; voorbij het laatste blijft het laatste open
-   - geen tik-bediening, alleen scrollen
-   - het script schuift de pagina niet zelf: dat liet de scroll op de iPhone haperen (v1.13.1)
-   Overige schermen (breed, zonder muis): tekst altijd zichtbaar.
-   is-active, is-acc en svc-hide worden alleen door dit script gezet; de CSS staat hieronder. */
+   - alleen op desktop met een muis (MQ); tablet en mobiel: vlakken onder elkaar, tekst altijd zichtbaar
+   is-active en svc-hide worden alleen door dit script gezet; de CSS staat hieronder. */
 (function () {
   var list = document.querySelector('[data-services]');
   if (!list) return;
   var DUR = 600;   // ms voor verschuiven en tekst
   var GROW = 5.25; // breedte van het actieve vlak t.o.v. de andere
-  var SHUT = 9.375; // rem, ingeklapte hoogte op tablet en mobiel (150px)
-  var DOWN = 0.9;   // onderlijn bij naar beneden scrollen (deel van de schermhoogte, van boven)
-  var UP = 0.25;    // bovenlijn bij omhoog scrollen
   var MQ = window.matchMedia('(min-width: 992px) and (hover: hover) and (pointer: fine)');
-  var ACC = window.matchMedia('(max-width: 991px)');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var items = Array.prototype.slice.call(list.querySelectorAll('[data-services-item]'));
 
   var css = document.createElement('style');
   css.textContent = '@media (min-width: 992px){.services_item{transition:flex-grow ' + (reduce ? 0 : DUR) + 'ms cubic-bezier(.22,1,.36,1)}' +
-    '.services_item.is-active{flex-grow:' + GROW + '}}.svc-hide{visibility:hidden}' +
-    '@media (max-width: 991px){.services_list.is-acc .services_item{overflow:visible;transition:height ' + (reduce ? 0 : DUR) + 'ms cubic-bezier(.22,1,.36,1)}' +
-    '.services_list.is-acc .services_inner{height:100%;overflow:hidden}}';
+    '.services_item.is-active{flex-grow:' + GROW + '}}.svc-hide{visibility:hidden}';
   document.head.appendChild(css);
 
   /* tekst in losse woorden */
@@ -83,84 +65,19 @@
 
   var active = null;
   function activate(it) {
-    if (it === active || ACC.matches) return;
+    if (it === active) return;
     if (active) { active.classList.remove('is-active'); show(active, false, DUR / 2); }
     active = it;
     if (it) { it.classList.add('is-active'); show(it, true, DUR); }
   }
 
-  /* harmonica (tablet en mobiel) */
-  var rem = function () { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; };
-  function full(it) {
-    var h = it.style.height;
-    it.style.transition = 'none';
-    it.style.height = 'auto';
-    var v = it.offsetHeight;
-    it.style.height = h;
-    it.offsetHeight;
-    it.style.transition = '';
-    return v;
-  }
-  function size(it, open) { it.style.height = (open ? full(it) : rem() * SHUT) + 'px'; }
-
-  function open(it) {
-    if (it === active) return;
-    if (active) { active.classList.remove('is-active'); size(active, false); show(active, false, DUR / 2); }
-    active = it;
-    if (it) { it.classList.add('is-active'); size(it, true); show(it, true, DUR); }
-  }
-  var lastY = window.pageYOffset, dir = 1;
-  function pick() {
-    if (!ACC.matches) return;
-    var y = window.pageYOffset, h = window.innerHeight, hit = active, i, r;
-    if (y > lastY + 1) dir = 1; else if (y < lastY - 1) dir = -1;
-    lastY = y;
-    if (dir > 0) {
-      /* het laatste vlak waarvan de bovenkant boven de onderlijn staat */
-      hit = null;
-      for (i = 0; i < items.length; i++) if (items[i].getBoundingClientRect().top <= h * DOWN) hit = items[i];
-      if (items.indexOf(hit) < items.indexOf(active)) hit = active; // naar beneden nooit terug
-    } else {
-      /* het eerste vlak waarvan de onderkant onder de bovenlijn staat */
-      for (i = 0; i < items.length; i++) {
-        r = items[i].getBoundingClientRect();
-        if (r.bottom > h * UP) { hit = r.top <= h * DOWN ? items[i] : null; break; }
-      }
-      if (active && items.indexOf(hit) > items.indexOf(active)) hit = active; // omhoog nooit vooruit
-    }
-    open(hit);
-  }
-  var queued = false;
-  function onScroll() {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(function () { queued = false; pick(); });
-  }
-
-  /* desktop: tekst verborgen tot hover; harmonica: alles dicht tot de onderlijn; anders: alles zichtbaar */
+  /* desktop: tekst verborgen tot hover; anders: alles zichtbaar */
   function setup() {
     activate(null);
-    active = null;
-    var acc = ACC.matches;
-    list.classList.toggle('is-acc', acc);
-    items.forEach(function (it) {
-      it.classList.remove('is-active');
-      it.style.height = acc ? rem() * SHUT + 'px' : '';
-      show(it, !MQ.matches && !acc, 0);
-    });
-    if (acc) pick();
+    items.forEach(function (it) { show(it, !MQ.matches, 0); });
   }
   setup();
-  [MQ, ACC].forEach(function (q) {
-    if (q.addEventListener) q.addEventListener('change', setup); else if (q.addListener) q.addListener(setup);
-  });
-  window.addEventListener('scroll', onScroll, { passive: true });
-  var rw = window.innerWidth;
-  window.addEventListener('resize', function () {
-    if (!ACC.matches || window.innerWidth === rw) return; // alleen breedte; adresbalk op mobiel telt niet
-    rw = window.innerWidth;
-    items.forEach(function (it) { size(it, it === active); });
-  });
+  if (MQ.addEventListener) MQ.addEventListener('change', setup); else if (MQ.addListener) MQ.addListener(setup);
 
   items.forEach(function (it) {
     it.addEventListener('pointerenter', function (e) {
