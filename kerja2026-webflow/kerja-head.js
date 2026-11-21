@@ -1,7 +1,15 @@
 /* Kerja 2026 — kerja-head.js
    Geladen: sitebreed, head, NIET defer/async: moet voor de eerste paint draaien
-   Zet dl-anim, pt-enter en theme-light op html en meet --kerja-bottom-offset op mobiel.
+   Zet viewport-fit=cover, dl-anim, pt-enter en theme-light op html en meet --kerja-bottom-offset op mobiel.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
+
+/* Telefoon liggend: de pagina moet doorlopen tot de schermrand, anders vult Safari de ruimte naast de notch
+   met de achtergrondkleur (blauwe stroken). Webflow zet zelf een viewport-regel bovenaan de head; een tweede
+   regel in de custom code negeert iOS. Daarom vult dit script viewport-fit=cover aan in elke bestaande regel.
+   De afstand tot de notch regelt kerja.css (telefoon liggend). */
+Array.prototype.forEach.call(document.querySelectorAll('meta[name="viewport"]'), function (m) {
+  if (!/viewport-fit/.test(m.content)) m.setAttribute('content', m.content + ', viewport-fit=cover');
+});
 
 /* Startstand zetten voor de eerste paint, zodat de lijnen niet eerst vol in beeld flitsen */
 if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
