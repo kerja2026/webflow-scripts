@@ -653,8 +653,9 @@
    Nooit twee keer achter elkaar dezelfde tekst.
    Geldt voor links naar een andere pagina op dezelfde site (ook vanuit het menu).
    Ankers op dezelfde pagina, nieuwe tabbladen en mailto blijven zoals ze waren.
-   Olievlek: bij aankomst (elke keer, ook bij een eerste bezoek of vernieuwen) groeit de pagina als een
-   olievlek van onder naar boven over de ondergrond in de andere kleur, daarna pas de opbouw. Bij
+   Olievlek: bij aankomst (elke keer, ook bij vernieuwen) groeit de pagina als een
+   olievlek van onder naar boven over de ondergrond in de andere kleur, daarna pas de opbouw.
+   Bij het eerste bezoek in de sessie is die groei de preloader (kerjaHaze.preload, script hero-gradient). Bij
    vertrek en bij de light/dark-wissel trekt hij zich na het verdwijnen van de onderdelen terug van
    boven naar onder (script: hero-gradient en korrel). */
 (function () {
@@ -685,6 +686,7 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var busy = false;
   var greet = document.querySelector('[data-greeting]');
+  window.kerjaGreetings = { hello: HELLO, lang: LANG }; // ook voor de preloader (script hero-gradient)
 
   function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (err) { return null; } }
   /* willekeurig uit de lijst, nooit dezelfde als de vorige keer */
@@ -833,7 +835,13 @@
     root.classList.remove('pt-enter');
     window.kerjaPtEnter = true; // voor de hero-gradient: start weggezakt
     busy = true;
-    setTimeout(function () { grow(build); }, 100);
+    /* eerste bezoek in de sessie: preloader (olievlek stijgt mee met het laden, zie kerjaHaze.preload) */
+    var first = !store('kerja-seen');
+    store('kerja-seen', '1');
+    setTimeout(function () {
+      if (first && window.kerjaHaze && window.kerjaHaze.preload) window.kerjaHaze.preload(build);
+      else grow(build);
+    }, first ? 0 : 100);
   }
 
   /* light/dark mode */
@@ -1166,7 +1174,8 @@
     dia: function () { return false; },
     grow: function (done) { if (done) done(); },
     sink: function (done) { if (done) done(); },
-    show: function () {}
+    show: function () {},
+    preload: function (done) { if (done) done(); }
   };
 
   var host = document.querySelector('[data-haze]');
@@ -1495,6 +1504,70 @@
   window.kerjaHaze.grow = function (done, mode) { runOil(1, under(mode || 'opposite'), done); };
   window.kerjaHaze.sink = function (done) { runOil(0, under('opposite'), done); };
   window.kerjaHaze.show = function () { oilP = 1; oilMode(false); };
+
+  /* Preloader (eerste bezoek in de sessie): de olievlek stijgt zo hoog als de pagina geladen is.
+     Een browser kent geen totaal percentage, dus de teller telt echte onderdelen af:
+     - de lettertypes (document.fonts.ready)
+     - elke afbeelding die bij het laden in beeld staat
+     - de volledige pagina (window load)
+     De gradient zelf is dan al klaar (dit script draait). Tussen twee afgevinkte onderdelen loopt de
+     vlek zacht door, nooit sneller dan PRE_MIN ms voor de hele weg; na PRE_MAX ms gaat hij hoe dan ook door.
+     Teller linksonder op de plek van de menuknop (.kerja-preload, kerja.css), met ernaast de wisselende
+     begroetingen van Home (GREET_STEP ms); samen wisselen ze van kleur als de olie ze passeert. Op 100: teller weg, de vlek stroomt door tot het scherm vol is (OIL ms),
+     dan de opbouw van de pagina. Bij 'reduced motion' of zonder WebGL: meteen door. */
+  var PRE_MIN = 1200, PRE_MAX = 10000;
+  window.kerjaHaze.preload = function (done) {
+    if (reduce || !gl) { window.kerjaHaze.grow(done); return; }
+    oilUnder = under('opposite'); oilP = 0; oilMode(true); kick();
+    var box = document.createElement('div');
+    box.className = 'kerja-preload';
+    box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<p class="kerja-preload_count">0</p><p class="kerja-preload_greet">Hello</p>';
+    document.body.appendChild(box);
+    var count = box.firstChild, greetEl = box.lastChild;
+
+    /* begroetingen naast de teller: eerst Hello, dan om de GREET_STEP ms een willekeurige uit HELLO
+       (paginaovergang), nooit twee keer dezelfde achter elkaar. Stopt op 100. */
+    var G = window.kerjaGreetings || { hello: [], lang: {} }, gLast = 'Hello', GREET_STEP = 320;
+    var gTimer = G.hello.length > 1 ? setInterval(function () {
+      var opts = G.hello.filter(function (x) { return x !== gLast; });
+      gLast = opts[Math.floor(Math.random() * opts.length)];
+      greetEl.textContent = gLast;
+      var l = G.lang[gLast];
+      if (l) greetEl.setAttribute('lang', l); else greetEl.removeAttribute('lang');
+      if (l === 'ar') greetEl.setAttribute('dir', 'rtl'); else greetEl.removeAttribute('dir');
+    }, GREET_STEP) : null;
+
+    var total = 2, ready = 0;
+    function tick() { ready++; }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick, tick); else tick();
+    if (document.readyState === 'complete') tick(); else window.addEventListener('load', tick, { once: true });
+    Array.prototype.forEach.call(document.images, function (img) {
+      var r = img.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight || (!r.width && !r.height)) return;
+      total++;
+      if (img.complete) tick(); else { img.addEventListener('load', tick, { once: true }); img.addEventListener('error', tick, { once: true }); }
+    });
+
+    var t0 = performance.now(), last = t0, shown = 0;
+    (function step(now) {
+      var dt = Math.min(.05, (now - last) / 1000); last = now;
+      var loaded = now - t0 > PRE_MAX ? 1 : ready / total;
+      var goal = Math.max(0, Math.min(loaded, (now - t0) / PRE_MIN));
+      /* zacht naar het doel, maar met een minimumtempo, zodat hij niet blijft hangen op 99 */
+      if (goal > shown) shown = Math.min(goal, shown + Math.max((goal - shown) * Math.min(1, dt * 5), dt * .2));
+      oilP = (shown + .2) / 1.35;   // zet de rand van de vlek op hoogte 'shown'
+      count.textContent = String(Math.floor(shown * 100 + .0001));
+      var cr = count.getBoundingClientRect();
+      box.classList.toggle('is-on-ground', window.innerHeight * (1 - shown) > cr.top + cr.height / 2);
+      if (shown < 1) { requestAnimationFrame(step); return; }
+      count.textContent = '100';
+      clearInterval(gTimer);
+      box.classList.add('is-gone');
+      setTimeout(function () { box.remove(); }, 600);
+      runOil(1, oilUnder, done);
+    })(t0);
+  };
   /* aankomst: meteen alleen de ondergrond, de groei start vanuit de pagina-overgang */
   if (window.kerjaPtEnter && !reduce && gl) { oilP = 0; oilUnder = under('opposite'); oilMode(true); }
   else root.classList.remove('pt-oil');

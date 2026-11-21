@@ -17,10 +17,13 @@ if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-mot
 }
 /* Pagina-overgang: elke pagina start verborgen (ook bij een eerste bezoek of vernieuwen), zodat eerst
    de gradient kan groeien en daarna de onderdelen worden opgebouwd. Niet bij 'reduced motion'.
-   Vangnet: draait kerja.js niet, dan komt alles na 4 s alsnog in beeld. */
+   Vangnet: draait kerja.js niet, dan komt alles na 4 s alsnog in beeld (eerste bezoek: 12 s, preloader). */
 if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.documentElement.classList.add('pt-enter', 'pt-oil');
-  setTimeout(function () { document.documentElement.classList.remove('pt-enter', 'pt-oil'); }, 4000);
+  /* eerste bezoek in de sessie: de preloader kan langer duren (max 10 s in kerja.js), dus later vangnet */
+  var kerjaSeen = false;
+  try { kerjaSeen = !!sessionStorage.getItem('kerja-seen'); } catch (e) {}
+  setTimeout(function () { document.documentElement.classList.remove('pt-enter', 'pt-oil'); }, kerjaSeen ? 4000 : 12000);
 }
 /* Thema: dark is standaard, ook als de computer op licht staat. Alleen een eigen keuze voor light wordt onthouden. */
 try { if (localStorage.getItem('kerja-theme') === 'light') document.documentElement.classList.add('theme-light'); } catch (e) {}

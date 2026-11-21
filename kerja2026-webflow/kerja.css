@@ -248,3 +248,28 @@ html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-
   .menu_list .menu_cell:nth-child(2) { --open: 5; --close: 1; z-index: 2; transform: translate(var(--menu-pitch), 0); }
   .menu_list .menu_cell:nth-child(1) { --open: 6; --close: 0; z-index: 1; transform: translate(var(--menu-pitch), 0); }
 }
+
+/* Preloader (eerste bezoek in de sessie, script hero-gradient: kerjaHaze.preload).
+   Linksonder op de plek van de menuknop: de teller, en klein ernaast op dezelfde basislijn de wisselende
+   begroeting. De teller is altijd drie cijfers breed, zodat de begroeting stilstaat.
+   Op de olie in de tekstkleur (--light), op de ondergrond in de andere kleur (--bright-blue). */
+.kerja-preload {
+  position: fixed; z-index: 9991; pointer-events: none;
+  left: max(2.5rem, calc(50vw - 44.75rem));
+  bottom: calc(40px + var(--kerja-bottom-offset, 0px));
+  display: flex; align-items: baseline; gap: 1.25rem;
+  color: var(--light);
+  transition: opacity 0.35s ease;
+}
+.kerja-preload.is-on-ground { color: var(--bright-blue); }
+.kerja-preload.is-gone { opacity: 0; }
+.kerja-preload_count { margin: 0; min-width: 3ch; font-size: 2.25rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.kerja-preload_greet { margin: 0; font-size: 1rem; line-height: 1; white-space: nowrap; }
+.kerja-preload_greet[lang="ja"] { font-family: 'Noto Sans JP', sans-serif; }
+.kerja-preload_greet[lang="ar"] { font-family: 'Noto Sans Arabic', sans-serif; }
+.kerja-preload_greet[lang="ru"] { font-family: 'Noto Sans', sans-serif; }
+@media screen and (max-width: 479px) { .kerja-preload { left: 1.25rem; gap: 1rem; } .kerja-preload_count { font-size: 1.5rem; } }
+@media (orientation: landscape) and (max-height: 479px) and (pointer: coarse) {
+  .kerja-preload { left: calc(1.25rem + env(safe-area-inset-left, 0px)); gap: 1rem; }
+  .kerja-preload_count { font-size: 1.5rem; }
+}
