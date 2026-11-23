@@ -593,33 +593,87 @@
   });
 })();
 
-/* Logo in de themakleur: de logo-afbeelding (.hero_logo) wordt vervangen door dezelfde SVG inline,
-   met als vulkleur var(--light). Zo wordt het logo blauw in light mode.
-   Lukt het ophalen niet, dan blijft de gewone afbeelding staan. */
+/* Logo (.hero_logo): de logo-afbeelding wordt vervangen door een inline SVG van het woordmerk
+   (kerja-def-2026.svg), met als vulkleur var(--light). Zo wordt het logo blauw in light mode.
+   In rust staan alleen de K en de punt. Mouse-over (of toetsenbordfocus op de link): de punt verdwijnt,
+   de letters e, r, j en a verschijnen abrupt, elk op een willekeurig moment binnen LOGO_IN ms (zoals
+   de teksten bij de pagina-overgang), en daarna staat de punt achter de a. Mouse-out: andersom.
+   Alleen op apparaten met muis; bij 'reduced motion' staat het woord in een keer. */
 (function () {
   var img = document.querySelector('img.hero_logo');
-  if (!img || !window.fetch || !window.DOMParser) return;
-  fetch(img.currentSrc || img.src)
-    .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
-    .then(function (text) {
-      var doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-      var svg = doc.documentElement;
-      if (!svg || svg.nodeName.toLowerCase() !== 'svg' || !img.parentNode) return;
-      svg = document.importNode(svg, true);
-      svg.removeAttribute('width');
-      svg.removeAttribute('height');
-      svg.removeAttribute('style');
-      svg.setAttribute('class', img.className);
-      svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', img.getAttribute('alt') || 'Kerja');
-      Array.prototype.forEach.call(svg.querySelectorAll('[fill]'), function (el) {
-        if (el.getAttribute('fill') === 'none') return;
-        el.removeAttribute('fill');
-        el.style.fill = 'var(--light, #EAE3DA)';
-      });
-      img.parentNode.replaceChild(svg, img);
-    })
-    .catch(function () {});
+  if (!img || !img.parentNode) return;
+  var LOGO_IN = 400, LOGO_OUT = 300;   // ms waarin de letters verschijnen of verdwijnen
+  var H = 145, W_K = 164, W_ALL = 708.1, DOT_K = 145, DOT_END = 689.1;   // maten in de viewBox
+  var NS = 'http://www.w3.org/2000/svg';
+  var SHAPES = [
+    ['polygon', 'points', '131 142.6 104.2 142.6 49.6 88.1 49.3 88.5 19.8 122.7 19.8 142.6 .7 142.6 .7 -.5 19.8 -.5 19.8 93.6 100.8 -.5 126 -.5 62 73.6 131 142.6', 'k'],
+    ['polygon', 'points', '162 18.5 162 61.5 241.9 61.5 241.9 80.5 162 80.5 162 123.5 267.1 123.5 267.1 142.6 143 142.6 143 -.5 267.1 -.5 267.1 18.5 162 18.5', 'e'],
+    ['path', 'd', 'M415.7,48c0-26.8-21.8-48.6-48.5-48.6h-77.7v143.1h19v-46h54.3l28.1,46h22.3l-29.8-48.8c18.9-6.7,32.4-24.6,32.4-45.8ZM308.4,18.4h58.7c16.3,0,29.5,13.3,29.5,29.6s-13.3,29.5-29.5,29.5h-58.7V18.4Z', 'r'],
+    ['path', 'd', 'M473.7,144.1h-6.9c-25.3,0-45.2-19.2-45.2-43.7v-6.4h19v6.4c0,14.1,11.3,24.7,26.2,24.7h6.9c14.4,0,26.2-11.7,26.2-26.2V18.5h-27.3V-.5h46.3v99.5c0,24.9-20.3,45.2-45.2,45.2Z', 'j'],
+    ['path', 'd', 'M610.7-.5h-22.5l-64.4,143h20.8l15.9-35.3h77.9l15.9,35.3h20.8L610.7-.5ZM569,88.3l30.4-67.5,30.4,67.5h-60.8Z', 'a']
+  ];
+  var svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', img.className);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', img.getAttribute('alt') || 'Kerja');
+  svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+  var letters = [];
+  SHAPES.forEach(function (s) {
+    var el = document.createElementNS(NS, s[0]);
+    el.setAttribute(s[1], s[2]);
+    el.style.fill = 'var(--light, #EAE3DA)';
+    if (s[3] !== 'k') { el.style.visibility = 'hidden'; letters.push(el); }
+    svg.appendChild(el);
+  });
+  var dot = document.createElementNS(NS, 'rect');
+  dot.setAttribute('y', '125.2'); dot.setAttribute('width', '19'); dot.setAttribute('height', '19');
+  dot.style.fill = 'var(--light, #EAE3DA)';
+  svg.appendChild(dot);
+  /* hoogte zoals de oude afbeelding; de breedte volgt het deel van het woord dat te zien is */
+  var h = img.getBoundingClientRect().height || 25;
+  function frame(open) {
+    var w = open ? W_ALL : W_K;
+    svg.setAttribute('viewBox', '0 -.5 ' + w + ' ' + H);
+    svg.style.width = (w / H * h / 16) + 'rem';
+    svg.style.height = (h / 16) + 'rem';
+    svg.style.overflow = 'visible';
+  }
+  dot.setAttribute('x', DOT_K);
+  frame(false);
+  img.parentNode.replaceChild(svg, img);
+
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timers = [], open = false;
+  function clear() { timers.forEach(clearTimeout); timers = []; }
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+  function shuffle(list) { list = list.slice(); for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = list[i]; list[i] = list[j]; list[j] = t; } return list; }
+  function show() {
+    if (open) return; open = true; clear();
+    frame(true);
+    dot.style.visibility = 'hidden';
+    if (reduce) { letters.forEach(function (l) { l.style.visibility = ''; }); dot.setAttribute('x', DOT_END); dot.style.visibility = ''; return; }
+    var step = LOGO_IN / letters.length;
+    shuffle(letters).forEach(function (l, i) { later(function () { l.style.visibility = ''; }, i * step + Math.random() * step * .8); });
+    later(function () { dot.setAttribute('x', DOT_END); dot.style.visibility = ''; }, LOGO_IN + 40);
+  }
+  function hide() {
+    if (!open) return; open = false; clear();
+    dot.style.visibility = 'hidden';
+    var done = function () { frame(false); dot.setAttribute('x', DOT_K); dot.style.visibility = ''; };
+    if (reduce) { letters.forEach(function (l) { l.style.visibility = 'hidden'; }); done(); return; }
+    var step = LOGO_OUT / letters.length;
+    shuffle(letters).forEach(function (l, i) { later(function () { l.style.visibility = 'hidden'; }, i * step + Math.random() * step * .8); });
+    later(done, LOGO_OUT + 40);
+  }
+  /* de muis telt op het zichtbare logo zelf (de link eromheen kan elders een eigen vlak hebben) */
+  svg.addEventListener('mouseenter', show);
+  svg.addEventListener('mouseleave', hide);
+  var link = svg.closest('a');
+  if (link) {
+    link.addEventListener('focusin', function () { try { if (link.matches(':focus-visible')) show(); } catch (e) {} });
+    link.addEventListener('focusout', hide);
+  }
 })();
 
 /* Pagina-overgang tussen pagina's van de site, en de wissel tussen light en dark mode.
