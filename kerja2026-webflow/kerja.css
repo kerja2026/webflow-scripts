@@ -319,3 +319,8 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
   .kerja-preload { left: calc(1.25rem + env(safe-area-inset-left, 0px)); gap: 1rem; }
   .kerja-preload_count { font-size: 1.5rem; }
 }
+
+/* Gradient onder de footer (script: footer-gradient): canvas achter de footer, dat een half scherm
+   boven de footer begint en daar doorzichtig uitloopt */
+.section_footer { position: relative; }
+.footer_haze { position: absolute; left: 0; right: 0; bottom: 0; top: -50vh; z-index: -1; pointer-events: none; }

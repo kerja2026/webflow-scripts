@@ -1882,3 +1882,107 @@
   ui(false);
   if (want) start();
 })();
+
+/* Gradient onder de footer ([section_footer], elke pagina even sterk): onderaan de pagina komt linksonder
+   subtiel de lichte kleur van de gradient terug, zodat de pagina niet in vlak blauw eindigt.
+   - een eigen klein canvas (.footer_haze, kerja.css) achter de footer, dat FOOT_RISE schermhoogtes boven
+     de footer begint en daar doorzichtig uitloopt in de korrelige achtergrond
+   - zelfde kleuren en korrel als de hero; het licht blijft subtiel: nooit lichter dan FOOT_MIN op de
+     kleurschaal (middenblauw), zodat de creme tekst erop leesbaar blijft
+   - ademt, volgt de muis een beetje en pulseert op de maat van de muziek (kerjaMusic.pulse)
+   - light mode: omgedraaid (creme ondergrond, blauwige gloed), zoals de hero
+   - tekent alleen als de footer in beeld is, max 30 beelden per seconde; 'reduced motion': stilstaand */
+(function () {
+  var footer = document.querySelector('.section_footer');
+  if (!footer) return;
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var FOOT_MIN = 0.5;    // lichtste waarde op de kleurschaal (0 = wit, .82 = de blauwe basis)
+  var FOOT_AMT = 1.0;    // hoeveelheid licht
+  var GRAIN = 0.14;
+  var host = document.createElement('div');
+  host.className = 'footer_haze';
+  host.setAttribute('aria-hidden', 'true');
+  footer.insertBefore(host, footer.firstChild);
+  var canvas = document.createElement('canvas');
+  canvas.style.cssText = 'display:block;width:100%;height:100%';
+  host.appendChild(canvas);
+  var gl = canvas.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false });
+  if (!gl) return;
+  var fs = [
+    'precision mediump float;',
+    'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float flip;uniform float bt;uniform float rise;',
+    'float hash(vec2 q){q=fract(q*vec2(123.34,456.21));q+=dot(q,q+45.32);return fract(q.x*q.y);}',
+    'float blob(vec2 q,vec2 c,vec2 s){vec2 d=(q-c)/s;return exp(-dot(d,d));}',
+    'vec3 ramp(float v,float cr){',
+    '  vec3 c0=mix(vec3(.933,.941,1.),vec3(.918,.89,.855),cr),c1=vec3(.682,.714,.98),c2=vec3(.298,.235,.949),c3=vec3(.18,.047,.949),c4=vec3(.086,.024,.525);',
+    '  if(v<.35)return mix(c0,c1,v/.35);if(v<.62)return mix(c1,c2,(v-.35)/.27);if(v<.82)return mix(c2,c3,(v-.62)/.2);return mix(c3,c4,(v-.82)/.18);}',
+    'void main(){',
+    '  vec2 uv=gl_FragCoord.xy/res;float a=res.x/res.y;vec2 q=vec2(uv.x*a,uv.y);',
+    '  float br=sin(t*.27)*.5+.5;float g=1.+.06*br+.08*bt;',
+    '  q+=vec2(sin(q.y*2.1+t*.19),cos(q.x*1.7-t*.15))*(.03+.02*bt);',
+    '  float l=blob(q,vec2(.06*a,-.08)+.03*vec2(sin(t*.13),cos(t*.11)),vec2(.5*a,.55)*g)*.9;',
+    '  l+=blob(q,vec2(.3*a,.08)+.04*vec2(sin(t*.17+1.),cos(t*.09)),vec2(.28*a,.3)*g)*.45;',
+    '  l+=blob(q,vec2(m.x*a,m.y),vec2(.22,.22))*.18;',
+    '  l=clamp(l*' + FOOT_AMT.toFixed(2) + ',0.,1.)*smoothstep(0.,rise,1.-uv.y+.02);',
+    '  vec2 cell=floor(gl_FragCoord.xy/1.5);float n=hash(cell+seed);',
+    '  float x=l*(.82-' + FOOT_MIN.toFixed(2) + ');',
+    '  float v=mix(.82-x,x*.6,flip);',   // dark: van blauw naar lichter; light: van creme naar iets blauwer (zwakker)
+    '  v=clamp(v+(n-.5)*' + GRAIN.toFixed(2) + ',0.,1.);',
+    '  float al=smoothstep(.0,.18,l);',
+    '  gl_FragColor=vec4(ramp(v,flip)*al,al);}'
+  ].join('\n');
+  function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 p2;void main(){gl_Position=vec4(p2,0.,1.);}'));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { host.remove(); return; }
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var loc = gl.getAttribLocation(prog, 'p2'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  var U = {}; ['res', 't', 'm', 'seed', 'flip', 'bt', 'rise'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+
+  function size() {
+    var r = host.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(r.width)); canvas.height = Math.max(1, Math.round(r.height));
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  size();
+  window.addEventListener('resize', size);
+
+  var target = [.2, .2], cur = [.2, .2], visible = false, raf = 0, last = 0, start = performance.now(), seed = 1, lastSeed = 0, beat = 0, flip = 0;
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    window.addEventListener('pointermove', function (e) {
+      var r = host.getBoundingClientRect();
+      target = [(e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height];
+    }, { passive: true });
+  }
+  function frame(now) {
+    raf = 0;
+    if (!visible) return;
+    if (!reduce) raf = requestAnimationFrame(frame);
+    if (!reduce && now - last < 33) return;
+    last = now;
+    cur[0] += (target[0] - cur[0]) * .035; cur[1] += (target[1] - cur[1]) * .035;
+    if (now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
+    var bp = !reduce && window.kerjaMusic && window.kerjaMusic.pulse ? window.kerjaMusic.pulse() : 0;
+    beat += (bp - beat) * .6;
+    var goal = root.classList.contains('theme-light') ? 1 : 0;
+    flip += (goal - flip) * (reduce ? 1 : .06);
+    var rise = host.offsetHeight ? Math.min(1, window.innerHeight * .5 / host.offsetHeight + .15) : .6;
+    gl.uniform2f(U.res, canvas.width, canvas.height);
+    gl.uniform1f(U.t, reduce ? 0 : (now - start) / 1000);
+    gl.uniform2f(U.m, cur[0], cur[1]);
+    gl.uniform1f(U.seed, seed);
+    gl.uniform1f(U.flip, flip);
+    gl.uniform1f(U.bt, beat);
+    gl.uniform1f(U.rise, rise);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+  new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) { size(); kick(); } }).observe(host);
+  new MutationObserver(kick).observe(root, { attributes: true, attributeFilter: ['class'] });
+})();
