@@ -1091,6 +1091,7 @@
    - olievlek bij de pagina-overgang: zie kerjaHaze.grow/sink (OIL ms)
    - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
    - uitvloeien: tijdens het scrollen breidt de vlek zelf vloeiend uit (SPR_*, VEL_WARP), naast de parallax
+   - op de maat: speelt de muziek, dan zwelt de vlek op elke tel kort op (BEAT_GROW, BEAT_WARP)
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
      leesbaarheid komt van diapositief. Zet ze op 1 om ze weer aan te zetten.
@@ -1201,6 +1202,9 @@
   var VEL_WARP = 0.055;     // extra golving tijdens het scrollen
   var SPR_EASE = 0.05;      // hoe traag de vlek de scroll volgt (per beeld, 30 per seconde)
   var spr = 0, vel = 0, lastSY = window.scrollY;
+  /* op de maat: als de muziek speelt, zwelt de donkere massa op elke tel kort op (BEAT_GROW) en vloeit
+     terug. De tellen komen uit het muziekscript (kerjaMusic.pulse, vooraf berekende maat). */
+  var BEAT_GROW = 0.08, BEAT_WARP = 0.02, beat = 0;
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
@@ -1311,11 +1315,11 @@
   function field(ux, uy, a, t, mx, my, f) {
     var px = ux * a, py = uy, mmx = mx * a, mmy = my;
     /* uitvloeien: vervormen, groeien en naar buiten schuiven (zelfde wiskunde als de shader) */
-    var wk = SPR_WARP * spr + VEL_WARP * vel;
+    var wk = SPR_WARP * spr + VEL_WARP * vel + BEAT_WARP * beat;
     var wx = Math.sin(py * 2.3 + t * .21 + spr * 2.6) + .6 * Math.sin(py * 4.1 - t * .13);
     var wy = Math.cos(px * 1.9 - t * .17 + spr * 2.1) + .6 * Math.cos(px * 3.7 + t * .11);
     px += wx * wk; py += wy * wk;
-    var gs = 1 + SPR_GROW * spr + .06 * vel, go = SPR_GROW * .4 * spr, ox = .5 * a, oy = .45;
+    var gs = 1 + SPR_GROW * spr + .06 * vel + BEAT_GROW * beat, go = SPR_GROW * .4 * spr, ox = .5 * a, oy = .45;
     var br = Math.sin(t * .29) * .5 + .5, br2 = Math.sin(t * .19 + 1.7);
     var c1x = .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0], c1y = -.18 + (mmy - .5) * FOLLOW_LOW[1];
     var c2x = .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21), c2y = .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17);
@@ -1335,7 +1339,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;uniform float sp;uniform float sv;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;uniform float sp;uniform float sv;uniform float bt;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v,float cr){',
@@ -1349,9 +1353,9 @@
       'float scene(vec2 cv,out float f){',
       '  vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=heroA;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
       // uitvloeien bij scrollen (sp = positie, sv = snelheid): vervormen, groeien, naar buiten schuiven
-      '  float wk=' + SPR_WARP.toFixed(3) + '*sp+' + VEL_WARP.toFixed(3) + '*sv;',
+      '  float wk=' + SPR_WARP.toFixed(3) + '*sp+' + VEL_WARP.toFixed(3) + '*sv+' + BEAT_WARP.toFixed(3) + '*bt;',
       '  p+=vec2(sin(p.y*2.3+t*.21+sp*2.6)+.6*sin(p.y*4.1-t*.13),cos(p.x*1.9-t*.17+sp*2.1)+.6*cos(p.x*3.7+t*.11))*wk;',
-      '  float gs=1.+' + SPR_GROW.toFixed(3) + '*sp+.06*sv;float go=' + (SPR_GROW * .4).toFixed(3) + '*sp;vec2 O=vec2(.5*a,.45);',
+      '  float gs=1.+' + SPR_GROW.toFixed(3) + '*sp+.06*sv+' + BEAT_GROW.toFixed(3) + '*bt;float go=' + (SPR_GROW * .4).toFixed(3) + '*sp;vec2 O=vec2(.5*a,.45);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
       '  vec2 c1=vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + ');',
       '  vec2 c2=vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17));',
@@ -1413,7 +1417,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH', 'sp', 'sv'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH', 'sp', 'sv', 'bt'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1620,6 +1624,8 @@
       spr += (Math.min(1, sy / (vh * SPR_DIST)) - spr) * SPR_EASE;
       vel += (Math.min(1, Math.abs(sy - lastSY) / (vh * .04)) - vel) * .12;
       lastSY = sy;
+      var bp = window.kerjaMusic && window.kerjaMusic.pulse ? window.kerjaMusic.pulse() : 0;
+      beat += (bp - beat) * .6;
     }
     if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
     if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
@@ -1649,6 +1655,7 @@
       gl.uniform2f(U.gc, gc[0], gc[1]);
       gl.uniform1f(U.sp, spr);
       gl.uniform1f(U.sv, vel);
+      gl.uniform1f(U.bt, beat);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 250) { update(); lastUpdate = now; }
@@ -1845,12 +1852,31 @@
 
   /* vertrek naar een andere pagina: uitfaden tegelijk met de olievlek (de keuze 'aan' blijft staan,
      zodat de muziek op de volgende pagina weer infadet) */
+  /* maat van 2-late.mp3 (80,75 BPM), vooraf berekend uit het bestand (librosa beat_track):
+     BEATS = tijdstip van elke tel in ms, BEAT_S = kracht van de bas op die tel (0-9).
+     Nieuw nummer? Dan deze twee lijsten opnieuw laten berekenen. */
+  var BEATS = [766,1533,2276,3065,3738,4412,5085,5805,6571,7291,8057,8800,9543,10286,11029,11773,12516,13259,14002,14745,15488,16231,16997,17740,18483,19226,19969,20712,21455,22175,22941,23684,24451,25194,25913,26657,27376,28143,28909,29652,30372,31115,31881,32601,33367,34110,34853,35596,36339,37082,37825,38568,39311,40054,40821,41564,42307,43050,43770,44536,45279,45999,46765,47508,48274,48994,49737,50457,51200,51966,52709,53429,54195,54938,55705,56424,57191,57934,58677,59420,60163,60906,61649,62392,63135,63878,64644,65364,66130,66873,67617,68360];
+  var BEAT_S = '10000083739292839293839382939382828283849393928382838383810382828383839483838282828383738282';
+  var BEAT_DECAY = 0.2;   // s: hoe snel een tel uitdooft
+  /* pulse(): 0-1, piekt op elke tel en dooft uit; geschaald met het volume, zodat hij mee in- en uitfadet */
+  function pulse() {
+    if (!playing || audio.paused || !BEATS.length) return 0;
+    var ms = audio.currentTime * 1000, lo = 0, hi = BEATS.length - 1;
+    if (ms < BEATS[0]) return 0;
+    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BEATS[mid] <= ms) lo = mid; else hi = mid - 1; }
+    var dt = (ms - BEATS[lo]) / 1000;
+    var amp = .6 + .4 * (+BEAT_S.charAt(lo) / 9);
+    var attack = Math.min(1, dt / .04);
+    return amp * attack * Math.exp(-dt / BEAT_DECAY) * Math.min(1, vol / VOL);
+  }
+
   window.kerjaMusic = {
     leave: function () {
       if (!playing) return;
       save();
       fade(0, LEAVE, easeOut, save);
-    }
+    },
+    pulse: pulse
   };
 
   ui(false);
