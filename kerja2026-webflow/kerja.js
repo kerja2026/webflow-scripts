@@ -1707,6 +1707,8 @@
    - de muziek staat standaard uit: vier stompjes van 3px. Een klik zet hem aan: 2-late.mp3 in een lus,
      fade-in (FADE_IN ms, ease-in), en de vier lijntjes gaan als een equalizer willekeurig op en neer.
      Nog een klik: fade-out (FADE_OUT ms, ease-out), terug naar de stompjes.
+   - mouse-over (alleen met een muis): de equalizer beweegt zolang de muis erboven zweeft, ook als de
+     muziek uit staat; muis weg en muziek uit: terug naar de stompjes
    - de keuze 'aan' en het tijdstip gelden voor het hele bezoek (sessionStorage): op de volgende pagina
      speelt hij verder vanaf hetzelfde punt. Bij vertrek fadet hij uit tegelijk met de olievlek (LEAVE ms).
      Laat de browser het geluid op de nieuwe pagina nog niet toe, dan start hij bij de eerste klik, tik of toets.
@@ -1728,9 +1730,16 @@
 
   /* equalizer: per lijntje een niveau 0 (stompje van 3px) tot 1 (volle hoogte), CSS in de head */
   function level(bar, lvl) { bar.style.setProperty('--lvl', lvl.toFixed(3)); }
-  var eq = null;
+  /* de equalizer beweegt als de muziek speelt, en ook zolang de muis boven de knop zweeft (alleen
+     apparaten met een muis): een voorproefje, zonder geluid. Muis weg: terug naar de stompjes. */
+  var eq = null, shown = false, hover = false;
   function ui(on) {
+    shown = on;
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    render();
+  }
+  function render() {
+    var on = shown || hover;
     btn.classList.toggle('is-off', !on);
     clearInterval(eq); eq = null;
     if (!on) { bars.forEach(function (b) { level(b, 0); }); return; }
@@ -1738,6 +1747,10 @@
     var tick = function () { bars.forEach(function (b) { level(b, .25 + Math.random() * .75); }); };
     tick();
     eq = setInterval(tick, TICK);
+  }
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    btn.addEventListener('mouseenter', function () { if (hover) return; hover = true; if (!shown) render(); });
+    btn.addEventListener('mouseleave', function () { hover = false; if (!shown) render(); });
   }
 
   /* geluid */
