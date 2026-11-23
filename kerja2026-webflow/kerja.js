@@ -1090,6 +1090,7 @@
      en de basis is donkerder (L_AMT, L_Y, L_W, GLOW, BASE)
    - olievlek bij de pagina-overgang: zie kerjaHaze.grow/sink (OIL ms)
    - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
+   - uitvloeien: tijdens het scrollen breidt de vlek zelf vloeiend uit (SPR_*, VEL_WARP), naast de parallax
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
      leesbaarheid komt van diapositief. Zet ze op 1 om ze weer aan te zetten.
@@ -1191,6 +1192,15 @@
   var FOLLOW_LOW = [0.1, 0.05]; // idem voor de onderste massa, x en y (was .07 en .03)
   var REST = [0.62, 0.48];   // rustpositie van het volgpunt (0-1 in de hero, y van onder)
   var PARALLAX = 0.55;      // gradient blijft 55% achter bij het scrollen (0 = uit)
+  /* uitvloeien bij scrollen: de olievlek zelf breidt uit, bovenop de parallax.
+     spr (0-1) volgt de scrollpositie: na SPR_DIST schermhoogtes is hij helemaal uitgevloeid.
+     vel volgt de scrollsnelheid en geeft een extra golving die rustig wegebt als je stilstaat. */
+  var SPR_DIST = 1.2;       // schermhoogtes scroll tot volledig uitgevloeid
+  var SPR_GROW = 0.7;       // de donkere massa wordt tot 70% groter en schuift naar buiten
+  var SPR_WARP = 0.075;     // vloeiende vervorming van de vorm bij uitvloeien
+  var VEL_WARP = 0.055;     // extra golving tijdens het scrollen
+  var SPR_EASE = 0.05;      // hoe traag de vlek de scroll volgt (per beeld, 30 per seconde)
+  var spr = 0, vel = 0, lastSY = window.scrollY;
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
@@ -1300,10 +1310,19 @@
   function blob(px, py, cx, cy, sx, sy) { var dx = (px - cx) / sx, dy = (py - cy) / sy; return Math.exp(-(dx * dx + dy * dy)); }
   function field(ux, uy, a, t, mx, my, f) {
     var px = ux * a, py = uy, mmx = mx * a, mmy = my;
+    /* uitvloeien: vervormen, groeien en naar buiten schuiven (zelfde wiskunde als de shader) */
+    var wk = SPR_WARP * spr + VEL_WARP * vel;
+    var wx = Math.sin(py * 2.3 + t * .21 + spr * 2.6) + .6 * Math.sin(py * 4.1 - t * .13);
+    var wy = Math.cos(px * 1.9 - t * .17 + spr * 2.1) + .6 * Math.cos(px * 3.7 + t * .11);
+    px += wx * wk; py += wy * wk;
+    var gs = 1 + SPR_GROW * spr + .06 * vel, go = SPR_GROW * .4 * spr, ox = .5 * a, oy = .45;
     var br = Math.sin(t * .29) * .5 + .5, br2 = Math.sin(t * .19 + 1.7);
-    var d = blob(px, py, .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0], -.18 + (mmy - .5) * FOLLOW_LOW[1], .62 * a * (1 + .05 * br), .62 * (1 + .05 * br)) * 1.15;
-    d += blob(px, py, .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21), .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17), .26 * (1 + .07 * br2), .28 * (1 + .07 * br2)) * .85;
-    d += blob(px, py, -.05 * a + .04 * Math.sin(t * .13), .45 + .04 * Math.cos(t * .11), .38 * a, .7) * .55;
+    var c1x = .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0], c1y = -.18 + (mmy - .5) * FOLLOW_LOW[1];
+    var c2x = .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21), c2y = .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17);
+    var c3x = -.05 * a + .04 * Math.sin(t * .13), c3y = .45 + .04 * Math.cos(t * .11);
+    var d = blob(px, py, c1x + (c1x - ox) * go, c1y + (c1y - oy) * go, .62 * a * (1 + .05 * br) * gs, .62 * (1 + .05 * br) * gs) * 1.15;
+    d += blob(px, py, c2x + (c2x - ox) * go, c2y + (c2y - oy) * go, .26 * (1 + .07 * br2) * gs, .28 * (1 + .07 * br2) * gs) * .85;
+    d += blob(px, py, c3x + (c3x - ox) * go, c3y + (c3y - oy) * go, .38 * a * gs, .7 * gs) * .55;
     d += boxShade(px, py) * TEXT_SHADE;
     var l = blob(px, py, lc[0], lc[1], L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
     var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += (SUBTLE ? 0 : .25) * s * s * (3 - 2 * s);
@@ -1316,7 +1335,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;uniform float sp;uniform float sv;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v,float cr){',
@@ -1329,10 +1348,17 @@
       // Geeft de waarde v (0 licht, 1 donker, al omgedraaid in light mode) en het oplossen f onderaan.
       'float scene(vec2 cv,out float f){',
       '  vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=heroA;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
+      // uitvloeien bij scrollen (sp = positie, sv = snelheid): vervormen, groeien, naar buiten schuiven
+      '  float wk=' + SPR_WARP.toFixed(3) + '*sp+' + VEL_WARP.toFixed(3) + '*sv;',
+      '  p+=vec2(sin(p.y*2.3+t*.21+sp*2.6)+.6*sin(p.y*4.1-t*.13),cos(p.x*1.9-t*.17+sp*2.1)+.6*cos(p.x*3.7+t*.11))*wk;',
+      '  float gs=1.+' + SPR_GROW.toFixed(3) + '*sp+.06*sv;float go=' + (SPR_GROW * .4).toFixed(3) + '*sp;vec2 O=vec2(.5*a,.45);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
-      '  float d=blob(p,vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + '),vec2(.62*a,.62)*(1.+.05*br))*1.15;',
-      '  d+=blob(p,vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17)),vec2(.26,.28)*(1.+.07*br2))*.85;',
-      '  d+=blob(p,vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11)),vec2(.38*a,.7))*.55;',
+      '  vec2 c1=vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + ');',
+      '  vec2 c2=vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17));',
+      '  vec2 c3=vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11));',
+      '  float d=blob(p,c1+(c1-O)*go,vec2(.62*a,.62)*(1.+.05*br)*gs)*1.15;',
+      '  d+=blob(p,c2+(c2-O)*go,vec2(.26,.28)*(1.+.07*br2)*gs)*.85;',
+      '  d+=blob(p,c3+(c3-O)*go,vec2(.38*a,.7)*gs)*.55;',
       // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
       '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=(p-b.xy)/(b.zw+soft);float e=dot(q,q);tb=max(tb,exp(-e*e*2.2));}}',
       '  d+=tb*shade;',
@@ -1387,7 +1413,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH', 'sp', 'sv'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1589,6 +1615,12 @@
     lc[0] += (lGoal[0] - lc[0]) * pk; lc[1] += (lGoal[1] - lc[1]) * pk;
     gc[0] += (gGoal[0] - gc[0]) * pk; gc[1] += (gGoal[1] - gc[1]) * pk;
     flip += (flipGoal - flip) * (reduce ? 1 : 0.06);
+    if (!reduce) {
+      var sy = window.scrollY, vh = window.innerHeight || 1;
+      spr += (Math.min(1, sy / (vh * SPR_DIST)) - spr) * SPR_EASE;
+      vel += (Math.min(1, Math.abs(sy - lastSY) / (vh * .04)) - vel) * .12;
+      lastSY = sy;
+    }
     if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
     if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
     if (gl) {
@@ -1615,6 +1647,8 @@
       gl.uniform1f(U.shade, TEXT_SHADE);
       gl.uniform2f(U.lc, lc[0], lc[1]);
       gl.uniform2f(U.gc, gc[0], gc[1]);
+      gl.uniform1f(U.sp, spr);
+      gl.uniform1f(U.sv, vel);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 250) { update(); lastUpdate = now; }
@@ -1667,17 +1701,15 @@
   queue();
 })();
 
-/* Muziek ([data-volume], rechts naast de menuknop, op elke pagina; staat in de Menu-component,
-   dus verdwijnt tijdens scrollen mee met het menu en schuift achter de FAQ-knop als het menu opent).
-   - speelt 2-late.mp3 in een lus, start met een fade-in (FADE_IN ms, ease-in) en stopt
-     met een fade-out (FADE_OUT ms, ease-out)
-   - browsers laten geluid pas toe na een handeling van de bezoeker: lukt starten bij het laden niet,
-     dan start de muziek bij de eerste klik, tik of toets ergens op de pagina
-   - de knop: vier verticale lijntjes die als een equalizer willekeurig op en neer gaan;
-     klik = muziek uit (de lijntjes zakken in tot vier stompjes van 3px), nog een klik = verder
-     vanaf waar hij stopte
-   - doorlopend over alle pagina's: het tijdstip en of hij uit staat worden onthouden (sessionStorage).
-     Bij vertrek fadet de muziek uit tegelijk met de olievlek (LEAVE ms), op de nieuwe pagina weer in
+/* Muziek ([data-volume]): een eigen vakje rechts tegen de menuknop (Volume-component in de Menu-component),
+   dus op elke pagina, en verdwijnt tijdens scrollen mee met het menu. Opent het menu, dan schuift het
+   vakje een cel naar rechts en komt de FAQ-knop op zijn plek (CSS in de head).
+   - de muziek staat standaard uit: vier stompjes van 3px. Een klik zet hem aan: 2-late.mp3 in een lus,
+     fade-in (FADE_IN ms, ease-in), en de vier lijntjes gaan als een equalizer willekeurig op en neer.
+     Nog een klik: fade-out (FADE_OUT ms, ease-out), terug naar de stompjes.
+   - de keuze 'aan' en het tijdstip gelden voor het hele bezoek (sessionStorage): op de volgende pagina
+     speelt hij verder vanaf hetzelfde punt. Bij vertrek fadet hij uit tegelijk met de olievlek (LEAVE ms).
+     Laat de browser het geluid op de nieuwe pagina nog niet toe, dan start hij bij de eerste klik, tik of toets.
    - volume via Web Audio (ook op iPhone in te faden); lukt dat niet, dan via audio.volume
    - bij 'reduced motion' staat de equalizer stil */
 (function () {
@@ -1685,7 +1717,7 @@
   if (!btn) return;
   var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b0216f1946d00316c778c65_2-late.mp3';
   var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, LEAVE = 1200, TICK = 170;
-  var KEY_T = 'kerja-music-t-2late', KEY_OFF = 'kerja-music-off'; // KEY_T per nummer: geen tijdstip van een ander nummer
+  var KEY_T = 'kerja-music-t-2late', KEY_ON = 'kerja-music-on'; // KEY_T per nummer: geen tijdstip van een ander nummer
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var bars = Array.prototype.slice.call(btn.querySelectorAll('.volume_bar'));
   function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
@@ -1749,7 +1781,7 @@
   function easeIn(k) { return k * k * k; }
   function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
 
-  var want = store(KEY_OFF) !== '1';  // staat de muziek aan (volgens de bezoeker)?
+  var want = store(KEY_ON) === '1';  // heeft de bezoeker de muziek aangezet? Standaard uit.
   var playing = false, waiting = false;
   var resumeAt = parseFloat(store(KEY_T)) || 0;
   audio.addEventListener('loadedmetadata', function () {
@@ -1790,8 +1822,8 @@
     fade(0, FADE_OUT, easeOut, function () { if (!playing) { audio.pause(); save(); } });
   }
   function toggle() {
-    if (playing) { want = false; store(KEY_OFF, '1'); stop(); }
-    else { want = true; store(KEY_OFF, ''); start(); }
+    if (playing) { want = false; store(KEY_ON, ''); stop(); }
+    else { want = true; store(KEY_ON, '1'); start(); }
   }
   btn.addEventListener('click', function (e) { e.preventDefault(); toggle(); });
   btn.addEventListener('keydown', function (e) {

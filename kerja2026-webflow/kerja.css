@@ -182,7 +182,7 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
    doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script). */
 /* dark mode: de donkere tint van de gradient (#1b08a6), zodat het glas wegvalt in de achtergrond;
    light mode: creme */
-.menu_cell-frame {
+.menu_cell-frame, .volume_frame {
   --menu-glass: color-mix(in srgb, #1b08a6 45%, transparent);
   background-color: var(--menu-glass);
   background-image: var(--kerja-grain, none);
@@ -190,15 +190,17 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
   -webkit-backdrop-filter: blur(0.75rem);
   backdrop-filter: blur(0.75rem);
 }
-html.theme-light .menu_cell-frame { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
+html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
 /* bolletjes dicht (glas op elk bolletje maakte de site traag), in een tint die bij het glas past */
 .menu_cell-dot { background-color: #1d0b9e; outline-color: #1d0b9e; }
 html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-color: var(--bright-blue); }
 
-/* Muziekknop ([data-volume]), rechts naast de menuknop: vier lijntjes van 1px, 5px uit elkaar.
-   Elk lijntje heeft een niveau --lvl (script) van 0 tot 1: 0 = stompje van 3px (muziek uit),
-   1 = volle hoogte (2.3125rem). De lijntjes staan onderaan vast en groeien omhoog.
-   Menu open: de knop verdwijnt achter de FAQ-knop, die eroverheen schuift. */
+/* Muziekknop ([data-volume]): vakje rechts tegen de menuknop, matglas zoals het menu.
+   Vier lijntjes van 1px, 7px uit elkaar. Elk lijntje heeft een niveau --lvl (script) van 0 tot 1:
+   0 = stompje van 3px (muziek uit, de standaard), 1 = volle hoogte (2.3125rem, van lijn tot lijn).
+   De lijntjes staan onderaan vast en groeien omhoog.
+   Menu open: het vakje schuift een cel (--menu-pitch) naar rechts, tegelijk met de FAQ-knop die op zijn
+   plek komt; bij sluiten schuift het terug, tegelijk met FAQ. */
 .volume_bar { --lvl: 0; }
 .volume_bar > .volume_line {
   position: absolute; left: 0; bottom: 0; margin: 0;
@@ -206,8 +208,9 @@ html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-
   transition: height 0.17s ease;
 }
 .volume_component.is-off .volume_bar > .volume_line { transition-duration: 0.6s; transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
-.volume_component { transition: opacity var(--menu-dur, 0.15s) linear calc(var(--menu-step, 0.08s) * 6); }
-.menu_component.is-open .volume_component { opacity: 0; pointer-events: none; transition-delay: 0s; }
+.volume_component { transition: transform var(--menu-dur, 0.15s) var(--menu-ease, ease) calc(var(--menu-step, 0.08s) * 6); }
+.menu_component.is-open .volume_component { transform: translate(var(--menu-pitch, 6.4375rem), 0); transition-delay: 0s; }
+.menu_component.is-instant .volume_component { transition-delay: 0s; }
 @media (prefers-reduced-motion: reduce) { .volume_bar > * { transition: none !important; } }
 
 /* Menu past altijd in het venster: het script zet --menu-fit (1 = ware grootte) als er boven of
