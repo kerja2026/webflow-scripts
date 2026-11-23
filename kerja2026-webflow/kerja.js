@@ -1091,7 +1091,8 @@
    - olievlek bij de pagina-overgang: zie kerjaHaze.grow/sink (OIL ms)
    - parallax: de gradient scrolt trager dan de pagina (PARALLAX); de korrel op body staat stil
    - uitvloeien: tijdens het scrollen breidt de vlek zelf vloeiend uit (SPR_*, VEL_WARP), naast de parallax
-   - op de maat: speelt de muziek, dan zwelt de vlek op elke tel kort op (BEAT_GROW, BEAT_WARP)
+   - op de maat: speelt de muziek, dan krijgt de vlek op elke tel een duw in een willekeurige richting en
+     veert hij na als vloeistof (BEAT_KICK, BEAT_SWELL, BEAT_WARP2, BEAT_PHASE, BEAT_STIFF, BEAT_DAMP, BEAT_SPREAD)
    - wegduwen: de lichtvlek en de muisgloed schuiven weg van de tekstblokken (PUSH, PUSH_R, PUSH_EASE).
      Staat uit (PUSH = 0), net als de donkere ondergrond (TEXT_SHADE = 0): de vrije gradient is gekozen,
      leesbaarheid komt van diapositief. Zet ze op 1 om ze weer aan te zetten.
@@ -1206,7 +1207,43 @@
      terug. De tellen komen uit het muziekscript (kerjaMusic.pulse, vooraf berekende maat). */
   /* zelf af te stellen: BEAT_GROW = opzwellen per tel (.08 = 8%), BEAT_WARP = vervormen per tel; 0 = niet.
      De footer heeft eigen waarden (FOOT_BEAT_GROW, FOOT_BEAT_WARP); naklinken = BEAT_DECAY in het muziekscript. */
-  var BEAT_GROW = 0.1, BEAT_WARP = 0.02, beat = 0;
+  var BEAT_GROW = 0, BEAT_WARP = 0, beat = 0;   // oude, gelijkmatige pomp: uit (was .1 en .02)
+  /* op de maat, organisch: elke tel geeft de vlek een duw in een willekeurige richting. Zware bastellen
+     duwen harder. De drie delen van de vlek reageren elk met een kleine vertraging en een eigen richting,
+     en veren na als vloeistof (een veer met demping). Afgesteld in de Beat Tuner-preview.
+     BEAT_KICK   = hoe ver de vlek per tel verschuift (deel van de hero-hoogte); 0 = niet
+     BEAT_SWELL  = hoeveel groter een deel per tel even wordt (.3 = 30%)
+     BEAT_WARP2  = hoe sterk de rand per tel golft
+     BEAT_PHASE  = hoe anders de vorm per tel vervormt (toeval)
+     BEAT_STIFF  = veerkracht: hoger = sneller terug, strakker
+     BEAT_DAMP   = demping: lager = langer nazwiepen
+     BEAT_SPREAD = hoe los de drie delen van elkaar reageren (vertraging en richting) */
+  var BEAT_KICK = 0.14, BEAT_SWELL = 0.3, BEAT_WARP2 = 0.08, BEAT_PHASE = 1.2, BEAT_STIFF = 28, BEAT_DAMP = 3.2, BEAT_SPREAD = 0.6;
+  var bD = [[0, 0], [0, 0], [0, 0]], bV = [[0, 0], [0, 0], [0, 0]], bS = [0, 0, 0], bSV = [0, 0, 0];
+  var bW = 0, bWV = 0, bPH = 0, bPV = 0, bQueue = [], bLast = -1, bTime = 0;
+  function beatHit(str, now) {
+    var th = Math.random() * Math.PI * 2, w = Math.sqrt(BEAT_STIFF);
+    for (var k = 0; k < 3; k++) bQueue.push({ at: now + k * BEAT_SPREAD * 140, k: k, th: th + (Math.random() - .5) * BEAT_SPREAD * Math.PI * 1.4, s: str * (.6 + .8 * Math.random()) * (k ? .85 : 1) });
+    bWV += BEAT_WARP2 * str * (.5 + Math.random()) * w;
+    bPV += (Math.random() - .5) * 2 * BEAT_PHASE * str * w * .6;
+  }
+  function beatPhysics(dt, now) {
+    var w = Math.sqrt(BEAT_STIFF);
+    for (var q = bQueue.length - 1; q >= 0; q--) {
+      var e = bQueue[q]; if (now < e.at) continue; bQueue.splice(q, 1);
+      bV[e.k][0] += Math.cos(e.th) * BEAT_KICK * e.s * w; bV[e.k][1] += Math.sin(e.th) * BEAT_KICK * e.s * w;
+      bSV[e.k] += BEAT_SWELL * e.s * w;
+    }
+    var n = 6, h = dt / n;
+    for (var j = 0; j < n; j++) {
+      for (var k = 0; k < 3; k++) {
+        for (var c = 0; c < 2; c++) { bV[k][c] += (-BEAT_STIFF * bD[k][c] - BEAT_DAMP * bV[k][c]) * h; bD[k][c] += bV[k][c] * h; }
+        bSV[k] += (-BEAT_STIFF * bS[k] - BEAT_DAMP * bSV[k]) * h; bS[k] += bSV[k] * h;
+      }
+      bWV += (-BEAT_STIFF * bW - BEAT_DAMP * bWV) * h; bW += bWV * h;
+      bPV *= Math.exp(-1.5 * h); bPH += bPV * h;
+    }
+  }
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
@@ -1317,18 +1354,19 @@
   function field(ux, uy, a, t, mx, my, f) {
     var px = ux * a, py = uy, mmx = mx * a, mmy = my;
     /* uitvloeien: vervormen, groeien en naar buiten schuiven (zelfde wiskunde als de shader) */
-    var wk = SPR_WARP * spr + VEL_WARP * vel + BEAT_WARP * beat;
-    var wx = Math.sin(py * 2.3 + t * .21 + spr * 2.6) + .6 * Math.sin(py * 4.1 - t * .13);
-    var wy = Math.cos(px * 1.9 - t * .17 + spr * 2.1) + .6 * Math.cos(px * 3.7 + t * .11);
+    var wk = SPR_WARP * spr + VEL_WARP * vel + BEAT_WARP * beat + bW, tw = t + bPH;
+    var wx = Math.sin(py * 2.3 + tw * .21 + spr * 2.6) + .6 * Math.sin(py * 4.1 - tw * .13);
+    var wy = Math.cos(px * 1.9 - tw * .17 + spr * 2.1) + .6 * Math.cos(px * 3.7 + tw * .11);
     px += wx * wk; py += wy * wk;
     var gs = 1 + SPR_GROW * spr + .06 * vel + BEAT_GROW * beat, go = SPR_GROW * .4 * spr, ox = .5 * a, oy = .45;
     var br = Math.sin(t * .29) * .5 + .5, br2 = Math.sin(t * .19 + 1.7);
-    var c1x = .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0], c1y = -.18 + (mmy - .5) * FOLLOW_LOW[1];
-    var c2x = .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21), c2y = .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17);
-    var c3x = -.05 * a + .04 * Math.sin(t * .13), c3y = .45 + .04 * Math.cos(t * .11);
-    var d = blob(px, py, c1x + (c1x - ox) * go, c1y + (c1y - oy) * go, .62 * a * (1 + .05 * br) * gs, .62 * (1 + .05 * br) * gs) * 1.15;
-    d += blob(px, py, c2x + (c2x - ox) * go, c2y + (c2y - oy) * go, .26 * (1 + .07 * br2) * gs, .28 * (1 + .07 * br2) * gs) * .85;
-    d += blob(px, py, c3x + (c3x - ox) * go, c3y + (c3y - oy) * go, .38 * a * gs, .7 * gs) * .55;
+    var c1x = .52 * a + (mmx - .52 * a) * FOLLOW_LOW[0] + bD[0][0] * a, c1y = -.18 + (mmy - .5) * FOLLOW_LOW[1] + bD[0][1];
+    var c2x = .4 * a + (mmx - .4 * a) * FOLLOW + .035 * Math.sin(t * .21) + bD[1][0] * a, c2y = .5 + (mmy - .5) * FOLLOW + .035 * Math.cos(t * .17) + bD[1][1];
+    var c3x = -.05 * a + .04 * Math.sin(t * .13) + bD[2][0] * a, c3y = .45 + .04 * Math.cos(t * .11) + bD[2][1];
+    var g1 = gs * (1 + bS[0]), g2 = gs * (1 + bS[1]), g3 = gs * (1 + bS[2]);
+    var d = blob(px, py, c1x + (c1x - ox) * go, c1y + (c1y - oy) * go, .62 * a * (1 + .05 * br) * g1, .62 * (1 + .05 * br) * g1) * 1.15;
+    d += blob(px, py, c2x + (c2x - ox) * go, c2y + (c2y - oy) * go, .26 * (1 + .07 * br2) * g2, .28 * (1 + .07 * br2) * g2) * .85;
+    d += blob(px, py, c3x + (c3x - ox) * go, c3y + (c3y - oy) * go, .38 * a * g3, .7 * g3) * .55;
     d += boxShade(px, py) * TEXT_SHADE;
     var l = blob(px, py, lc[0], lc[1], L_W * a * (1 + .06 * br), .36 * (1 + .06 * br)) * L_AMT;
     var s = Math.min(1, Math.max(0, (ux * .6 + uy * .4 - .2) / .8)); l += (SUBTLE ? 0 : .25) * s * s * (3 - 2 * s);
@@ -1341,7 +1379,7 @@
   if (gl) {
     var fs = [
       'precision highp float;',
-      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;uniform float sp;uniform float sv;uniform float bt;',
+      'uniform vec2 res;uniform float t;uniform vec2 m;uniform float seed;uniform float grain;uniform float flip;uniform float frac;uniform float fadeFrom;uniform vec4 lt;uniform float base;uniform vec4 bx[10];uniform float soft;uniform float shade;uniform vec2 lc;uniform vec2 gc;uniform float heroA;uniform float oilOn;uniform float oilP;uniform float oilUnder;uniform float hostTop;uniform float hostH;uniform float sp;uniform float sv;uniform float bt;uniform vec2 o1;uniform vec2 o2;uniform vec2 o3;uniform vec3 sg;uniform float bw;uniform float ph;',
       'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
       'float blob(vec2 p,vec2 c,vec2 s){vec2 d=(p-c)/s;return exp(-dot(d,d));}',
       'vec3 ramp(float v,float cr){',
@@ -1355,16 +1393,16 @@
       'float scene(vec2 cv,out float f){',
       '  vec2 uv=vec2(cv.x,(cv.y-(1.-frac))/frac);float a=heroA;vec2 p=vec2(uv.x*a,uv.y);vec2 mm=vec2(m.x*a,m.y);',
       // uitvloeien bij scrollen (sp = positie, sv = snelheid): vervormen, groeien, naar buiten schuiven
-      '  float wk=' + SPR_WARP.toFixed(3) + '*sp+' + VEL_WARP.toFixed(3) + '*sv+' + BEAT_WARP.toFixed(3) + '*bt;',
-      '  p+=vec2(sin(p.y*2.3+t*.21+sp*2.6)+.6*sin(p.y*4.1-t*.13),cos(p.x*1.9-t*.17+sp*2.1)+.6*cos(p.x*3.7+t*.11))*wk;',
+      '  float wk=' + SPR_WARP.toFixed(3) + '*sp+' + VEL_WARP.toFixed(3) + '*sv+' + BEAT_WARP.toFixed(3) + '*bt+bw;float tw=t+ph;',
+      '  p+=vec2(sin(p.y*2.3+tw*.21+sp*2.6)+.6*sin(p.y*4.1-tw*.13),cos(p.x*1.9-tw*.17+sp*2.1)+.6*cos(p.x*3.7+tw*.11))*wk;',
       '  float gs=1.+' + SPR_GROW.toFixed(3) + '*sp+.06*sv+' + BEAT_GROW.toFixed(3) + '*bt;float go=' + (SPR_GROW * .4).toFixed(3) + '*sp;vec2 O=vec2(.5*a,.45);',
       '  float br=sin(t*.29)*.5+.5;float br2=sin(t*.19+1.7);',
-      '  vec2 c1=vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + ');',
-      '  vec2 c2=vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17));',
-      '  vec2 c3=vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11));',
-      '  float d=blob(p,c1+(c1-O)*go,vec2(.62*a,.62)*(1.+.05*br)*gs)*1.15;',
-      '  d+=blob(p,c2+(c2-O)*go,vec2(.26,.28)*(1.+.07*br2)*gs)*.85;',
-      '  d+=blob(p,c3+(c3-O)*go,vec2(.38*a,.7)*gs)*.55;',
+      '  vec2 c1=vec2(.52*a,-.18)+(mm-vec2(.52*a,.5))*vec2(' + FOLLOW_LOW[0].toFixed(3) + ',' + FOLLOW_LOW[1].toFixed(3) + ')+o1*vec2(a,1.);',
+      '  vec2 c2=vec2(.4*a,.5)+(mm-vec2(.4*a,.5))*' + FOLLOW.toFixed(3) + '+.035*vec2(sin(t*.21),cos(t*.17))+o2*vec2(a,1.);',
+      '  vec2 c3=vec2(-.05*a,.45)+.04*vec2(sin(t*.13),cos(t*.11))+o3*vec2(a,1.);',
+      '  float d=blob(p,c1+(c1-O)*go,vec2(.62*a,.62)*(1.+.05*br)*gs*(1.+sg.x))*1.15;',
+      '  d+=blob(p,c2+(c2-O)*go,vec2(.26,.28)*(1.+.07*br2)*gs*(1.+sg.y))*.85;',
+      '  d+=blob(p,c3+(c3-O)*go,vec2(.38*a,.7)*gs*(1.+sg.z))*.55;',
       // onder tekstblokken (bx = midden en halve maat) een zachte donkere massa
       '  float tb=0.;for(int i=0;i<10;i++){vec4 b=bx[i];if(b.z>0.){vec2 q=(p-b.xy)/(b.zw+soft);float e=dot(q,q);tb=max(tb,exp(-e*e*2.2));}}',
       '  d+=tb*shade;',
@@ -1419,7 +1457,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH', 'sp', 'sv', 'bt'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      ['res', 't', 'm', 'seed', 'grain', 'flip', 'frac', 'fadeFrom', 'lt', 'base', 'soft', 'shade', 'bx', 'lc', 'gc', 'heroA', 'oilOn', 'oilP', 'oilUnder', 'hostTop', 'hostH', 'sp', 'sv', 'bt', 'o1', 'o2', 'o3', 'sg', 'bw', 'ph'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
     }
   }
   if (!gl) {
@@ -1628,6 +1666,11 @@
       lastSY = sy;
       var bp = window.kerjaMusic && window.kerjaMusic.pulse ? window.kerjaMusic.pulse() : 0;
       beat += (bp - beat) * .6;
+      var bh = window.kerjaMusic && window.kerjaMusic.hit ? window.kerjaMusic.hit() : null;
+      if (bh && bh.i !== bLast && !bh.late) beatHit(bh.s, now);
+      bLast = bh ? bh.i : -1;
+      beatPhysics(Math.min(.05, bTime ? (now - bTime) / 1000 : .033), now);
+      bTime = now;
     }
     if (Math.abs(flipGoal - flip) < .001) flip = flipGoal;
     if (!reduce && now - lastSeed > 83) { seed = Math.random() * 100; lastSeed = now; }
@@ -1658,6 +1701,8 @@
       gl.uniform1f(U.sp, spr);
       gl.uniform1f(U.sv, vel);
       gl.uniform1f(U.bt, beat);
+      gl.uniform2f(U.o1, bD[0][0], bD[0][1]); gl.uniform2f(U.o2, bD[1][0], bD[1][1]); gl.uniform2f(U.o3, bD[2][0], bD[2][1]);
+      gl.uniform3f(U.sg, bS[0], bS[1], bS[2]); gl.uniform1f(U.bw, bW); gl.uniform1f(U.ph, bPH);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     if (reduce || now - lastUpdate > 250) { update(); lastUpdate = now; }
@@ -1878,7 +1923,17 @@
       save();
       fade(0, LEAVE, easeOut, save);
     },
-    pulse: pulse
+    pulse: pulse,
+    /* hit(): de tel die nu klinkt, { i: volgnummer, s: kracht 0-1 }, of null als er niets speelt.
+       De hero gebruikt dit om op elke nieuwe tel de vlek een duw te geven. */
+    hit: function () {
+      if (!playing || audio.paused || !BEATS.length) return null;
+      var ms = audio.currentTime * 1000, lo = 0, hi = BEATS.length - 1;
+      if (ms < BEATS[0]) return null;
+      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BEATS[mid] <= ms) lo = mid; else hi = mid - 1; }
+      if (ms - BEATS[lo] > 150) return { i: lo, s: 0, late: true };
+      return { i: lo, s: (.55 + .45 * (+BEAT_S.charAt(lo) / 9)) * Math.min(1, vol / VOL) };
+    }
   };
 
   ui(false);
