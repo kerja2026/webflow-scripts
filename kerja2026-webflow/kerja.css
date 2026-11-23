@@ -179,21 +179,63 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
 @media (prefers-reduced-motion: reduce) { .haze-target { transition: none; } }
 
 /* Menu als matglas: de vlakjes (ook het coming soon- en reviews-label) laten de pagina wazig
-   doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script). */
-/* dark mode: de donkere tint van de gradient (#1b08a6), zodat het glas wegvalt in de achtergrond;
-   light mode: creme */
+   doorschijnen in de achtergrondkleur, met korrel erover (--kerja-grain, script).
+   dark mode: de donkere tint van de gradient (#1b08a6), zodat het glas wegvalt in de achtergrond;
+   light mode: creme.
+   Lijnen: geen rand maar vier losse lijnstukken (achtergrondlagen) die op --dot-gap (0.375rem) van
+   de hoeken stoppen. De bolletjes zijn daardoor alleen een ring, zonder vulling: overal schijnt de
+   echte achtergrond door, ook op de gradient. */
 .menu_cell-frame, .volume_frame {
   --menu-glass: color-mix(in srgb, #1b08a6 45%, transparent);
+  --dot-gap: 0.375rem;
+  --ln: linear-gradient(var(--light), var(--light));
+  border: 0;
   background-color: var(--menu-glass);
-  background-image: var(--kerja-grain, none);
-  background-size: 192px 192px;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
   -webkit-backdrop-filter: blur(0.75rem);
   backdrop-filter: blur(0.75rem);
 }
+/* vakje: lijn boven, onder, links, rechts */
+.menu_cell-frame {
+  background-image: var(--ln), var(--ln), var(--ln), var(--ln), var(--kerja-grain, none);
+  background-size:
+    calc(100% - 2 * var(--dot-gap)) 1px, calc(100% - 2 * var(--dot-gap)) 1px,
+    1px calc(100% - 2 * var(--dot-gap)), 1px calc(100% - 2 * var(--dot-gap)), 192px 192px;
+  background-position: var(--dot-gap) 0, var(--dot-gap) 100%, 0 var(--dot-gap), 100% var(--dot-gap), 0 0;
+}
+/* muziekknop: geen linkerlijn (die is van MENU). Het glas begint op de rand van het MENU-vlak (left in
+   Webflow), de lijnen boven en onder pas na het bolletje van MENU (0.25rem) */
+.volume_frame {
+  background-image: var(--ln), var(--ln), var(--ln), var(--kerja-grain, none);
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+  background-size:
+    calc(100% - 0.25rem - var(--dot-gap)) 1px, calc(100% - 0.25rem - var(--dot-gap)) 1px,
+    1px calc(100% - 2 * var(--dot-gap)), 192px 192px;
+  background-position: 0.25rem 0, 0.25rem 100%, 100% var(--dot-gap), 0 0;
+}
 html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
-/* bolletjes dicht (glas op elk bolletje maakte de site traag), in een tint die bij het glas past */
-.menu_cell-dot { background-color: #1d0b9e; outline-color: #1d0b9e; }
-html.theme-light .menu_cell-dot { background-color: var(--bright-blue); outline-color: var(--bright-blue); }
+/* bolletjes: alleen de ring, boven het glas van een vakje ernaast (de muziekknop ligt deels over MENU) */
+.menu_cell-dot { background-color: transparent; outline: 0; z-index: 2; }
+
+/* Dienstenraster (.services_list, Home en Expertise): zelfde aanpak als het menu. Geen randen, maar
+   lijnstukken die voor de bolletjes stoppen, en bolletjes als lege ring.
+   Elk vlak tekent zijn eigen vier zijden: boven en links in het vlak (achtergrondlagen), rechts en
+   onder net buiten het vlak (::before en ::after). Waar twee vlakken elkaar raken, vallen hun lijnen
+   op dezelfde pixel. De bolletjes zitten op de hoeken (services_dot in Webflow); de lijnen beginnen
+   0.375rem na een hoek en stoppen 0.3125rem ervoor. Werkt naast elkaar (desktop) en onder elkaar. */
+.services_list { border-right: 0; border-bottom: 0; }
+.services_item {
+  --ln: linear-gradient(var(--light), var(--light));
+  border-top: 0; border-left: 0;
+  background-image: var(--ln), var(--ln);
+  background-repeat: no-repeat;
+  background-size: calc(100% - 0.6875rem) 1px, 1px calc(100% - 0.6875rem);
+  background-position: 0.375rem 0, 0 0.375rem;
+}
+.services_item::before, .services_item::after { content: ""; position: absolute; background: var(--light); pointer-events: none; }
+.services_item::before { left: 100%; width: 1px; top: 0.375rem; bottom: 0.3125rem; }
+.services_item::after { top: 100%; height: 1px; left: 0.375rem; right: 0.3125rem; }
+.services_dot { background-color: transparent; outline: 0; z-index: 2; }
 
 /* Muziekknop ([data-volume]): vakje rechts tegen de menuknop, matglas zoals het menu.
    Vier lijntjes van 1px, 7px uit elkaar. Elk lijntje heeft een niveau --lvl (script) van 0 tot 1:
