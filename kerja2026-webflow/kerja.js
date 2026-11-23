@@ -1204,6 +1204,8 @@
   var spr = 0, vel = 0, lastSY = window.scrollY;
   /* op de maat: als de muziek speelt, zwelt de donkere massa op elke tel kort op (BEAT_GROW) en vloeit
      terug. De tellen komen uit het muziekscript (kerjaMusic.pulse, vooraf berekende maat). */
+  /* zelf af te stellen: BEAT_GROW = opzwellen per tel (.08 = 8%), BEAT_WARP = vervormen per tel; 0 = niet.
+     De footer heeft eigen waarden (FOOT_BEAT_GROW, FOOT_BEAT_WARP); naklinken = BEAT_DECAY in het muziekscript. */
   var BEAT_GROW = 0.08, BEAT_WARP = 0.02, beat = 0;
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
@@ -1857,7 +1859,7 @@
      Nieuw nummer? Dan deze twee lijsten opnieuw laten berekenen. */
   var BEATS = [766,1533,2276,3065,3738,4412,5085,5805,6571,7291,8057,8800,9543,10286,11029,11773,12516,13259,14002,14745,15488,16231,16997,17740,18483,19226,19969,20712,21455,22175,22941,23684,24451,25194,25913,26657,27376,28143,28909,29652,30372,31115,31881,32601,33367,34110,34853,35596,36339,37082,37825,38568,39311,40054,40821,41564,42307,43050,43770,44536,45279,45999,46765,47508,48274,48994,49737,50457,51200,51966,52709,53429,54195,54938,55705,56424,57191,57934,58677,59420,60163,60906,61649,62392,63135,63878,64644,65364,66130,66873,67617,68360];
   var BEAT_S = '10000083739292839293839382939382828283849393928382838383810382828383839483838282828383738282';
-  var BEAT_DECAY = 0.2;   // s: hoe snel een tel uitdooft
+  var BEAT_DECAY = 0.2;   // s: hoe snel een tel uitdooft (lager = korte tik, hoger = lange golf); geldt voor hero en footer
   /* pulse(): 0-1, piekt op elke tel en dooft uit; geschaald met het volume, zodat hij mee in- en uitfadet */
   function pulse() {
     if (!playing || audio.paused || !BEATS.length) return 0;
@@ -1900,6 +1902,12 @@
   var FOOT_MIN = 0.5;    // lichtste waarde op de kleurschaal (0 = wit, .82 = de blauwe basis)
   var FOOT_AMT = 1.0;    // hoeveelheid licht
   var GRAIN = 0.14;
+  /* op de maat van de muziek (zelf af te stellen):
+     FOOT_BEAT_GROW = hoeveel het licht per tel opzwelt (.08 = 8%); 0 = niet
+     FOOT_BEAT_WARP = hoeveel de vorm per tel vervormt (.02 = licht golvend); 0 = niet
+     hoe lang een tel naklinkt staat in het muziekscript: BEAT_DECAY (geldt voor hero en footer) */
+  var FOOT_BEAT_GROW = 0.08;
+  var FOOT_BEAT_WARP = 0.02;
   var host = document.createElement('div');
   host.className = 'footer_haze';
   host.setAttribute('aria-hidden', 'true');
@@ -1919,8 +1927,8 @@
     '  if(v<.35)return mix(c0,c1,v/.35);if(v<.62)return mix(c1,c2,(v-.35)/.27);if(v<.82)return mix(c2,c3,(v-.62)/.2);return mix(c3,c4,(v-.82)/.18);}',
     'void main(){',
     '  vec2 uv=gl_FragCoord.xy/res;float a=res.x/res.y;vec2 q=vec2(uv.x*a,uv.y);',
-    '  float br=sin(t*.27)*.5+.5;float g=1.+.06*br+.08*bt;',
-    '  q+=vec2(sin(q.y*2.1+t*.19),cos(q.x*1.7-t*.15))*(.03+.02*bt);',
+    '  float br=sin(t*.27)*.5+.5;float g=1.+.06*br+' + FOOT_BEAT_GROW.toFixed(3) + '*bt;',
+    '  q+=vec2(sin(q.y*2.1+t*.19),cos(q.x*1.7-t*.15))*(.03+' + FOOT_BEAT_WARP.toFixed(3) + '*bt);',
     '  float l=blob(q,vec2(.06*a,-.08)+.03*vec2(sin(t*.13),cos(t*.11)),vec2(.5*a,.55)*g)*.9;',
     '  l+=blob(q,vec2(.3*a,.08)+.04*vec2(sin(t*.17+1.),cos(t*.09)),vec2(.28*a,.3)*g)*.45;',
     '  l+=blob(q,vec2(m.x*a,m.y),vec2(.22,.22))*.18;',
