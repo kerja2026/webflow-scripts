@@ -203,15 +203,16 @@ html.theme-light .is-haze-dia { --light: #eae3da; --bright-blue: #2e0cf2; --whit
     1px calc(100% - 2 * var(--dot-gap)), 1px calc(100% - 2 * var(--dot-gap)), 192px 192px;
   background-position: var(--dot-gap) 0, var(--dot-gap) 100%, 0 var(--dot-gap), 100% var(--dot-gap), 0 0;
 }
-/* muziekknop: geen linkerlijn (die is van MENU). Het glas begint op de rand van het MENU-vlak (left in
-   Webflow), de lijnen boven en onder pas na het bolletje van MENU (0.25rem) */
+/* muziekknop: geen linkerlijn (die is van MENU). Het glas begint precies op de rand van het MENU-vlak
+   (left -0.125rem in Webflow: 6.875 - 0.1875 - 6.8125), zodat er geen strook zonder glas tussen zit.
+   De lijnen boven en onder beginnen pas na het bolletje van MENU (0.3125rem) */
 .volume_frame {
   background-image: var(--ln), var(--ln), var(--ln), var(--kerja-grain, none);
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
   background-size:
-    calc(100% - 0.25rem - var(--dot-gap)) 1px, calc(100% - 0.25rem - var(--dot-gap)) 1px,
+    calc(100% - 0.3125rem - var(--dot-gap)) 1px, calc(100% - 0.3125rem - var(--dot-gap)) 1px,
     1px calc(100% - 2 * var(--dot-gap)), 192px 192px;
-  background-position: 0.25rem 0, 0.25rem 100%, 100% var(--dot-gap), 0 0;
+  background-position: 0.3125rem 0, 0.3125rem 100%, 100% var(--dot-gap), 0 0;
 }
 html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(in srgb, var(--bright-blue) 55%, transparent); }
 /* bolletjes: alleen de ring, boven het glas van een vakje ernaast (de muziekknop ligt deels over MENU) */
