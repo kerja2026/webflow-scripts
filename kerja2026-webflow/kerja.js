@@ -1206,7 +1206,7 @@
      terug. De tellen komen uit het muziekscript (kerjaMusic.pulse, vooraf berekende maat). */
   /* zelf af te stellen: BEAT_GROW = opzwellen per tel (.08 = 8%), BEAT_WARP = vervormen per tel; 0 = niet.
      De footer heeft eigen waarden (FOOT_BEAT_GROW, FOOT_BEAT_WARP); naklinken = BEAT_DECAY in het muziekscript. */
-  var BEAT_GROW = 0.6, BEAT_WARP = 0.02, beat = 0;
+  var BEAT_GROW = 0.1, BEAT_WARP = 0.02, beat = 0;
   var PUSH = 0;             // hoe ver het licht wijkt (0 = uit; 1 = tot de rand van de vlek het blok raakt)
   var PUSH_R = .9;           // welk deel van de vlek als 'rand' telt (lager = licht mag dichterbij)
   var PUSH_EASE = .04;       // hoe snel het licht wegschuift
