@@ -598,11 +598,16 @@
    In rust staan alleen de K en de punt. Mouse-over (of toetsenbordfocus op de link): de punt verdwijnt,
    de letters e, r, j en a verschijnen abrupt, elk op een willekeurig moment binnen LOGO_IN ms (zoals
    de teksten bij de pagina-overgang), en daarna staat de punt achter de a. Mouse-out: andersom.
-   Alleen op apparaten met muis; bij 'reduced motion' staat het woord in een keer. */
+   Tegelijk schaalt het hele logo naar LOGO_SCALE (75%) vanuit linksboven, in 0,5 s; bij mouse-out
+   schaalt de K met de punt terug naar 100%. Het hover-vlak blijft op het volle formaat staan, zodat de
+   muis er niet vanaf valt als het logo kleiner wordt (anders gaat het flikkeren).
+   Alleen op apparaten met muis; bij 'reduced motion' staat het woord in een keer, zonder schalen. */
 (function () {
   var img = document.querySelector('img.hero_logo');
   if (!img || !img.parentNode) return;
   var LOGO_IN = 400, LOGO_OUT = 300;   // ms waarin de letters verschijnen of verdwijnen
+  var LOGO_SCALE = 0.75;               // formaat van het logo bij mouse-over (1 = niet schalen)
+  var EASE = '0.5s cubic-bezier(0.65, 0, 0.35, 1)';
   var H = 145, W_K = 164, W_ALL = 708.1, DOT_K = 145, DOT_END = 689.1;   // maten in de viewBox
   var NS = 'http://www.w3.org/2000/svg';
   var SHAPES = [
@@ -629,6 +634,12 @@
   dot.setAttribute('y', '125.2'); dot.setAttribute('width', '19'); dot.setAttribute('height', '19');
   dot.style.fill = 'var(--light, #EAE3DA)';
   svg.appendChild(dot);
+  /* onzichtbaar vlak dat bij mouse-over de volle hoogte van het logo bedekt, ook als het kleiner is */
+  var pad = document.createElementNS(NS, 'rect');
+  pad.setAttribute('x', '0'); pad.setAttribute('y', '-.5');
+  pad.setAttribute('width', W_ALL); pad.setAttribute('height', H / LOGO_SCALE);
+  pad.style.fill = 'none'; pad.style.pointerEvents = 'all'; pad.style.display = 'none';
+  svg.appendChild(pad);
   /* hoogte zoals de oude afbeelding; de breedte volgt het deel van het woord dat te zien is */
   var h = img.getBoundingClientRect().height || 25;
   function frame(open) {
@@ -644,6 +655,11 @@
 
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* schalen via 'scale' (los van 'translate', waarmee het logo bij scrollen wegschuift); de overige
+     overgangen uit kerja.css (translate, kleurwissel bij diapositief) gaan mee in dezelfde regel */
+  svg.style.transformOrigin = '0 0';
+  if (!reduce) svg.style.transition = 'translate ' + EASE + ', scale ' + EASE + ', --light 0.6s cubic-bezier(0.65, 0, 0.35, 1), --bright-blue 0.6s cubic-bezier(0.65, 0, 0.35, 1)';
+  function size(small) { if (!reduce) svg.style.scale = small ? String(LOGO_SCALE) : ''; pad.style.display = small ? '' : 'none'; }
   var timers = [], open = false;
   function clear() { timers.forEach(clearTimeout); timers = []; }
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
@@ -651,6 +667,7 @@
   function show() {
     if (open) return; open = true; clear();
     frame(true);
+    size(true);
     dot.style.visibility = 'hidden';
     if (reduce) { letters.forEach(function (l) { l.style.visibility = ''; }); dot.setAttribute('x', DOT_END); dot.style.visibility = ''; return; }
     var step = LOGO_IN / letters.length;
@@ -659,6 +676,7 @@
   }
   function hide() {
     if (!open) return; open = false; clear();
+    size(false);
     dot.style.visibility = 'hidden';
     var done = function () { frame(false); dot.setAttribute('x', DOT_K); dot.style.visibility = ''; };
     if (reduce) { letters.forEach(function (l) { l.style.visibility = 'hidden'; }); done(); return; }
