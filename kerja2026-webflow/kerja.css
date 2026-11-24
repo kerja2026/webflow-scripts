@@ -369,3 +369,6 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 .work-cases_tip { position: relative; z-index: 3; display: flex; flex-direction: column; row-gap: 0.75rem; min-width: 13rem; padding: 0.875rem 1.125rem 1rem; }
 .work-cases_tip .section-title_component { margin: 0; }
 .work-cases_tip .work-cases_services { margin: 0; }
+/* label: titel 1rem, werkzaamheden 0.7rem (alleen in het label; onder de cases blijven de Webflow-maten) */
+.work-cases_tip .heading-style-h6 { font-size: 1rem; }
+.work-cases_tip .work-cases_services .text-size-small { font-size: 0.7rem; line-height: 1.7; }
