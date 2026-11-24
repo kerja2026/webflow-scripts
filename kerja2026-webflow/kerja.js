@@ -447,6 +447,9 @@
    - de lijn volgt het scrollen met wat naloop, dus hij remt zacht af als je stopt met scrollen
    Terugscrollen = terugschuiven. Bij 'reduced motion' staat hij direct in de eindpositie.
    De lijnkleur is var(--light), dus hij wisselt mee met light/dark mode.
+   Hoeken: op elke hoek een hol bolletje, zoals bij de kaders van de cases en het menu (DOT_R, ring van
+   1px), en de lijnen stoppen op DOT_GAP voor de hoek. De SVG tekent daarom in echte pixels (viewBox =
+   eigen maat, opnieuw bij resize), anders zouden de bolletjes mee uitrekken tot ovalen.
    Classes: faq_visual (FAQ), work_visual en visual_image (Home, Connect), about-more_visual (About). */
 (function () {
   var imgs = Array.prototype.slice.call(document.querySelectorAll('.faq_visual, .work_visual, .visual_image, .about-more_visual'));
@@ -455,6 +458,9 @@
   var END_AT = 0.3;   // bovenkant op 30% van het scherm = ruim 90% onderweg
   var CURVE = 2.5;    // hoe snel de beweging uitloopt (hoger = eerder bijna stil)
   var FOLLOW = 0.1;   // naloop per frame (lager = zachter en trager volgen)
+  var DOT_R = 0.1875;   // rem, straal van het bolletje (midden van de ring van 1px), 3px op 1512
+  var DOT_GAP = 0.3125; // rem, lijnen stoppen zo ver voor de hoek (gelijk aan de kaders)
+  function rem() { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; }
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* rustige start, daarna steeds langzamer: nadert 1 zonder hem hard te raken */
   function curve(p) { return p <= 0 ? 0 : 1 - Math.exp(-CURVE * Math.pow(p, 1.5)); }
@@ -462,11 +468,7 @@
   var items = [];
 
   function init(img) {
-    var W = img.naturalWidth || 1431;
-    var H = img.naturalHeight || Math.round(W * img.offsetHeight / Math.max(1, img.offsetWidth));
     var svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    svg.setAttribute('preserveAspectRatio', 'none');
     svg.setAttribute('fill', 'none');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('class', img.getAttribute('class'));
@@ -476,18 +478,46 @@
     path.setAttribute('stroke-width', '1');
     path.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(path);
+    var dots = [];
+    for (var i = 0; i < 6; i++) {
+      var c = document.createElementNS(NS, 'circle');
+      c.style.stroke = 'var(--light, #EAE3DA)';
+      c.setAttribute('stroke-width', '1');
+      svg.appendChild(c);
+      dots.push(c);
+    }
+    /* zelfde maat als de afbeelding: verhouding van het bestand, breedte uit de layout */
+    var rw = img.naturalWidth || img.offsetWidth || 1431, rh = img.naturalHeight || img.offsetHeight || 123;
+    svg.style.height = 'auto';
+    svg.style.aspectRatio = rw + ' / ' + rh;
     img.parentNode.replaceChild(svg, img);
 
-    var pad = 0.5, top = pad, bot = H - pad, xl = pad, xr = W - pad;
     var down = Math.random() < 0.5; // richting van de schuine lijnen, vast per zigzag
-    var ya = down ? bot : top, yb = down ? top : bot;
     var start = randX(), end = randX();
     while (Math.abs(end - start) < 0.25) end = randX();
+    var last = .5;
 
     function draw(x) {
+      last = x;
+      var r = svg.getBoundingClientRect(), W = r.width, H = r.height;
+      if (!W || !H) return;
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      var pad = 0.5, top = pad, bot = H - pad, xl = pad, xr = W - pad;
+      var ya = down ? bot : top, yb = down ? top : bot;
       var xm = pad + x * (W - 2 * pad);
-      path.setAttribute('d', 'M' + xl + ' ' + ya + 'V' + yb + 'L' + xm + ' ' + ya + 'V' + yb + 'L' + xr + ' ' + ya + 'V' + yb);
+      var pts = [[xl, ya], [xl, yb], [xm, ya], [xm, yb], [xr, ya], [xr, yb]];
+      var g = DOT_GAP * rem(), d = '';
+      for (var k = 0; k < 5; k++) {
+        var a = pts[k], b = pts[k + 1], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.sqrt(dx * dx + dy * dy);
+        if (len <= 2 * g) continue;
+        var ux = dx / len * g, uy = dy / len * g;
+        d += 'M' + (a[0] + ux) + ' ' + (a[1] + uy) + 'L' + (b[0] - ux) + ' ' + (b[1] - uy);
+      }
+      path.setAttribute('d', d);
+      var rr = DOT_R * rem();
+      pts.forEach(function (pt, k) { dots[k].setAttribute('cx', pt[0]); dots[k].setAttribute('cy', pt[1]); dots[k].setAttribute('r', rr); });
     }
+    if (window.ResizeObserver) new ResizeObserver(function () { draw(last); }).observe(svg);
 
     function target() {
       var vh = window.innerHeight;
