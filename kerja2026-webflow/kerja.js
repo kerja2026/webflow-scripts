@@ -1,6 +1,6 @@
 /* Kerja 2026 — kerja.js
    Geladen: sitebreed, footer, na lenis.min.js
-   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk, muziek.
+   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk, muziek, footer-gradient, work-cases.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
 
 /* Lenis smooth scroll */
@@ -2120,4 +2120,179 @@
   function kick() { if (!raf) raf = requestAnimationFrame(frame); }
   new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) { size(); kick(); } }).observe(host);
   new MutationObserver(kick).observe(root, { attributes: true, attributeFilter: ['class'] });
+})();
+
+/* Work-cases (.work-cases_item met data-work-case, pagina Work): de kleurenfoto (.work-cases_image) wordt
+   in rust getoond als halftone van ringen, in de kleuren van de site (ringen: var(--light),
+   ondergrond: var(--bright-blue); in light mode dus omgekeerd). Het raster wordt uit de foto zelf
+   gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case.
+   Mouse-over: een olievlek trekt van linksonder naar rechtsboven over de case. Waar hij komt krimpen
+   de ringen weg en opent elk rasterpunt zich als een rondje kleur, tot de foto heel is.
+   Mouse-out: andersom, terug naar linksonder. Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
+   op volgorde; een vierde case krijgt weer de eerste). data-work-focus="x y" (0-1) bepaalt welk deel
+   van de foto in beeld blijft bij het bijsnijden (standaard het midden).
+   Telefoon en tablet (geen muis): alleen de halftone. Reduced motion: direct wisselen, zonder vlek.
+   Lukt WebGL of het laden van de foto niet, dan blijft gewoon de foto staan. */
+(function () {
+  var items = document.querySelectorAll('.work-cases_item[data-work-case]');
+  if (!items.length) return;
+  var WORK_PITCH = 72;
+  var WORK_CASES = [
+    { tilt: 8, freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
+    { tilt: -10, freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
+    { tilt: 2, freq: 1.2, amp: .55, warp: .45, inMs: 2600, outMs: 1900, seed: 12.4 }
+  ];
+  var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement;
+  var FS = [
+    'precision highp float;',
+    'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec3 ink;uniform vec2 res;',
+    'uniform vec2 sc;uniform vec2 off;uniform float pitch;',
+    'uniform float tilt;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
+    'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
+    'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
+    'float fbm(vec2 q){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(q);q=q*2.03+17.;a*=.5;}return s;}',
+    'vec3 img(vec2 u){return texture2D(tc,off+clamp(u,0.,1.)*sc).rgb;}',
+    'void main(){vec2 uv=v;float ar=res.x/res.y;',
+    /* raster van ringen, 45 graden gedraaid */
+    '  vec2 px=uv*res;float cell=res.x/pitch;float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
+    '  vec2 r=R*px/cell;vec2 ci=floor(r)+.5;vec2 f=r-ci;',
+    '  vec2 cc=(Ri*ci)*cell/res;vec3 sc0=img(cc);',
+    /* olievlek, gemeten in het midden van elk rasterpunt */
+    '  vec2 cq=vec2(cc.x*ar,cc.y);',
+    '  vec2 w=vec2(fbm(cq*freq*.7+seed+t*.11),fbm(cq*freq*.7+seed*1.7-t*.09))-.5;',
+    '  vec2 uw=cc+w*warp;',
+    '  float a=radians(45.+tilt);vec2 dir=vec2(cos(a),sin(a));',
+    '  float d0=min(min(0.,dir.x),min(dir.y,dir.x+dir.y));float d1=max(max(0.,dir.x),max(dir.y,dir.x+dir.y));',
+    '  float d=(dot(uw,dir)-d0)/(d1-d0);',
+    '  float e=d+(fbm(cq*freq+seed*2.3+t*.07)-.5)*2.*amp+(h(ci+seed)-.5)*.05;',
+    '  float th0=mix(-amp-.22,1.+amp+.22,p);',
+    '  float cp=clamp((th0-e)/.2,0.,1.);',
+    /* ring krimpt weg, het punt opent zich als rondje kleur */
+    '  float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.18)*1.3,0.,1.);',
+    '  float k=1.-smoothstep(0.,.85,cp);',
+    '  float rad=(.14+.34*dk)*k;float wid=(.06+.14*dk)*k;float dd=length(f);float aa=1.2/cell;',
+    '  float ring=smoothstep(rad-wid*.5-aa,rad-wid*.5,dd)*(1.-smoothstep(rad+wid*.5,rad+wid*.5+aa,dd))*step(.001,k);',
+    '  float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
+    '  float dot_=max(ring,fill)*step(.03,dk);',
+    '  float hole=1.-smoothstep(cp*.78-aa,cp*.78,dd);',
+    '  vec3 base=mix(ink,img(uv),hole);',
+    '  gl_FragColor=vec4(mix(base,paper,dot_),1.);}'
+  ].join('\n');
+  function rgb(str, fb) {
+    var m = (str || '').match(/[\d.]+/g);
+    if (m && m.length >= 3 && str.indexOf('rgb') > -1) return [m[0] / 255, m[1] / 255, m[2] / 255];
+    var hx = (str || '').trim().replace('#', '');
+    if (/^[0-9a-f]{6}$/i.test(hx)) return [parseInt(hx.slice(0, 2), 16) / 255, parseInt(hx.slice(2, 4), 16) / 255, parseInt(hx.slice(4, 6), 16) / 255];
+    return fb;
+  }
+  function ease(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+
+  Array.prototype.forEach.call(items, function (item, idx) {
+    var box = item.querySelector('.work-cases_visual');
+    var img = item.querySelector('.work-cases_image');
+    if (!box || !img) return;
+    var cfg = WORK_CASES[idx % WORK_CASES.length];
+    var focus = (item.getAttribute('data-work-focus') || '.5 .5').split(/\s+/).map(parseFloat);
+    if (!(focus[0] >= 0)) focus[0] = .5;
+    if (!(focus[1] >= 0)) focus[1] = .5;
+    var cv = document.createElement('canvas');
+    cv.className = 'work-cases_canvas';
+    cv.setAttribute('aria-hidden', 'true');
+    var gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+    if (!gl) return;
+    function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
+    var pr = gl.createProgram();
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 a;varying vec2 v;void main(){v=a*.5+.5;gl_Position=vec4(a,0.,1.);}'));
+    gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    var al = gl.getAttribLocation(pr, 'a');
+    gl.enableVertexAttribArray(al);
+    gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
+    var U = {};
+    ['tc', 'p', 't', 'paper', 'ink', 'res', 'sc', 'off', 'pitch', 'tilt', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    gl.uniform1i(U.tc, 0);
+    gl.uniform1f(U.pitch, WORK_PITCH);
+    gl.uniform1f(U.tilt, cfg.tilt); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
+    gl.uniform1f(U.warp, cfg.warp); gl.uniform1f(U.seed, cfg.seed);
+
+    var iw = 1, ih = 1, ready = false, p = 0, from = 0, to = 0, t0 = 0, dur = 1, raf = 0, start = performance.now();
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    function size() {
+      var r = box.getBoundingClientRect();
+      cv.width = Math.max(1, Math.round(r.width * dpr));
+      cv.height = Math.max(1, Math.round(r.height * dpr));
+      gl.viewport(0, 0, cv.width, cv.height);
+      var ia = iw / ih, ba = cv.width / cv.height, sx = 1, sy = 1;
+      if (ia > ba) sx = ba / ia; else sy = ia / ba;
+      gl.uniform2f(U.sc, sx, sy);
+      gl.uniform2f(U.off, focus[0] * (1 - sx), (1 - focus[1]) * (1 - sy));
+    }
+    function draw() {
+      if (!ready) return;
+      var cs = getComputedStyle(box);
+      gl.uniform3fv(U.paper, rgb(cs.getPropertyValue('--light'), [.918, .89, .855]));
+      gl.uniform3fv(U.ink, rgb(cs.getPropertyValue('--bright-blue'), [.18, .047, .949]));
+      gl.uniform1f(U.p, p);
+      gl.uniform1f(U.t, (performance.now() - start) / 1000);
+      gl.uniform2f(U.res, cv.width, cv.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    function loop(now) {
+      var x = Math.min(1, (now - t0) / dur);
+      p = from + (to - from) * ease(x);
+      draw();
+      raf = x < 1 ? requestAnimationFrame(loop) : 0;
+    }
+    function go(target) {
+      if (!ready) return;
+      from = p; to = target; t0 = performance.now();
+      dur = Math.max(1, (target > p ? cfg.inMs : cfg.outMs) * Math.abs(target - p));
+      if (reduce) { p = target; draw(); return; }
+      if (!raf) raf = requestAnimationFrame(loop);
+    }
+    /* kleur volgen bij light/dark mode en diapositief (de variabelen hebben een overgang van 0,6 s) */
+    var follow = 0;
+    function recolor() {
+      var until = performance.now() + 700;
+      cancelAnimationFrame(follow);
+      (function step() { draw(); if (performance.now() < until) follow = requestAnimationFrame(step); })();
+    }
+
+    var src = new Image();
+    src.crossOrigin = 'anonymous';
+    src.onload = function () {
+      iw = src.naturalWidth; ih = src.naturalHeight;
+      var tx = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tx);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); } catch (err) { return; }
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      ready = true;
+      box.appendChild(cv);
+      size(); draw();
+      if (window.ResizeObserver) new ResizeObserver(function () { size(); draw(); }).observe(box);
+      else window.addEventListener('resize', function () { size(); draw(); });
+      new MutationObserver(recolor).observe(root, { attributes: true, attributeFilter: ['class'] });
+      new MutationObserver(recolor).observe(box, { attributes: true, attributeFilter: ['class'] });
+    };
+    function load() { src.src = img.currentSrc || img.src; }
+    if (img.complete && (img.currentSrc || img.src)) load(); else img.addEventListener('load', load, { once: true });
+
+    if (hover) {
+      item.addEventListener('mouseenter', function () { go(1); });
+      item.addEventListener('mouseleave', function () { go(0); });
+      item.addEventListener('focusin', function () { go(1); });
+      item.addEventListener('focusout', function () { go(0); });
+    }
+  });
 })();

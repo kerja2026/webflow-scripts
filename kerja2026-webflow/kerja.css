@@ -324,3 +324,39 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
    boven de footer begint en daar doorzichtig uitloopt */
 .section_footer { position: relative; }
 .footer_haze { position: absolute; left: 0; right: 0; bottom: 0; top: -50vh; z-index: -1; pointer-events: none; }
+
+/* Work-cases (pagina Work, script: work-cases): kader om de cases met lijnen en holle bolletjes op de
+   hoeken, zoals de lijnen van het menu (stoppen voor de bolletjes). De canvas met de halftone ligt over
+   de foto, het kader daar weer boven. Op telefoon staan de cases onder elkaar en heeft elk een eigen kader. */
+.work-cases_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+.work-cases_visual::before, .work-cases_visual::after { content: ""; position: absolute; pointer-events: none; z-index: 2; }
+.work-cases_visual::before {
+  inset: 0;
+  background:
+    linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat;
+}
+.work-cases_visual::after {
+  inset: -0.21875rem;
+  --ring: radial-gradient(circle, transparent 0 0.15625rem, var(--light) 0.15625rem 0.21875rem, transparent 0.21875rem);
+  background: var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat;
+}
+.work-cases_item:last-child .work-cases_visual::before { background:
+    linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
+    linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
+.work-cases_item:last-child .work-cases_visual::after { background:
+    var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
+    var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
+@media screen and (max-width: 767px) {
+  .work-cases_item .work-cases_visual::before { background:
+    linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
+    linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
+  .work-cases_item .work-cases_visual::after { background:
+    var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
+    var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
+}
