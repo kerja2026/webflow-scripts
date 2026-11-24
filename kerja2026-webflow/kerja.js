@@ -2202,7 +2202,16 @@
   }
   function ease(x) { return 1 - Math.pow(1 - x, 3); }   // snel beginnen, rustig uitlopen
 
-  /* zwevend label: titel (Section Title) en werkzaamheden van de case, gekloond uit de case zelf */
+  /* zwevend label: titel (Section Title) en werkzaamheden van de case, gekloond uit de case zelf.
+     Bij elke mouse-over opnieuw, en zonder de standen van de pagina-overgang en de gradient
+     (pt-hide, haze-target, is-haze-dia, inline style): anders neemt het label een verborgen titel over. */
+  function clean(el) {
+    [el].concat(Array.prototype.slice.call(el.querySelectorAll('*'))).forEach(function (n) {
+      n.classList.remove('pt-hide', 'haze-target', 'is-haze-dia');
+      n.removeAttribute('style');
+    });
+    return el;
+  }
   function tipContent(item) {
     var w = document.createElement('div');
     w.className = 'work-cases_tip';
@@ -2214,9 +2223,9 @@
         var d = document.createElement('div'); d.className = h.className; d.innerHTML = h.innerHTML; h.parentNode.replaceChild(d, h);
       });
       Array.prototype.forEach.call(c.querySelectorAll('.dots-line_component'), function (d) { d.classList.add('is-in'); });
-      w.appendChild(c);
+      w.appendChild(clean(c));
     }
-    if (sv) w.appendChild(sv.cloneNode(true));
+    if (sv) w.appendChild(clean(sv.cloneNode(true)));
     return w;
   }
   var tip = (function () {
@@ -2358,8 +2367,7 @@
         if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) return;
         gl.uniform1f(U.ang, Math.atan2(-y, -x));
       };
-      var tipBody = tipContent(item);
-      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); tip.show(tipBody, e); });
+      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); tip.show(tipContent(item), e); });
       item.addEventListener('mousemove', function (e) { tip.move(e); });
       item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); tip.hide(); });
       item.addEventListener('focusin', function () { go(1); });
