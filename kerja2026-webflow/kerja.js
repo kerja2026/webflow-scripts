@@ -2123,8 +2123,8 @@
 })();
 
 /* Work-cases (.work-cases_item met data-work-case, pagina Work): de kleurenfoto (.work-cases_image) wordt
-   in rust getoond als halftone van ringen, in de kleuren van de site (ringen: var(--light),
-   ondergrond: var(--bright-blue); in light mode dus omgekeerd). Het raster wordt uit de foto zelf
+   in rust getoond als halftone van ringen in var(--light) (in light mode dus blauw); tussen de ringen
+   is de case doorzichtig, zodat de achtergrond van de pagina erdoor te zien is. Het raster wordt uit de foto zelf
    gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case.
    Mouse-over: een olievlek trekt van linksonder naar rechtsboven over de case. Waar hij komt krimpen
    de ringen weg en opent elk rasterpunt zich als een rondje kleur, tot de foto heel is.
@@ -2147,7 +2147,7 @@
   var root = document.documentElement;
   var FS = [
     'precision highp float;',
-    'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec3 ink;uniform vec2 res;',
+    'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec2 res;',
     'uniform vec2 sc;uniform vec2 off;uniform float pitch;',
     'uniform float tilt;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
     'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
@@ -2177,8 +2177,9 @@
     '  float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
     '  float dot_=max(ring,fill)*step(.03,dk);',
     '  float hole=1.-smoothstep(cp*.78-aa,cp*.78,dd);',
-    '  vec3 base=mix(ink,img(uv),hole);',
-    '  gl_FragColor=vec4(mix(base,paper,dot_),1.);}'
+    /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
+    '  float al=max(dot_,hole);',
+    '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.)),al);}'
   ].join('\n');
   function rgb(str, fb) {
     var m = (str || '').match(/[\d.]+/g);
@@ -2215,7 +2216,7 @@
     gl.enableVertexAttribArray(al);
     gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['tc', 'p', 't', 'paper', 'ink', 'res', 'sc', 'off', 'pitch', 'tilt', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'pitch', 'tilt', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
     gl.uniform1i(U.tc, 0);
     gl.uniform1f(U.pitch, WORK_PITCH);
     gl.uniform1f(U.tilt, cfg.tilt); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
@@ -2237,7 +2238,6 @@
       if (!ready) return;
       var cs = getComputedStyle(box);
       gl.uniform3fv(U.paper, rgb(cs.getPropertyValue('--light'), [.918, .89, .855]));
-      gl.uniform3fv(U.ink, rgb(cs.getPropertyValue('--bright-blue'), [.18, .047, .949]));
       gl.uniform1f(U.p, p);
       gl.uniform1f(U.t, (performance.now() - start) / 1000);
       gl.uniform2f(U.res, cv.width, cv.height);
@@ -2279,6 +2279,7 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       ready = true;
       box.appendChild(cv);
+      img.style.opacity = '0'; // de foto zelf alleen nog als terugval zonder WebGL
       size(); draw();
       if (window.ResizeObserver) new ResizeObserver(function () { size(); draw(); }).observe(box);
       else window.addEventListener('resize', function () { size(); draw(); });
