@@ -2127,9 +2127,13 @@
    is de case doorzichtig, zodat de achtergrond van de pagina erdoor te zien is. Het raster wordt uit de foto zelf
    gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case. Lichte delen
    van de foto blijven leeg, en over de buitenste WORK_EDGE lopen de ringen grillig naar de rand uit.
-   Mouse-over: een olievlek trekt van linksonder naar rechtsboven over de case. Waar hij komt krimpen
-   de ringen weg en opent elk rasterpunt zich als een rondje kleur, tot de foto heel is.
-   Mouse-out: andersom, terug naar linksonder. Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
+   Mouse-over (richting, 360 graden): de olievlek begint aan de kant waar de cursor binnenkomt en trekt
+   over de case. Waar hij komt krimpen de ringen weg en opent elk rasterpunt zich als een rondje kleur,
+   tot de foto heel is. Mouse-out: de vlek trekt zich terug naar de kant waar de cursor de case verlaat.
+   Verlaat je de case halverwege, dan gaat hij terug naar de kant waar hij begon.
+   Label: een zwevend vlakje (zelfde classes als het coming soon-label) met titel, puntjeslijn en
+   werkzaamheden volgt de cursor over de case. Daarom staan titel en werkzaamheden onder de cases
+   alleen op apparaten zonder muis (kerja.css). Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
    op volgorde; een vierde case krijgt weer de eerste). data-work-focus="x y" (0-1) bepaalt welk deel
    van de foto in beeld blijft bij het bijsnijden (standaard het midden).
    Telefoon en tablet (geen muis): alleen de halftone. Reduced motion: direct wisselen, zonder vlek.
@@ -2140,9 +2144,9 @@
   var WORK_PITCH = 72;
   var WORK_EDGE = 0.06;   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
   var WORK_CASES = [
-    { tilt: 8, freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
-    { tilt: -10, freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
-    { tilt: 2, freq: 1.2, amp: .55, warp: .45, inMs: 2600, outMs: 1900, seed: 12.4 }
+    { freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
+    { freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
+    { freq: 1.2, amp: .55, warp: .45, inMs: 2600, outMs: 1900, seed: 12.4 }
   ];
   var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2151,7 +2155,7 @@
     'precision highp float;',
     'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec2 res;',
     'uniform vec2 sc;uniform vec2 off;uniform float pitch;',
-    'uniform float tilt;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
+    'uniform float ang;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
     'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
     'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
     'float fbm(vec2 q){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(q);q=q*2.03+17.;a*=.5;}return s;}',
@@ -2165,7 +2169,7 @@
     '  vec2 cq=vec2(cc.x*ar,cc.y);',
     '  vec2 w=vec2(fbm(cq*freq*.7+seed+t*.11),fbm(cq*freq*.7+seed*1.7-t*.09))-.5;',
     '  vec2 uw=cc+w*warp;',
-    '  float a=radians(45.+tilt);vec2 dir=vec2(cos(a),sin(a));',
+    '  vec2 dir=vec2(cos(ang),sin(ang));',
     '  float d0=min(min(0.,dir.x),min(dir.y,dir.x+dir.y));float d1=max(max(0.,dir.x),max(dir.y,dir.x+dir.y));',
     '  float d=(dot(uw,dir)-d0)/(d1-d0);',
     '  float e=d+(fbm(cq*freq+seed*2.3+t*.07)-.5)*2.*amp+(h(ci+seed)-.5)*.05;',
@@ -2198,6 +2202,54 @@
   }
   function ease(x) { return 1 - Math.pow(1 - x, 3); }   // snel beginnen, rustig uitlopen
 
+  /* zwevend label: titel (Section Title) en werkzaamheden van de case, gekloond uit de case zelf */
+  function tipContent(item) {
+    var w = document.createElement('div');
+    w.className = 'work-cases_tip';
+    var st = item.querySelector('.section-title_component');
+    var sv = item.querySelector('.work-cases_services');
+    if (st) {
+      var c = st.cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('h1,h2,h3,h4,h5,h6'), function (h) {
+        var d = document.createElement('div'); d.className = h.className; d.innerHTML = h.innerHTML; h.parentNode.replaceChild(d, h);
+      });
+      Array.prototype.forEach.call(c.querySelectorAll('.dots-line_component'), function (d) { d.classList.add('is-in'); });
+      w.appendChild(c);
+    }
+    if (sv) w.appendChild(sv.cloneNode(true));
+    return w;
+  }
+  var tip = (function () {
+    var OFFSET = 0.75, EDGE = 0.75, FOLLOW = .25;   // rem van de cursor, rem van de schermrand, volgsnelheid
+    var l = document.createElement('div'), body = null, on = false, raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
+    l.className = 'reviews_label';
+    l.setAttribute('aria-hidden', 'true');
+    l.style.width = 'auto'; l.style.height = 'auto';
+    l.innerHTML = '<div class="menu_cell-frame"></div><div class="menu_cell-dot is-tl"></div><div class="menu_cell-dot is-tr"></div>' +
+      '<div class="menu_cell-dot is-bl"></div><div class="menu_cell-dot is-br"></div>';
+    function rem() { return parseFloat(getComputedStyle(root).fontSize) || 16; }
+    function place() {
+      var o = OFFSET * rem(), m = EDGE * rem(), w = l.offsetWidth, h = l.offsetHeight, x = cx + o, y = cy + o;
+      if (x + w > window.innerWidth - m) x = cx - o - w;
+      if (y + h > window.innerHeight - m) y = cy - o - h;
+      l.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+    }
+    function follow() {
+      cx += (tx - cx) * FOLLOW; cy += (ty - cy) * FOLLOW; place();
+      raf = on && (Math.abs(tx - cx) > .3 || Math.abs(ty - cy) > .3) ? requestAnimationFrame(follow) : 0;
+    }
+    window.addEventListener('scroll', function () { if (on) { on = false; l.style.opacity = '0'; } }, { passive: true });
+    return {
+      show: function (b, e) {
+        if (!l.parentNode) document.body.appendChild(l);
+        if (body !== b) { if (body) l.removeChild(body); l.appendChild(b); body = b; }
+        tx = cx = e.clientX; ty = cy = e.clientY; on = true; place(); l.style.opacity = '1';
+      },
+      move: function (e) { tx = e.clientX; ty = e.clientY; if (!on) { on = true; cx = tx; cy = ty; l.style.opacity = '1'; } if (!raf) raf = requestAnimationFrame(follow); },
+      hide: function () { on = false; l.style.opacity = '0'; }
+    };
+  })();
+
   Array.prototype.forEach.call(items, function (item, idx) {
     var box = item.querySelector('.work-cases_visual');
     var img = item.querySelector('.work-cases_image');
@@ -2224,10 +2276,10 @@
     gl.enableVertexAttribArray(al);
     gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'pitch', 'tilt', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'pitch', 'ang', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
     gl.uniform1i(U.tc, 0);
     gl.uniform1f(U.pitch, WORK_PITCH);
-    gl.uniform1f(U.tilt, cfg.tilt); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
+    gl.uniform1f(U.ang, Math.PI / 4); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
     gl.uniform1f(U.warp, cfg.warp); gl.uniform1f(U.seed, cfg.seed);
 
     var iw = 1, ih = 1, ready = false, p = 0, from = 0, to = 0, t0 = 0, dur = 1, raf = 0, start = performance.now();
@@ -2298,8 +2350,18 @@
     if (img.complete && (img.currentSrc || img.src)) load(); else img.addEventListener('load', load, { once: true });
 
     if (hover) {
-      item.addEventListener('mouseenter', function () { go(1); });
-      item.addEventListener('mouseleave', function () { go(0); });
+      /* richting: hoek van het midden van de case naar de cursor, de vlek komt van die kant.
+         Alleen bijsturen als de vlek (bijna) helemaal open of dicht is. */
+      var aim = function (e) {
+        var r = box.getBoundingClientRect();
+        var x = (e.clientX - r.left) / r.width - .5, y = .5 - (e.clientY - r.top) / r.height;
+        if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) return;
+        gl.uniform1f(U.ang, Math.atan2(-y, -x));
+      };
+      var tipBody = tipContent(item);
+      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); tip.show(tipBody, e); });
+      item.addEventListener('mousemove', function (e) { tip.move(e); });
+      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); tip.hide(); });
       item.addEventListener('focusin', function () { go(1); });
       item.addEventListener('focusout', function () { go(0); });
     }
