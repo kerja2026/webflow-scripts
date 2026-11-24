@@ -2167,7 +2167,8 @@
     '  float d0=min(min(0.,dir.x),min(dir.y,dir.x+dir.y));float d1=max(max(0.,dir.x),max(dir.y,dir.x+dir.y));',
     '  float d=(dot(uw,dir)-d0)/(d1-d0);',
     '  float e=d+(fbm(cq*freq+seed*2.3+t*.07)-.5)*2.*amp+(h(ci+seed)-.5)*.05;',
-    '  float th0=mix(-amp-.22,1.+amp+.22,p);',
+    /* de vlek begint direct in de hoek linksonder (geen aanloop buiten beeld) */
+    '  float th0=mix(-amp*.6,1.+amp*.6+.22,p);',
     '  float cp=clamp((th0-e)/.2,0.,1.);',
     /* ring krimpt weg, het punt opent zich als rondje kleur */
     '  float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.18)*1.3,0.,1.);',
@@ -2188,7 +2189,7 @@
     if (/^[0-9a-f]{6}$/i.test(hx)) return [parseInt(hx.slice(0, 2), 16) / 255, parseInt(hx.slice(2, 4), 16) / 255, parseInt(hx.slice(4, 6), 16) / 255];
     return fb;
   }
-  function ease(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+  function ease(x) { return 1 - Math.pow(1 - x, 3); }   // snel beginnen, rustig uitlopen
 
   Array.prototype.forEach.call(items, function (item, idx) {
     var box = item.querySelector('.work-cases_visual');
