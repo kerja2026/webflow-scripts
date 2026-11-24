@@ -2125,7 +2125,8 @@
 /* Work-cases (.work-cases_item met data-work-case, pagina Work): de kleurenfoto (.work-cases_image) wordt
    in rust getoond als halftone van ringen in var(--light) (in light mode dus blauw); tussen de ringen
    is de case doorzichtig, zodat de achtergrond van de pagina erdoor te zien is. Het raster wordt uit de foto zelf
-   gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case.
+   gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case. Lichte delen
+   van de foto blijven leeg, en over de buitenste WORK_EDGE lopen de ringen grillig naar de rand uit.
    Mouse-over: een olievlek trekt van linksonder naar rechtsboven over de case. Waar hij komt krimpen
    de ringen weg en opent elk rasterpunt zich als een rondje kleur, tot de foto heel is.
    Mouse-out: andersom, terug naar linksonder. Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
@@ -2137,6 +2138,7 @@
   var items = document.querySelectorAll('.work-cases_item[data-work-case]');
   if (!items.length) return;
   var WORK_PITCH = 72;
+  var WORK_EDGE = 0.06;   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
   var WORK_CASES = [
     { tilt: 8, freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
     { tilt: -10, freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
@@ -2171,12 +2173,17 @@
     '  float th0=mix(-amp*.6,1.+amp*.6+.22,p);',
     '  float cp=clamp((th0-e)/.2,0.,1.);',
     /* ring krimpt weg, het punt opent zich als rondje kleur */
-    '  float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.18)*1.3,0.,1.);',
+    /* lichte delen van de foto blijven leeg (meer ruimte tussen het onderwerp) */
+    '  float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.32)*1.6,0.,1.);',
+    /* rand: over de buitenste WORK_EDGE van het vlak worden de ringen kleiner en vallen punten weg,
+       met een grillige, korrelige overgang in plaats van een rechte afsnijding */
+    '  float ed=min(min(cc.x,1.-cc.x),min(cc.y,1.-cc.y));float en=ed+(fbm(cq*5.+seed*3.1)-.5)*.1;',
+    '  float fall=smoothstep(0.,' + WORK_EDGE.toFixed(3) + ',en);dk*=mix(.3,1.,fall);float keep=step(h(ci+seed*1.3),fall*1.25);',
     '  float k=1.-smoothstep(0.,.85,cp);',
     '  float rad=(.14+.34*dk)*k;float wid=(.06+.14*dk)*k;float dd=length(f);float aa=1.2/cell;',
     '  float ring=smoothstep(rad-wid*.5-aa,rad-wid*.5,dd)*(1.-smoothstep(rad+wid*.5,rad+wid*.5+aa,dd))*step(.001,k);',
     '  float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
-    '  float dot_=max(ring,fill)*step(.03,dk);',
+    '  float dot_=max(ring,fill)*step(.03,dk)*keep;',
     '  float hole=1.-smoothstep(cp*.78-aa,cp*.78,dd);',
     /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
     '  float al=max(dot_,hole);',
