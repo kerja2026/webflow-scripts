@@ -2183,6 +2183,11 @@
   var WORK_PITCH = 72;
   var WORK_EDGE = 0.06;
   var WORK_RATIO = 463 / 470;   // breedte/hoogte van een case in rust (gelijk aan aspect-ratio in Webflow)
+  /* Spoor: aan de kant waar de olievlek binnenkomt blijft vanaf het begin van de mouse-over een smalle
+     strook bolletjes staan die langzaam golft (breder en smaller, de golf loopt langs de rand).
+     TRACE_W = breedte van de strook (deel van het vlak), TRACE_SIDE = 'origin' (kant waar de olievlek
+     vandaan kwam) of 'all' (alle vier randen), TRACE_IN/OUT = in- en uitfaden in ms. */
+  var TRACE_W = 0.2, TRACE_SIDE = 'origin', TRACE_IN = 200, TRACE_OUT = 350;
   /* WORK_GROW (3.125rem = 50px op 1512) en de duur (0,6 s) staan in kerja.css */   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
   var WORK_CASES = [
     { freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
@@ -2196,7 +2201,8 @@
     'precision highp float;',
     'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec2 res;',
     'uniform vec2 sc;uniform vec2 off;uniform float cellpx;',
-    'uniform float ang;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
+    'uniform float ang;uniform float freq;uniform float amp;uniform float warp;uniform float seed;',
+    'uniform float tr;uniform float side;uniform float tw;varying vec2 v;',
     'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
     'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
     'float fbm(vec2 q){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(q);q=q*2.03+17.;a*=.5;}return s;}',
@@ -2229,7 +2235,17 @@
     '  float ring=smoothstep(rad-wid*.5-aa,rad-wid*.5,dd)*(1.-smoothstep(rad+wid*.5,rad+wid*.5+aa,dd))*step(.001,k);',
     '  float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
     '  float dot_=max(ring,fill)*step(.03,dk)*keep;',
-    '  float hole=1.-smoothstep(cp*.78-aa,cp*.78,dd);',
+    /* spoor aan de rand (tr 0-1): afstand tot alle randen, of tot de kant waar de vlek vandaan kwam.
+       De breedte golft langzaam langs de rand. Ook op lichte delen van de foto een bolletje. */
+    '  float dist=side>.5?(dot(cc,dir)-d0)/(d1-d0):ed;',
+    '  float along=side>.5?dot(cc,vec2(-dir.y,dir.x))*2.:atan(cc.y-.5,cc.x-.5)/6.2832*4.;',
+    '  float wv=.62+.38*sin(along*9.42-t*1.4)+(fbm(vec2(along*3.,t*.35)+seed)-.5)*.5;',
+    '  float tb=tw*wv;',
+    '  float tsv=(1.-smoothstep(tb*.35,tb,dist+(h(ci+seed*2.1)-.5)*tw*.5))*tr;',
+    '  float dkT=max(dk,.45);float radT=(.14+.34*dkT)*tsv;float widT=(.06+.14*dkT)*tsv;',
+    '  float ringT=smoothstep(radT-widT*.5-aa,radT-widT*.5,dd)*(1.-smoothstep(radT+widT*.5,radT+widT*.5+aa,dd))*step(.001,tsv);',
+    '  dot_=max(dot_,ringT*step(h(ci+seed*1.9),.55+fall*.45));',
+    '  float hr=cp*.8*(1.-tsv);float hole=1.-smoothstep(hr,hr+aa,dd);',
     /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
     '  float al=max(dot_,hole);',
     '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.)),al);}'
@@ -2342,12 +2358,13 @@
     gl.enableVertexAttribArray(al);
     gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'cellpx', 'ang', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'cellpx', 'ang', 'freq', 'amp', 'warp', 'seed', 'tr', 'side', 'tw'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
     gl.uniform1i(U.tc, 0);
     gl.uniform1f(U.ang, Math.PI / 4); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
     gl.uniform1f(U.warp, cfg.warp); gl.uniform1f(U.seed, cfg.seed);
 
     var iw = 1, ih = 1, ready = false, p = 0, from = 0, to = 0, t0 = 0, dur = 1, raf = 0, start = performance.now();
+    var trv = 0, trGoal = 0, trRaf = 0, trLast = 0;
     var dpr = Math.min(2, window.devicePixelRatio || 1);
     function size() {
       var r = box.getBoundingClientRect();
@@ -2371,6 +2388,9 @@
       gl.uniform3fv(U.paper, rgb(cs.getPropertyValue('--light'), [.918, .89, .855]));
       gl.uniform1f(U.p, p);
       gl.uniform1f(U.t, (performance.now() - start) / 1000);
+      gl.uniform1f(U.tr, trv);
+      gl.uniform1f(U.side, TRACE_SIDE === 'origin' ? 1 : 0);
+      gl.uniform1f(U.tw, TRACE_W);
       gl.uniform2f(U.res, cv.width, cv.height);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
@@ -2380,8 +2400,22 @@
       draw();
       raf = x < 1 ? requestAnimationFrame(loop) : 0;
     }
+    /* spoor in- en uitfaden; zolang het er is, draait de golf door */
+    function trace(goal) {
+      trGoal = goal;
+      if (reduce) { trv = goal; draw(); return; }
+      if (!trRaf && (trv > 0 || goal > 0)) { trLast = performance.now(); trRaf = requestAnimationFrame(trStep); }
+    }
+    function trStep(now) {
+      var dt = Math.min(50, now - trLast); trLast = now;
+      if (trv < trGoal) trv = Math.min(trGoal, trv + dt / TRACE_IN);
+      else if (trv > trGoal) trv = Math.max(trGoal, trv - dt / TRACE_OUT);
+      if (!raf) draw();
+      trRaf = trv > 0 || trGoal > 0 ? requestAnimationFrame(trStep) : 0;
+    }
     function go(target) {
       if (!ready) return;
+      trace(target === 1 ? 1 : 0);
       from = p; to = target; t0 = performance.now();
       dur = Math.max(1, (target > p ? cfg.inMs : cfg.outMs) * Math.abs(target - p));
       if (reduce) { p = target; draw(); return; }
