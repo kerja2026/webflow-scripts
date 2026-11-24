@@ -372,3 +372,18 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 /* label: titel 1rem, werkzaamheden 0.7rem (alleen in het label; onder de cases blijven de Webflow-maten) */
 .work-cases_tip .heading-style-h6 { font-size: 1rem; }
 .work-cases_tip .work-cases_services .text-size-small { font-size: 0.7rem; line-height: 1.7; }
+/* Work-cases, groeien (alleen met een muis, vanaf 768px): de case onder de cursor (is-active, script:
+   work-cases) wordt 3.125rem (50px op 1512) breder, de andere twee elk 1.5625rem smaller. Zelfde beweging
+   als de Services (0.6s, ease-out). Het raster wordt hier een rij met flex (grid-kolommen animeren niet
+   vloeiend). De hoogte blijft die van een case in rust (463/470); de foto toont dan meer aan de
+   zijkanten (script). */
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .work-cases_list { display: flex; container-type: inline-size; }
+  .work-cases_list > .work-cases_item { flex: 0 0 calc(100% / 3); min-width: 0; transition: flex-basis 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  .work-cases_list:has(> .work-cases_item.is-active) > .work-cases_item { flex-basis: calc(100% / 3 - 1.5625rem); }
+  .work-cases_list:has(> .work-cases_item.is-active) > .work-cases_item.is-active { flex-basis: calc(100% / 3 + 3.125rem); }
+  .work-cases_visual { aspect-ratio: auto; height: calc(100cqw / 3 * 470 / 463); }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) and (prefers-reduced-motion: reduce) {
+  .work-cases_list > .work-cases_item { transition: none; }
+}

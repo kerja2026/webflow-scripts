@@ -2136,13 +2136,19 @@
    alleen op apparaten zonder muis (kerja.css). Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
    op volgorde; een vierde case krijgt weer de eerste). data-work-focus="x y" (0-1) bepaalt welk deel
    van de foto in beeld blijft bij het bijsnijden (standaard het midden).
+   Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt WORK_GROW rem breder, de
+   andere twee elk de helft smaller (is-active, CSS in kerja.css). De hoogte blijft gelijk. De foto
+   schaalt niet mee: de uitsnede wordt breder, zodat je meer van de foto ziet. Het raster hangt aan het
+   midden van de case en de rondjes houden hun maat (gerekend op de breedte in rust, WORK_RATIO).
    Telefoon en tablet (geen muis): alleen de halftone. Reduced motion: direct wisselen, zonder vlek.
    Lukt WebGL of het laden van de foto niet, dan blijft gewoon de foto staan. */
 (function () {
   var items = document.querySelectorAll('.work-cases_item[data-work-case]');
   if (!items.length) return;
   var WORK_PITCH = 72;
-  var WORK_EDGE = 0.06;   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
+  var WORK_EDGE = 0.06;
+  var WORK_RATIO = 463 / 470;   // breedte/hoogte van een case in rust (gelijk aan aspect-ratio in Webflow)
+  /* WORK_GROW (3.125rem = 50px op 1512) en de duur (0,6 s) staan in kerja.css */   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
   var WORK_CASES = [
     { freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
     { freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
@@ -2154,7 +2160,7 @@
   var FS = [
     'precision highp float;',
     'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec2 res;',
-    'uniform vec2 sc;uniform vec2 off;uniform float pitch;',
+    'uniform vec2 sc;uniform vec2 off;uniform float cellpx;',
     'uniform float ang;uniform float freq;uniform float amp;uniform float warp;uniform float seed;varying vec2 v;',
     'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
     'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
@@ -2162,9 +2168,9 @@
     'vec3 img(vec2 u){return texture2D(tc,off+clamp(u,0.,1.)*sc).rgb;}',
     'void main(){vec2 uv=v;float ar=res.x/res.y;',
     /* raster van ringen, 45 graden gedraaid */
-    '  vec2 px=uv*res;float cell=res.x/pitch;float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
+    '  vec2 px=(uv-.5)*res;float cell=cellpx;float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
     '  vec2 r=R*px/cell;vec2 ci=floor(r)+.5;vec2 f=r-ci;',
-    '  vec2 cc=(Ri*ci)*cell/res;vec3 sc0=img(cc);',
+    '  vec2 cc=(Ri*ci)*cell/res+.5;vec3 sc0=img(cc);',
     /* olievlek, gemeten in het midden van elk rasterpunt */
     '  vec2 cq=vec2(cc.x*ar,cc.y);',
     '  vec2 w=vec2(fbm(cq*freq*.7+seed+t*.11),fbm(cq*freq*.7+seed*1.7-t*.09))-.5;',
@@ -2285,9 +2291,8 @@
     gl.enableVertexAttribArray(al);
     gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'pitch', 'ang', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'cellpx', 'ang', 'freq', 'amp', 'warp', 'seed'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
     gl.uniform1i(U.tc, 0);
-    gl.uniform1f(U.pitch, WORK_PITCH);
     gl.uniform1f(U.ang, Math.PI / 4); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
     gl.uniform1f(U.warp, cfg.warp); gl.uniform1f(U.seed, cfg.seed);
 
@@ -2298,10 +2303,16 @@
       cv.width = Math.max(1, Math.round(r.width * dpr));
       cv.height = Math.max(1, Math.round(r.height * dpr));
       gl.viewport(0, 0, cv.width, cv.height);
-      var ia = iw / ih, ba = cv.width / cv.height, sx = 1, sy = 1;
-      if (ia > ba) sx = ba / ia; else sy = ia / ba;
+      /* rust: de foto vult de case (cover) rond data-work-focus. Breder: zelfde schaal en zelfde midden,
+         alleen een bredere uitsnede */
+      var bw = cv.height * WORK_RATIO, bh = cv.height;
+      var s = Math.max(bw / iw, bh / ih);
+      var sxB = bw / (iw * s), sy = bh / (ih * s);
+      var mid = focus[0] * (1 - sxB) + sxB / 2;
+      var sx = Math.min(1, cv.width / (iw * s));
       gl.uniform2f(U.sc, sx, sy);
-      gl.uniform2f(U.off, focus[0] * (1 - sx), (1 - focus[1]) * (1 - sy));
+      gl.uniform2f(U.off, Math.min(Math.max(mid - sx / 2, 0), 1 - sx), (1 - focus[1]) * (1 - sy));
+      gl.uniform1f(U.cellpx, bw / WORK_PITCH);
     }
     function draw() {
       if (!ready) return;
@@ -2367,9 +2378,9 @@
         if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) return;
         gl.uniform1f(U.ang, Math.atan2(-y, -x));
       };
-      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); tip.show(tipContent(item), e); });
+      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); item.classList.add('is-active'); tip.show(tipContent(item), e); });
       item.addEventListener('mousemove', function (e) { tip.move(e); });
-      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); tip.hide(); });
+      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); item.classList.remove('is-active'); tip.hide(); });
       item.addEventListener('focusin', function () { go(1); });
       item.addEventListener('focusout', function () { go(0); });
     }
