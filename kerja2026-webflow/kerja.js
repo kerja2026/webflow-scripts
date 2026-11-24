@@ -734,7 +734,8 @@
   var root = document.documentElement;
   var KEY = 'kerja-pt';
   var THEME_KEY = 'kerja-theme';
-  var SEL = 'h1,h2,h3,h4,h5,h6,p,img,svg,a,.dots-line_component,.menu_component,.text-size-tiny,[data-greeting],.hero_payoff,.theme-switch_component';
+  /* .work-cases_visual: de case als geheel (foto, halftone-canvas en kader), anders blijft de halftone staan */
+  var SEL = 'h1,h2,h3,h4,h5,h6,p,img,svg,a,.dots-line_component,.menu_component,.text-size-tiny,[data-greeting],.hero_payoff,.theme-switch_component,.work-cases_visual';
   var STATEMENT = '[data-word-hover], .statement_heading, .footer_heading, .about_heading';
   var OUT = 1000, IN = 1000; // ms waarin alles in beeld verdwijnt of verschijnt
   var SPIN = 500; // ms dat de switch draait voordat de wissel begint (gelijk aan de transition in Webflow)

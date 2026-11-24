@@ -17,13 +17,20 @@ if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-mot
 }
 /* Pagina-overgang: elke pagina start verborgen (ook bij een eerste bezoek of vernieuwen), zodat eerst
    de gradient kan groeien en daarna de onderdelen worden opgebouwd. Niet bij 'reduced motion'.
-   Vangnet: draait kerja.js niet, dan komt alles na 4 s alsnog in beeld (eerste bezoek: 12 s, preloader). */
+   Vangnet: neemt kerja.js het niet over, dan komt alles alsnog in beeld. Niet op een vaste tijd na het
+   begin: een nieuwe versie op jsDelivr kan bij de eerste keer laden seconden duren, en dan zou het vangnet
+   de overgang wegnemen voordat kerja.js er is. Daarom: 2 s na het laden van de pagina (kerja.js is dan
+   gedraaid, of mislukt), en hoe dan ook na 12 s (eerste bezoek: 15 s, preloader). kerja.js zet
+   window.kerjaPtEnter zodra het de overgang overneemt. */
 if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.documentElement.classList.add('pt-enter', 'pt-oil');
-  /* eerste bezoek in de sessie: de preloader kan langer duren (max 10 s in kerja.js), dus later vangnet */
   var kerjaSeen = false;
   try { kerjaSeen = !!sessionStorage.getItem('kerja-seen'); } catch (e) {}
-  setTimeout(function () { document.documentElement.classList.remove('pt-enter', 'pt-oil'); }, kerjaSeen ? 4000 : 12000);
+  var kerjaPtFallback = function () {
+    if (!window.kerjaPtEnter) document.documentElement.classList.remove('pt-enter', 'pt-oil');
+  };
+  window.addEventListener('load', function () { setTimeout(kerjaPtFallback, 2000); });
+  setTimeout(kerjaPtFallback, kerjaSeen ? 12000 : 15000);
 }
 /* Thema: dark is standaard, ook als de computer op licht staat. Alleen een eigen keuze voor light wordt onthouden. */
 try { if (localStorage.getItem('kerja-theme') === 'light') document.documentElement.classList.add('theme-light'); } catch (e) {}

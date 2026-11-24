@@ -148,7 +148,7 @@ html.dl-anim .dots-line_component.is-in .dots-line_line { flex-grow: 1; }
    zodat er geen flits is voordat de onderdelen een voor een verschijnen.
    [data-greeting] = begroeting op Home, doet ook mee. */
 .pt-hide { visibility: hidden !important; }
-html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, .menu_component, .text-size-tiny, [data-greeting], .hero_payoff, .theme-switch_component) { visibility: hidden !important; }
+html.pt-enter :is(h1, h2, h3, h4, h5, h6, p, img, svg, a, .dots-line_component, .menu_component, .text-size-tiny, [data-greeting], .hero_payoff, .theme-switch_component, .work-cases_visual) { visibility: hidden !important; }
 
 /* Begroeting en afscheid in een ander schrift: Articulat CF heeft geen Japanse, Arabische of Cyrillische tekens.
    Het script zet lang (en dir voor Arabisch) op [data-greeting]. Fonts: Noto Sans via Google Fonts,
