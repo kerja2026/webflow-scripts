@@ -1633,14 +1633,17 @@
     if (reduce || !gl) { oilP = to; oilMode(false); root.classList.remove('pt-oil'); if (done) done(); return; }
     oilMode(true);
     kick();
-    var from = oilP, t0 = performance.now();
+    /* tijd per beeld begrensd (max 50 ms): hapert de browser even (bijvoorbeeld zware WebGL op de
+       pagina), dan loopt de olievlek even trager in plaats van in een keer naar het eind te springen */
+    var from = oilP, el = 0, last = performance.now();
     (function step(now) {
-      var k = Math.min(1, (now - t0) / OIL);
+      el += Math.min(Math.max(now - last, 0), 50); last = now;
+      var k = Math.min(1, el / OIL);
       oilP = from + (to - from) * inOut(k);
       if (k < 1) { requestAnimationFrame(step); return; }
-      if (to >= 1) oilMode(false);
+      if (to >= 1) { oilMode(false); window.dispatchEvent(new Event('kerja-oil-done')); }
       if (done) done();
-    })(t0);
+    })(last);
   }
   /* ondergrond: 'opposite' = de andere kleur dan het huidige thema, 'same' = de eigen achtergrond */
   function under(mode) { var l = light(); return (mode === 'same' ? l : !l) ? 1 : 0; }
@@ -1712,7 +1715,8 @@
     })(t0);
   };
   /* aankomst: meteen alleen de ondergrond, de groei start vanuit de pagina-overgang */
-  if (window.kerjaPtEnter && !reduce && gl) { oilP = 0; oilUnder = under('opposite'); oilMode(true); }
+  /* kerjaOilIn: de olievlek groeit zo op (de Work-cases wachten daarop, zie work-cases) */
+  if (window.kerjaPtEnter && !reduce && gl) { oilP = 0; oilUnder = under('opposite'); oilMode(true); window.kerjaOilIn = true; }
   else root.classList.remove('pt-oil');
 
   var lastDraw = 0, visible = true, running = false, start = performance.now(), lastSeed = 0, lastUpdate = 0, seed = 7;
@@ -2266,6 +2270,22 @@
     };
   })();
 
+  /* Aankomst met olievlek: de cases pas opzetten als de vlek is opgegroeid (event kerja-oil-done uit de
+     hero-gradient). Het opzetten van drie WebGL-beelden kost de browser even rekenwerk en zou de vlek
+     laten haperen. De cases zijn tijdens de groei toch verborgen; de foto blijft tot dan onzichtbaar.
+     Vangnet: na 12 s hoe dan ook (eerste bezoek met preloader kan lang duren). */
+  if (window.kerjaOilIn) {
+    Array.prototype.forEach.call(items, function (item) {
+      var im = item.querySelector('.work-cases_image');
+      if (im) im.style.opacity = '0';
+    });
+    var started = false;
+    var start = function () { if (started) return; started = true; setup(); };
+    window.addEventListener('kerja-oil-done', start, { once: true });
+    setTimeout(start, 12000);
+  } else setup();
+
+  function setup() {
   Array.prototype.forEach.call(items, function (item, idx) {
     var box = item.querySelector('.work-cases_visual');
     var img = item.querySelector('.work-cases_image');
@@ -2278,7 +2298,7 @@
     cv.className = 'work-cases_canvas';
     cv.setAttribute('aria-hidden', 'true');
     var gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false });
-    if (!gl) return;
+    if (!gl) { img.style.opacity = ''; return; }
     function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
     var pr = gl.createProgram();
     gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 a;varying vec2 v;void main(){v=a*.5+.5;gl_Position=vec4(a,0.,1.);}'));
@@ -2353,7 +2373,7 @@
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, tx);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); } catch (err) { return; }
+      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); } catch (err) { img.style.opacity = ''; return; }
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -2367,6 +2387,7 @@
       new MutationObserver(recolor).observe(root, { attributes: true, attributeFilter: ['class'] });
       new MutationObserver(recolor).observe(box, { attributes: true, attributeFilter: ['class'] });
     };
+    src.onerror = function () { img.style.opacity = ''; };
     function load() { src.src = img.currentSrc || img.src; }
     if (img.complete && (img.currentSrc || img.src)) load(); else img.addEventListener('load', load, { once: true });
 
@@ -2386,4 +2407,5 @@
       item.addEventListener('focusout', function () { go(0); });
     }
   });
+  }
 })();
