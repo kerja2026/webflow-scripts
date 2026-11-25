@@ -2209,7 +2209,7 @@
     'vec3 img(vec2 u){return texture2D(tc,off+clamp(u,0.,1.)*sc).rgb;}',
     'void main(){vec2 uv=v;float ar=res.x/res.y;',
     /* raster van ringen, 45 graden gedraaid */
-    '  vec2 px=(uv-.5)*res;float cell=cellpx;float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
+    '  vec2 px=(uv-.5)*res;float cell=max(cellpx,1.);float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
     '  vec2 r=R*px/cell;vec2 ci=floor(r)+.5;vec2 f=r-ci;',
     '  vec2 cc=(Ri*ci)*cell/res+.5;vec3 sc0=img(cc);',
     /* olievlek, gemeten in het midden van elk rasterpunt */
@@ -2245,7 +2245,7 @@
     '  float dkT=max(dk,.45);float radT=(.14+.34*dkT)*tsv;float widT=(.06+.14*dkT)*tsv;',
     '  float ringT=smoothstep(radT-widT*.5-aa,radT-widT*.5,dd)*(1.-smoothstep(radT+widT*.5,radT+widT*.5+aa,dd))*step(.001,tsv);',
     '  dot_=max(dot_,ringT*step(h(ci+seed*1.9),.55+fall*.45));',
-    '  float hr=cp*.8*(1.-tsv);float hole=1.-smoothstep(hr,hr+aa,dd);',
+    '  float hr=cp*.8*(1.-tsv);float hole=(1.-smoothstep(hr,hr+aa,dd))*step(.001,hr);',
     /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
     '  float al=max(dot_,hole);',
     '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.)),al);}'
