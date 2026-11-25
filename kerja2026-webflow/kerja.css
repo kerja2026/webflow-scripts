@@ -338,10 +338,13 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
     linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
     linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat;
 }
+/* hoekbolletjes: ring in var(--light) met een binnenkant in de paginakleur en daaromheen een rand in de
+   paginakleur (0.125rem), zodat lijnen van de cases ernaast netjes voor het bolletje stoppen. Boven alle
+   lijnen (z-index 3), ook die van de volgende case. */
 .work-cases_visual::after {
-  inset: -0.21875rem;
-  --ring: radial-gradient(circle, transparent 0 0.15625rem, var(--light) 0.15625rem 0.21875rem, transparent 0.21875rem);
-  background: var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat;
+  inset: -0.34375rem; z-index: 3;
+  --ring: radial-gradient(circle, var(--bright-blue) 0 0.15625rem, var(--light) 0.15625rem 0.21875rem, var(--bright-blue) 0.21875rem 0.34375rem, transparent 0.34375rem);
+  background: var(--ring) left top / 0.6875rem 0.6875rem no-repeat, var(--ring) left bottom / 0.6875rem 0.6875rem no-repeat;
 }
 .work-cases_item:is(:nth-child(3n), :last-child) .work-cases_visual::before { background:
     linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
@@ -349,8 +352,8 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
     linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
     linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
 .work-cases_item:is(:nth-child(3n), :last-child) .work-cases_visual::after { background:
-    var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
-    var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
+    var(--ring) left top / 0.6875rem 0.6875rem no-repeat, var(--ring) left bottom / 0.6875rem 0.6875rem no-repeat,
+    var(--ring) right top / 0.6875rem 0.6875rem no-repeat, var(--ring) right bottom / 0.6875rem 0.6875rem no-repeat; }
 @media screen and (max-width: 767px) {
   .work-cases_item .work-cases_visual::before { background:
     linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
@@ -358,8 +361,8 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
     linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
     linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
   .work-cases_item .work-cases_visual::after { background:
-    var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
-    var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
+    var(--ring) left top / 0.6875rem 0.6875rem no-repeat, var(--ring) left bottom / 0.6875rem 0.6875rem no-repeat,
+    var(--ring) right top / 0.6875rem 0.6875rem no-repeat, var(--ring) right bottom / 0.6875rem 0.6875rem no-repeat; }
 }
 /* Work-cases, labels: met een muis staan titel en werkzaamheden niet onder de cases maar in labels die
    bij mouse-over uit het cursorbolletje springen, aan lijnen van 1px (script: work-cases, makeLabels).
@@ -391,6 +394,14 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
      met een muis in de labels, dus er hoeft niets tussen) */
   .work-cases_list { display: flex; flex-wrap: wrap; row-gap: 0; container-type: inline-size; }
   .work-cases_list .work-cases_visual { margin-bottom: 0; }
+  /* één lijn tussen de rijen: vanaf de tweede rij geen eigen bovenlijn, de onderlijn van de rij erboven telt */
+  .work-cases_list > .work-cases_item:nth-child(n+4) .work-cases_visual::before { background:
+    linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
+  .work-cases_list > .work-cases_item:nth-child(n+4):is(:nth-child(3n), :last-child) .work-cases_visual::before { background:
+    linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
+    linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
+    linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
   .work-cases_list > .work-cases_item { flex: 0 0 calc(100% / 3); min-width: 0; transition: flex-basis 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
   .work-cases_list > .work-cases_item.is-shrink { flex-basis: calc(100% / 3 - 1.5625rem); }
   .work-cases_list > .work-cases_item.is-active { flex-basis: calc(100% / 3 + 3.125rem); }
