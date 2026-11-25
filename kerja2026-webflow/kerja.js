@@ -2166,9 +2166,9 @@
    over de case. Waar hij komt krimpen de ringen weg en opent elk rasterpunt zich als een rondje kleur,
    tot de foto heel is. Mouse-out: de vlek trekt zich terug naar de kant waar de cursor de case verlaat.
    Verlaat je de case halverwege, dan gaat hij terug naar de kant waar hij begon.
-   Label: een zwevend vlakje (zelfde classes als het coming soon-label) met titel, puntjeslijn en
-   werkzaamheden volgt de cursor over de case. Daarom staan titel en werkzaamheden onder de cases
-   alleen op apparaten zonder muis (kerja.css). Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
+   Labels: projectnaam en werkzaamheden springen bij mouse-over uit het cursorbolletje, aan lijnen
+   (zie makeLabels). Daarom staan titel en werkzaamheden onder de cases alleen op apparaten zonder
+   muis (kerja.css). Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
    op volgorde; een vierde case krijgt weer de eerste). data-work-focus="x y" (0-1) bepaalt welk deel
    van de foto in beeld blijft bij het bijsnijden (standaard het midden).
    Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt WORK_GROW rem breder, de
@@ -2259,62 +2259,128 @@
   }
   function ease(x) { return 1 - Math.pow(1 - x, 3); }   // snel beginnen, rustig uitlopen
 
-  /* zwevend label: titel (Section Title) en werkzaamheden van de case, gekloond uit de case zelf.
-     Bij elke mouse-over opnieuw, en zonder de standen van de pagina-overgang en de gradient
-     (pt-hide, haze-target, is-haze-dia, inline style): anders neemt het label een verborgen titel over. */
-  function clean(el) {
-    [el].concat(Array.prototype.slice.call(el.querySelectorAll('*'))).forEach(function (n) {
-      n.classList.remove('pt-hide', 'haze-target', 'is-haze-dia');
-      n.removeAttribute('style');
+  /* Labels (alleen met een muis): bij mouse-over komen uit het cursorbolletje labels met de projectnaam
+     en de werkzaamheden, met een snelle ease-in-out (LBL_IN ms, kort na elkaar: LBL_STAGGER). Elk label
+     hangt met een lijn van 1px aan het cursorbolletje: van de rand van het bolletje naar de dichtstbijzijnde
+     hoek van het label. De lijnen bewegen mee met de cursor.
+     - Projectnaam: linksboven, LBL_PAD rem van boven en links, en staat daarna stil.
+     - Werkzaamheden: elke mouse-over op andere plekken in de case, met minstens LBL_GAP rem ruimte tussen
+       de labels en LBL_EDGE rem tot de rand; daarna zweven ze licht (LBL_FLOAT rem uitslag).
+     Mouse-out: de labels zijn meteen weg (geen fade), de lijnen schieten in LBL_BACK ms terug naar het
+     cursorbolletje. Tekst komt uit de case zelf (Section Title en .work-cases_services), dus aanpassen in
+     Webflow. Opmaak: .work-cases_label in kerja.css, kaders met de classes van de menuknop. */
+  var LBL_PAD = 2.5, LBL_GAP = 1.25, LBL_EDGE = 1, LBL_FLOAT = 0.3;
+  var LBL_IN = 420, LBL_STAGGER = 45, LBL_BACK = 160;
+  var CUR_R = 0.3125;   // rem, straal van het cursorbolletje (gelijk aan de cursor)
+  var DOT_R = 0.21875;  // rem, de lijn stopt aan de buitenkant van het hoekbolletje
+  var NS = 'http://www.w3.org/2000/svg';
+  function remPx() { return parseFloat(getComputedStyle(root).fontSize) || 16; }
+  function txt(el) { return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
+  function makeLabels(item, box) {
+    var layer = document.createElement('div');
+    layer.className = 'work-cases_labels';
+    layer.setAttribute('aria-hidden', 'true');
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'work-cases_lines');
+    layer.appendChild(svg);
+    box.appendChild(layer);
+    var defs = [{ t: txt(item.querySelector('.section-title_component h1, .section-title_component h2, .section-title_component h3, .section-title_component .heading-style-h6')), name: true }];
+    Array.prototype.forEach.call(item.querySelectorAll('.work-cases_services li'), function (li) { defs.push({ t: txt(li) }); });
+    var L = defs.filter(function (d) { return d.t; }).map(function (d, i) {
+      var el = document.createElement('div');
+      el.className = 'work-cases_label' + (d.name ? ' is-name' : '');
+      el.innerHTML = '<div class="menu_cell-frame"></div><div class="menu_cell-dot is-tl"></div><div class="menu_cell-dot is-tr"></div>' +
+        '<div class="menu_cell-dot is-bl"></div><div class="menu_cell-dot is-br"></div><span class="work-cases_label-text"></span>';
+      el.querySelector('span').textContent = d.t;
+      layer.appendChild(el);
+      var ln = document.createElementNS(NS, 'line');
+      svg.appendChild(ln);
+      return { el: el, ln: ln, name: !!d.name, i: i, x: 0, y: 0, sx: 0, sy: 0, s: 0, fx: 0, fy: 0, w: 0, h: 0, ph: Math.random() * 6.283, sp: .7 + Math.random() * .5, ex: 0, ey: 0 };
     });
-    return el;
-  }
-  function tipContent(item) {
-    var w = document.createElement('div');
-    w.className = 'work-cases_tip';
-    var st = item.querySelector('.section-title_component');
-    var sv = item.querySelector('.work-cases_services');
-    if (st) {
-      var c = st.cloneNode(true);
-      Array.prototype.forEach.call(c.querySelectorAll('h1,h2,h3,h4,h5,h6'), function (h) {
-        var d = document.createElement('div'); d.className = h.className; d.innerHTML = h.innerHTML; h.parentNode.replaceChild(d, h);
-      });
-      Array.prototype.forEach.call(c.querySelectorAll('.dots-line_component'), function (d) { d.classList.add('is-in'); });
-      w.appendChild(clean(c));
-    }
-    if (sv) w.appendChild(clean(sv.cloneNode(true)));
-    return w;
-  }
-  var tip = (function () {
-    var OFFSET = 0.75, EDGE = 0.75, FOLLOW = .25;   // rem van de cursor, rem van de schermrand, volgsnelheid
-    var l = document.createElement('div'), body = null, on = false, raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
-    l.className = 'reviews_label';
-    l.setAttribute('aria-hidden', 'true');
-    l.style.width = 'auto'; l.style.height = 'auto';
-    l.innerHTML = '<div class="menu_cell-frame"></div><div class="menu_cell-dot is-tl"></div><div class="menu_cell-dot is-tr"></div>' +
-      '<div class="menu_cell-dot is-bl"></div><div class="menu_cell-dot is-br"></div>';
-    function rem() { return parseFloat(getComputedStyle(root).fontSize) || 16; }
+    var on = false, back = 0, raf = 0, t0 = 0, last = 0, cx = 0, cy = 0, W = 1, H = 1, rem = 16;
+
+    function measure() { var r = box.getBoundingClientRect(); W = r.width; H = r.height; rem = remPx(); }
+    /* plekken: projectnaam vast; werkzaamheden willekeurig, best-of-N zodat ze goed verspreid liggen */
     function place() {
-      var o = OFFSET * rem(), m = EDGE * rem(), w = l.offsetWidth, h = l.offsetHeight, x = cx + o, y = cy + o;
-      if (x + w > window.innerWidth - m) x = cx - o - w;
-      if (y + h > window.innerHeight - m) y = cy - o - h;
-      l.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+      var pad = LBL_PAD * rem, gap = LBL_GAP * rem, edge = LBL_EDGE * rem, rects = [];
+      L.forEach(function (l) { l.w = l.el.offsetWidth; l.h = l.el.offsetHeight; });
+      L.forEach(function (l) {
+        if (l.name) { l.fx = (pad + l.w / 2) / W; l.fy = (pad + l.h / 2) / H; rects.push([pad, pad, l.w, l.h]); return; }
+        var best = null, bestD = -1;
+        for (var k = 0; k < 40; k++) {
+          var x = edge + Math.random() * Math.max(1, W - l.w - 2 * edge), y = edge + Math.random() * Math.max(1, H - l.h - 2 * edge);
+          var ok = true, d = 1e9;
+          rects.forEach(function (r) {
+            if (x < r[0] + r[2] + gap && x + l.w + gap > r[0] && y < r[1] + r[3] + gap && y + l.h + gap > r[1]) ok = false;
+            var dx = (x + l.w / 2) - (r[0] + r[2] / 2), dy = (y + l.h / 2) - (r[1] + r[3] / 2);
+            d = Math.min(d, dx * dx + dy * dy);
+          });
+          if (ok && d > bestD) { bestD = d; best = [x, y]; }
+        }
+        if (!best) best = [edge + Math.random() * Math.max(1, W - l.w - 2 * edge), edge + Math.random() * Math.max(1, H - l.h - 2 * edge)];
+        rects.push([best[0], best[1], l.w, l.h]);
+        l.fx = (best[0] + l.w / 2) / W; l.fy = (best[1] + l.h / 2) / H;
+      });
     }
-    function follow() {
-      cx += (tx - cx) * FOLLOW; cy += (ty - cy) * FOLLOW; place();
-      raf = on && (Math.abs(tx - cx) > .3 || Math.abs(ty - cy) > .3) ? requestAnimationFrame(follow) : 0;
+    /* lijn van de rand van het cursorbolletje naar de dichtstbijzijnde hoek (buitenkant van het hoekbolletje) */
+    function line(l, ex, ey) {
+      var dx = ex - cx, dy = ey - cy, len = Math.sqrt(dx * dx + dy * dy) || 1, r0 = CUR_R * rem, r1 = l.name || l.s > .5 ? DOT_R * rem : 0;
+      if (len <= r0 + r1) { l.ln.setAttribute('visibility', 'hidden'); return; }
+      l.ln.setAttribute('visibility', 'visible');
+      l.ln.setAttribute('x1', cx + dx / len * r0); l.ln.setAttribute('y1', cy + dy / len * r0);
+      l.ln.setAttribute('x2', ex - dx / len * r1); l.ln.setAttribute('y2', ey - dy / len * r1);
     }
-    window.addEventListener('scroll', function () { if (on) { on = false; l.style.opacity = '0'; } }, { passive: true });
+    /* hoek = midden van het hoekbolletje (0.21875rem binnen de rand van het label, zie .menu_cell-dot) */
+    function corner(l) {
+      var hw = (l.w / 2 - DOT_R * rem) * l.s, hh = (l.h / 2 - DOT_R * rem) * l.s;
+      return [l.x + (cx < l.x ? -hw : hw), l.y + (cy < l.y ? -hh : hh)];
+    }
+    function frame(now) {
+      raf = 0;
+      var dt = Math.min(.05, (now - last) / 1000); last = now;
+      measure();
+      var t = (now - t0) / 1000, busy = false;
+      L.forEach(function (l) {
+        if (on) {
+          var tx = l.fx * W, ty = l.fy * H;
+          if (!l.name && !reduce) { tx += Math.sin(t * l.sp + l.ph) * LBL_FLOAT * rem; ty += Math.cos(t * l.sp * .8 + l.ph * 1.3) * LBL_FLOAT * rem; }
+          var k = reduce ? 1 : Math.min(1, Math.max(0, (now - t0 - l.i * LBL_STAGGER) / LBL_IN));
+          var e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;   // ease-in-out
+          l.x = l.sx + (tx - l.sx) * e; l.y = l.sy + (ty - l.sy) * e; l.s = e;
+          l.el.style.transform = 'translate3d(' + (l.x - l.w / 2) + 'px,' + (l.y - l.h / 2) + 'px,0) scale(' + Math.max(0, l.s) + ')';
+          var c = corner(l); l.ex = c[0]; l.ey = c[1];
+          line(l, l.ex, l.ey);
+          busy = true;
+        } else if (back) {
+          /* terugschieten: het eindpunt van de lijn loopt in LBL_BACK ms naar het cursorbolletje */
+          var k = Math.min(1, (now - back) / LBL_BACK), e = k * k;
+          if (k < 1) { line(l, l.ex + (cx - l.ex) * e, l.ey + (cy - l.ey) * e); busy = true; }
+          else l.ln.setAttribute('visibility', 'hidden');
+        }
+      });
+      if (!on && back && now - back >= LBL_BACK) back = 0;
+      if (busy) raf = requestAnimationFrame(frame);
+    }
+    function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+    function point(e) { var r = box.getBoundingClientRect(); cx = e.clientX - r.left; cy = e.clientY - r.top; }
     return {
-      show: function (b, e) {
-        if (!l.parentNode) document.body.appendChild(l);
-        if (body !== b) { if (body) l.removeChild(body); l.appendChild(b); body = b; }
-        tx = cx = e.clientX; ty = cy = e.clientY; on = true; place(); l.style.opacity = '1';
+      show: function (e) {
+        point(e); measure();
+        on = true; back = 0; t0 = performance.now();
+        L.forEach(function (l) { l.el.classList.add('is-on'); l.x = l.sx = cx; l.y = l.sy = cy; l.s = 0; });
+        place();
+        kick();
       },
-      move: function (e) { tx = e.clientX; ty = e.clientY; if (!on) { on = true; cx = tx; cy = ty; l.style.opacity = '1'; } if (!raf) raf = requestAnimationFrame(follow); },
-      hide: function () { on = false; l.style.opacity = '0'; }
+      move: function (e) { point(e); kick(); },
+      hide: function (e) {
+        if (e) point(e);
+        on = false;
+        L.forEach(function (l) { l.el.classList.remove('is-on'); });
+        if (reduce) { L.forEach(function (l) { l.ln.setAttribute('visibility', 'hidden'); }); return; }
+        back = performance.now(); kick();
+      }
     };
-  })();
+  }
 
   /* Aankomst met olievlek: de cases pas opzetten als de vlek is opgegroeid (event kerja-oil-done uit de
      hero-gradient). Het opzetten van drie WebGL-beelden kost de browser even rekenwerk en zou de vlek
@@ -2464,9 +2530,10 @@
         if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) return;
         gl.uniform1f(U.ang, Math.atan2(-y, -x));
       };
-      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); item.classList.add('is-active'); tip.show(tipContent(item), e); });
-      item.addEventListener('mousemove', function (e) { tip.move(e); });
-      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); item.classList.remove('is-active'); tip.hide(); });
+      var labels = makeLabels(item, box);
+      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); item.classList.add('is-active'); labels.show(e); });
+      item.addEventListener('mousemove', function (e) { labels.move(e); });
+      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); item.classList.remove('is-active'); labels.hide(e); });
       item.addEventListener('focusin', function () { go(1); });
       item.addEventListener('focusout', function () { go(0); });
     }

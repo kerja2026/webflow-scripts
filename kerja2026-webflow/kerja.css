@@ -360,18 +360,23 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
     var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
     var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
 }
-/* Work-cases, label: met een muis staan titel en werkzaamheden niet onder de cases maar in een zwevend
-   vlakje bij de cursor (.reviews_label met .work-cases_tip, script: work-cases). Zonder muis
-   (telefoon, tablet) blijven ze gewoon onder de cases staan. */
+/* Work-cases, labels: met een muis staan titel en werkzaamheden niet onder de cases maar in labels die
+   bij mouse-over uit het cursorbolletje springen, aan lijnen van 1px (script: work-cases, makeLabels).
+   Zonder muis (telefoon, tablet) blijven ze gewoon onder de cases staan.
+   Label: kader met de classes van de menuknop (.menu_cell-frame, .menu_cell-dot), effen achtergrond in de
+   paginakleur. Projectnaam 1rem, werkzaamheden 0.7rem. */
 @media (hover: hover) and (pointer: fine) {
   .work-cases_item > .section-title_component, .work-cases_item > .work-cases_services { display: none; }
 }
-.work-cases_tip { position: relative; z-index: 3; display: flex; flex-direction: column; row-gap: 0.75rem; min-width: 13rem; padding: 0.875rem 1.125rem 1rem; }
-.work-cases_tip .section-title_component { margin: 0; }
-.work-cases_tip .work-cases_services { margin: 0; }
-/* label: titel 1rem, werkzaamheden 0.7rem (alleen in het label; onder de cases blijven de Webflow-maten) */
-.work-cases_tip .heading-style-h6 { font-size: 1rem; }
-.work-cases_tip .work-cases_services .text-size-small { font-size: 0.7rem; line-height: 1.7; }
+.work-cases_labels { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.work-cases_lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.work-cases_lines line { stroke: var(--light); stroke-width: 1; }
+.work-cases_label { position: absolute; left: 0; top: 0; display: flex; align-items: center; min-width: 6.5rem; height: 2rem;
+  padding: 0 1.5rem 0 0.5625rem; background: var(--bright-blue); color: var(--light); font-size: 0.7rem; line-height: 1;
+  white-space: nowrap; visibility: hidden; transform-origin: 50% 50%; will-change: transform; }
+.work-cases_label.is-name { font-size: 1rem; }
+.work-cases_label.is-on { visibility: visible; }
+.work-cases_label-text { position: relative; z-index: 1; }
 /* Work-cases, groeien (alleen met een muis, vanaf 768px): de case onder de cursor (is-active, script:
    work-cases) wordt 3.125rem (50px op 1512) breder, de andere twee elk 1.5625rem smaller. Zelfde beweging
    als de Services (0.6s, ease-out). Het raster wordt hier een rij met flex (grid-kolommen animeren niet
