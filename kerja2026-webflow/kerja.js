@@ -2248,7 +2248,9 @@
     '  float hr=cp*.8*(1.-tsv);float hole=(1.-smoothstep(hr,hr+aa,dd))*step(.001,hr);',
     /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
     '  float al=max(dot_,hole);',
-    '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.)),al);}'
+    /* premultiplied: kleur maal dekking. Safari op iPhone gaat niet goed om met premultipliedAlpha:false
+       (de foto lekte dan door de doorzichtige delen heen als een roze waas) */
+    '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.))*al,al);}'
   ].join('\n');
   function rgb(str, fb) {
     var m = (str || '').match(/[\d.]+/g);
@@ -2409,7 +2411,7 @@
     var cv = document.createElement('canvas');
     cv.className = 'work-cases_canvas';
     cv.setAttribute('aria-hidden', 'true');
-    var gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+    var gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: true });
     if (!gl) { img.style.opacity = ''; return; }
     function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
     var pr = gl.createProgram();
