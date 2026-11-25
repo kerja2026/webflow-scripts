@@ -364,7 +364,7 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
    bij mouse-over uit het cursorbolletje springen, aan lijnen van 1px (script: work-cases, makeLabels).
    Zonder muis (telefoon, tablet) blijven ze gewoon onder de cases staan.
    Label: kader met de classes van de menuknop (.menu_cell-frame, .menu_cell-dot), effen achtergrond in de
-   paginakleur. Projectnaam 1rem, werkzaamheden 0.7rem. */
+   paginakleur binnen de lijnen van het kader. Projectnaam 1rem, werkzaamheden 0.7rem. */
 @media (hover: hover) and (pointer: fine) {
   .work-cases_item > .section-title_component, .work-cases_item > .work-cases_services { display: none; }
 }
@@ -372,8 +372,10 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 .work-cases_lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .work-cases_lines line { stroke: var(--light); stroke-width: 1; }
 .work-cases_label { position: absolute; left: 0; top: 0; display: flex; align-items: center; min-width: 6.5rem; height: 2rem;
-  padding: 0 1.5rem 0 0.5625rem; background: var(--bright-blue); color: var(--light); font-size: 0.7rem; line-height: 1;
+  padding: 0 1.5rem 0 0.5625rem; color: var(--light); font-size: 0.7rem; line-height: 1;
   white-space: nowrap; visibility: hidden; transform-origin: 50% 50%; will-change: transform; }
+/* de achtergrond loopt tot de lijnen van het kader (.menu_cell-frame staat 0.1875rem binnen de rand), niet eroverheen */
+.work-cases_label .menu_cell-frame { background-color: var(--bright-blue); }
 .work-cases_label.is-name { font-size: 1rem; }
 .work-cases_label.is-on { visibility: visible; }
 .work-cases_label-text { position: relative; z-index: 1; }

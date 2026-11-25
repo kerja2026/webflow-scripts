@@ -2157,100 +2157,85 @@
   new MutationObserver(kick).observe(root, { attributes: true, attributeFilter: ['class'] });
 })();
 
-/* Work-cases (.work-cases_item met data-work-case, pagina Work): de kleurenfoto (.work-cases_image) wordt
-   in rust getoond als halftone van ringen in var(--light) (in light mode dus blauw); tussen de ringen
-   is de case doorzichtig, zodat de achtergrond van de pagina erdoor te zien is. Het raster wordt uit de foto zelf
+/* Work-cases (.work-cases_item met data-work-case, pagina Work): de foto (.work-cases_image) wordt getoond
+   als halftone van ringen in var(--light) (in light mode dus blauw); tussen de ringen is de case
+   doorzichtig, zodat de achtergrond van de pagina erdoor te zien is. Het raster wordt uit de foto zelf
    gemaakt en is voor elke case gelijk: WORK_PITCH ringen over de breedte van een case. Lichte delen
    van de foto blijven leeg, en over de buitenste WORK_EDGE lopen de ringen grillig naar de rand uit.
-   Mouse-over (richting, 360 graden): de olievlek begint aan de kant waar de cursor binnenkomt en trekt
-   over de case. Waar hij komt krimpen de ringen weg en opent elk rasterpunt zich als een rondje kleur,
-   tot de foto heel is. Mouse-out: de vlek trekt zich terug naar de kant waar de cursor de case verlaat.
-   Verlaat je de case halverwege, dan gaat hij terug naar de kant waar hij begon.
+   Mouse-over: de bolletjes gedragen zich als een negatieve magneet. Ze gaan de cursor uit de weg, zodat
+   er rond de cursor een lege cirkel van PUSH_CLEAR rem ontstaat; de bolletjes die daar stonden schuiven
+   gelijkmatig naar buiten. Het effect reikt tot PUSH_RADIUS rem en loopt naar buiten
+   toe zacht af. De plek volgt de cursor met wat naloop (PUSH_FOLLOW); bij binnenkomen en weggaan
+   wijken de bolletjes in PUSH_FADE ms uit en gaan ze terug. Er is geen kleurenfoto meer.
    Labels: projectnaam en werkzaamheden springen bij mouse-over uit het cursorbolletje, aan lijnen
    (zie makeLabels). Daarom staan titel en werkzaamheden onder de cases alleen op apparaten zonder
-   muis (kerja.css). Elke case heeft een eigen vlekvorm en tempo (WORK_CASES,
-   op volgorde; een vierde case krijgt weer de eerste). data-work-focus="x y" (0-1) bepaalt welk deel
-   van de foto in beeld blijft bij het bijsnijden (standaard het midden).
-   Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt WORK_GROW rem breder, de
-   andere twee elk de helft smaller (is-active, CSS in kerja.css). De hoogte blijft gelijk. De foto
-   schaalt niet mee: de uitsnede wordt breder, zodat je meer van de foto ziet. Het raster hangt aan het
-   midden van de case en de rondjes houden hun maat (gerekend op de breedte in rust, WORK_RATIO).
-   Telefoon en tablet (geen muis): alleen de halftone. Reduced motion: direct wisselen, zonder vlek.
+   muis (kerja.css). data-work-focus="x y" (0-1) bepaalt welk deel van de foto in beeld blijft bij het
+   bijsnijden (standaard het midden).
+   Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt 3.125rem breder, de andere
+   twee elk de helft smaller (is-active, CSS in kerja.css). De hoogte blijft gelijk. De foto schaalt niet
+   mee: de uitsnede wordt breder. Het raster hangt aan het midden van de case en de rondjes houden hun
+   maat (gerekend op de breedte in rust, WORK_RATIO).
+   Telefoon en tablet (geen muis) en reduced motion: alleen de halftone, zonder golven.
    Lukt WebGL of het laden van de foto niet, dan blijft gewoon de foto staan. */
 (function () {
   var items = document.querySelectorAll('.work-cases_item[data-work-case]');
   if (!items.length) return;
   var WORK_PITCH = 72;
-  var WORK_EDGE = 0.06;
+  var WORK_EDGE = 0.06;   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
   var WORK_RATIO = 463 / 470;   // breedte/hoogte van een case in rust (gelijk aan aspect-ratio in Webflow)
-  /* Spoor: aan de kant waar de olievlek binnenkomt blijft vanaf het begin van de mouse-over een smalle
-     strook bolletjes staan die langzaam golft (breder en smaller, de golf loopt langs de rand).
-     TRACE_W = breedte van de strook (deel van het vlak), TRACE_SIDE = 'origin' (kant waar de olievlek
-     vandaan kwam) of 'all' (alle vier randen), TRACE_IN/OUT = in- en uitfaden in ms. */
-  var TRACE_W = 0.2, TRACE_SIDE = 'origin', TRACE_IN = 200, TRACE_OUT = 350;
-  /* WORK_GROW (3.125rem = 50px op 1512) en de duur (0,6 s) staan in kerja.css */   // deel van het vlak (per kant) waarover de ringen naar de rand uitlopen
-  var WORK_CASES = [
-    { freq: 1.7, amp: .42, warp: .35, inMs: 2300, outMs: 1700, seed: 3.1 },
-    { freq: 2.6, amp: .3, warp: .22, inMs: 2000, outMs: 1500, seed: 7.7 },
-    { freq: 1.2, amp: .55, warp: .45, inMs: 2600, outMs: 1900, seed: 12.4 }
-  ];
+  var WORK_SEEDS = [3.1, 7.7, 12.4];   // eigen korrel van de rand per case (op volgorde)
+  /* Uitwijken rond de cursor (maten in rem, zodat ze meeschalen): */
+  var PUSH_CLEAR = 0.75;    // straal van de lege cirkel rond de cursor (12px op 1512)
+  var PUSH_RADIUS = 7;      // tot hoe ver rond de cursor de bolletjes uitwijken (minstens 1,5 x PUSH_CLEAR)
+  var PUSH_FOLLOW = 0.22;   // naloop per beeld (lager = zachter en trager volgen)
+  var PUSH_FADE = 300;      // ms om bij binnenkomen en weggaan uit te wijken en terug te gaan
   var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var root = document.documentElement;
   var FS = [
     'precision highp float;',
-    'uniform sampler2D tc;uniform float p;uniform float t;uniform vec3 paper;uniform vec2 res;',
-    'uniform vec2 sc;uniform vec2 off;uniform float cellpx;',
-    'uniform float ang;uniform float freq;uniform float amp;uniform float warp;uniform float seed;',
-    'uniform float tr;uniform float side;uniform float tw;varying vec2 v;',
+    'uniform sampler2D tc;uniform vec3 paper;uniform vec2 res;',
+    'uniform vec2 sc;uniform vec2 off;uniform float cellpx;uniform float seed;',
+    /* cursor: xy = plek (px, vanuit het midden van het vlak, y omhoog), z = bereik (px), w = lege cirkel
+       (px, al maal de sterkte) */
+    'uniform vec4 cur;varying vec2 v;',
     'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
     'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
     'float fbm(vec2 q){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(q);q=q*2.03+17.;a*=.5;}return s;}',
     'vec3 img(vec2 u){return texture2D(tc,off+clamp(u,0.,1.)*sc).rgb;}',
-    'void main(){vec2 uv=v;float ar=res.x/res.y;',
-    /* raster van ringen, 45 graden gedraaid */
+    /* negatieve magneet: een bolletje op afstand r van de cursor komt op sqrt(r*r + w*w). Zo ontstaat een lege
+       cirkel met straal w en schuiven de bolletjes gelijkmatig naar buiten (de dichtheid blijft gelijk, geen
+       ster- of klontvorm). Richting z (het bereik) loopt het effect uit tot nul.
+       src() zoekt voor een pixel terug welke plek daar terechtkomt, zodat we de goede cellen tekenen. */
+    'float push(float r){return (sqrt(r*r+cur.w*cur.w)-r)*(1.-smoothstep(cur.z*.4,cur.z,r));}',
+    'vec2 moved(vec2 c){vec2 dv=c-cur.xy;float r=length(dv);return cur.xy+dv/max(r,.001)*(r+push(r));}',
+    'vec2 src(vec2 q){vec2 dv=q-cur.xy;float rp=length(dv);float r=rp;',
+    '  for(int i=0;i<8;i++){r=max(0.,rp-push(r));}',
+    '  return cur.xy+dv/max(rp,.001)*r;}',
+    'void main(){vec2 uv=v;',
+    /* raster van ringen, 45 graden gedraaid; bij uitwijken ook de buurpunten, want een verschoven bolletje
+       kan over de rand van zijn eigen cel heen komen */
     '  vec2 px=(uv-.5)*res;float cell=max(cellpx,1.);float ca=.7071;mat2 R=mat2(ca,-ca,ca,ca);mat2 Ri=mat2(ca,ca,-ca,ca);',
-    '  vec2 r=R*px/cell;vec2 ci=floor(r)+.5;vec2 f=r-ci;',
-    '  vec2 cc=(Ri*ci)*cell/res+.5;vec3 sc0=img(cc);',
-    /* olievlek, gemeten in het midden van elk rasterpunt */
-    '  vec2 cq=vec2(cc.x*ar,cc.y);',
-    '  vec2 w=vec2(fbm(cq*freq*.7+seed+t*.11),fbm(cq*freq*.7+seed*1.7-t*.09))-.5;',
-    '  vec2 uw=cc+w*warp;',
-    '  vec2 dir=vec2(cos(ang),sin(ang));',
-    '  float d0=min(min(0.,dir.x),min(dir.y,dir.x+dir.y));float d1=max(max(0.,dir.x),max(dir.y,dir.x+dir.y));',
-    '  float d=(dot(uw,dir)-d0)/(d1-d0);',
-    '  float e=d+(fbm(cq*freq+seed*2.3+t*.07)-.5)*2.*amp+(h(ci+seed)-.5)*.05;',
-    /* de vlek begint direct in de hoek linksonder (geen aanloop buiten beeld) */
-    '  float th0=mix(-amp*.6,1.+amp*.6+.22,p);',
-    '  float cp=clamp((th0-e)/.2,0.,1.);',
-    /* ring krimpt weg, het punt opent zich als rondje kleur */
+    '  bool on=cur.w>.01;vec2 c0=floor(R*(on?src(px):px)/cell)+.5;float aa=1.2/cell;float cov=0.;',
+    '  for(int j=-1;j<=1;j++){for(int i=-1;i<=1;i++){',
+    '    if(!on&&(i!=0||j!=0))continue;',
+    '    vec2 ci=c0+vec2(float(i),float(j));vec2 cpx=Ri*ci*cell;',
+    '    vec2 f=R*(px-(on?moved(cpx):cpx))/cell;',
+    '    vec2 cc=cpx/res+.5;vec3 sc0=img(cc);',
     /* lichte delen van de foto blijven leeg (meer ruimte tussen het onderwerp) */
-    '  float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.32)*1.6,0.,1.);',
-    /* rand: over de buitenste WORK_EDGE van het vlak worden de ringen kleiner en vallen punten weg,
-       met een grillige, korrelige overgang in plaats van een rechte afsnijding */
-    '  float ed=min(min(cc.x,1.-cc.x),min(cc.y,1.-cc.y));float en=ed+(fbm(cq*5.+seed*3.1)-.5)*.1;',
-    '  float fall=smoothstep(0.,' + WORK_EDGE.toFixed(3) + ',en);dk*=mix(.3,1.,fall);float keep=step(h(ci+seed*1.3),fall*1.25);',
-    '  float k=1.-smoothstep(0.,.85,cp);',
-    '  float rad=(.14+.34*dk)*k;float wid=(.06+.14*dk)*k;float dd=length(f);float aa=1.2/cell;',
-    '  float ring=smoothstep(rad-wid*.5-aa,rad-wid*.5,dd)*(1.-smoothstep(rad+wid*.5,rad+wid*.5+aa,dd))*step(.001,k);',
-    '  float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
-    '  float dot_=max(ring,fill)*step(.03,dk)*keep;',
-    /* spoor aan de rand (tr 0-1): afstand tot alle randen, of tot de kant waar de vlek vandaan kwam.
-       De breedte golft langzaam langs de rand. Ook op lichte delen van de foto een bolletje. */
-    '  float dist=side>.5?(dot(cc,dir)-d0)/(d1-d0):ed;',
-    '  float along=side>.5?dot(cc,vec2(-dir.y,dir.x))*2.:atan(cc.y-.5,cc.x-.5)/6.2832*4.;',
-    '  float wv=.62+.38*sin(along*9.42-t*1.4)+(fbm(vec2(along*3.,t*.35)+seed)-.5)*.5;',
-    '  float tb=tw*wv;',
-    '  float tsv=(1.-smoothstep(tb*.35,tb,dist+(h(ci+seed*2.1)-.5)*tw*.5))*tr;',
-    '  float dkT=max(dk,.45);float radT=(.14+.34*dkT)*tsv;float widT=(.06+.14*dkT)*tsv;',
-    '  float ringT=smoothstep(radT-widT*.5-aa,radT-widT*.5,dd)*(1.-smoothstep(radT+widT*.5,radT+widT*.5+aa,dd))*step(.001,tsv);',
-    '  dot_=max(dot_,ringT*step(h(ci+seed*1.9),.55+fall*.45));',
-    '  float hr=cp*.8*(1.-tsv);float hole=(1.-smoothstep(hr,hr+aa,dd))*step(.001,hr);',
-    /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien */
-    '  float al=max(dot_,hole);',
-    /* premultiplied: kleur maal dekking. Safari op iPhone gaat niet goed om met premultipliedAlpha:false
-       (de foto lekte dan door de doorzichtige delen heen als een roze waas) */
-    '  gl_FragColor=vec4(mix(img(uv),paper,clamp(dot_/max(al,.001),0.,1.))*al,al);}'
+    '    float lum=dot(sc0,vec3(.299,.587,.114));float dk=clamp((1.-lum-.32)*1.6,0.,1.);',
+    /* rand: over de buitenste WORK_EDGE worden de ringen kleiner en vallen punten weg, grillig en korrelig */
+    '    vec2 cq=vec2(cc.x*res.x/res.y,cc.y);',
+    '    float ed=min(min(cc.x,1.-cc.x),min(cc.y,1.-cc.y));float en=ed+(fbm(cq*5.+seed*3.1)-.5)*.1;',
+    '    float fall=smoothstep(0.,' + WORK_EDGE.toFixed(3) + ',en);dk*=mix(.3,1.,fall);float keep=step(h(ci+seed*1.3),fall*1.25);',
+    '    float rad=.14+.34*dk;float wid=.06+.14*dk;float dd=length(f);',
+    '    float ring=smoothstep(rad-wid*.5-aa,rad-wid*.5,dd)*(1.-smoothstep(rad+wid*.5,rad+wid*.5+aa,dd));',
+    '    float fill=(1.-smoothstep(rad-aa,rad,dd))*smoothstep(.82,1.,dk);',
+    '    cov=max(cov,max(ring,fill)*step(.03,dk)*keep);',
+    '  }}',
+    /* alles tussen de ringen is doorzichtig: daar is de achtergrond van de pagina te zien.
+       Premultiplied (kleur maal dekking): Safari op iPhone gaat niet goed om met premultipliedAlpha:false */
+    '  gl_FragColor=vec4(paper*cov,cov);}'
   ].join('\n');
   function rgb(str, fb) {
     var m = (str || '').match(/[\d.]+/g);
@@ -2259,7 +2244,6 @@
     if (/^[0-9a-f]{6}$/i.test(hx)) return [parseInt(hx.slice(0, 2), 16) / 255, parseInt(hx.slice(2, 4), 16) / 255, parseInt(hx.slice(4, 6), 16) / 255];
     return fb;
   }
-  function ease(x) { return 1 - Math.pow(1 - x, 3); }   // snel beginnen, rustig uitlopen
 
   /* Labels (alleen met een muis): bij mouse-over komen uit het cursorbolletje labels met de projectnaam
      en de werkzaamheden, met een snelle ease-in-out (LBL_IN ms, kort na elkaar: LBL_STAGGER). Elk label
@@ -2404,7 +2388,7 @@
     var box = item.querySelector('.work-cases_visual');
     var img = item.querySelector('.work-cases_image');
     if (!box || !img) return;
-    var cfg = WORK_CASES[idx % WORK_CASES.length];
+    var seed = WORK_SEEDS[idx % WORK_SEEDS.length];
     var focus = (item.getAttribute('data-work-focus') || '.5 .5').split(/\s+/).map(parseFloat);
     if (!(focus[0] >= 0)) focus[0] = .5;
     if (!(focus[1] >= 0)) focus[1] = .5;
@@ -2426,13 +2410,12 @@
     gl.enableVertexAttribArray(al);
     gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['tc', 'p', 't', 'paper', 'res', 'sc', 'off', 'cellpx', 'ang', 'freq', 'amp', 'warp', 'seed', 'tr', 'side', 'tw'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+    ['tc', 'paper', 'res', 'sc', 'off', 'cellpx', 'seed', 'cur'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
     gl.uniform1i(U.tc, 0);
-    gl.uniform1f(U.ang, Math.PI / 4); gl.uniform1f(U.freq, cfg.freq); gl.uniform1f(U.amp, cfg.amp);
-    gl.uniform1f(U.warp, cfg.warp); gl.uniform1f(U.seed, cfg.seed);
+    gl.uniform1f(U.seed, seed);
 
-    var iw = 1, ih = 1, ready = false, p = 0, from = 0, to = 0, t0 = 0, dur = 1, raf = 0, start = performance.now();
-    var trv = 0, trGoal = 0, trRaf = 0, trLast = 0;
+    var iw = 1, ih = 1, ready = false, raf = 0;
+    var tx = 0, ty = 0, cx = 0, cy = 0, str = 0, goal = 0, last = 0;   // cursor (CSS-px in het vlak), sterkte
     var dpr = Math.min(2, window.devicePixelRatio || 1);
     function size() {
       var r = box.getBoundingClientRect();
@@ -2454,40 +2437,26 @@
       if (!ready) return;
       var cs = getComputedStyle(box);
       gl.uniform3fv(U.paper, rgb(cs.getPropertyValue('--light'), [.918, .89, .855]));
-      gl.uniform1f(U.p, p);
-      gl.uniform1f(U.t, (performance.now() - start) / 1000);
-      gl.uniform1f(U.tr, trv);
-      gl.uniform1f(U.side, TRACE_SIDE === 'origin' ? 1 : 0);
-      gl.uniform1f(U.tw, TRACE_W);
       gl.uniform2f(U.res, cv.width, cv.height);
+      /* cursor naar de shader: in canvas-px, vanuit het midden, y omhoog */
+      var k = dpr * remPx();
+      gl.uniform4f(U.cur, (cx - cv.width / dpr / 2) * dpr, (cv.height / dpr / 2 - cy) * dpr, PUSH_RADIUS * k, PUSH_CLEAR * k * str);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
+    /* volgen en in/uitfaden; stopt zodra alles stilstaat */
     function loop(now) {
-      var x = Math.min(1, (now - t0) / dur);
-      p = from + (to - from) * ease(x);
+      var dt = Math.min(50, now - last); last = now;
+      cx += (tx - cx) * PUSH_FOLLOW; cy += (ty - cy) * PUSH_FOLLOW;
+      str = goal > str ? Math.min(goal, str + dt / PUSH_FADE) : Math.max(goal, str - dt / PUSH_FADE);
       draw();
-      raf = x < 1 ? requestAnimationFrame(loop) : 0;
+      var busy = str !== goal || Math.abs(tx - cx) > .2 || Math.abs(ty - cy) > .2;
+      raf = busy ? requestAnimationFrame(loop) : 0;
     }
-    /* spoor in- en uitfaden; zolang het er is, draait de golf door */
-    function trace(goal) {
-      trGoal = goal;
-      if (reduce) { trv = goal; draw(); return; }
-      if (!trRaf && (trv > 0 || goal > 0)) { trLast = performance.now(); trRaf = requestAnimationFrame(trStep); }
-    }
-    function trStep(now) {
-      var dt = Math.min(50, now - trLast); trLast = now;
-      if (trv < trGoal) trv = Math.min(trGoal, trv + dt / TRACE_IN);
-      else if (trv > trGoal) trv = Math.max(trGoal, trv - dt / TRACE_OUT);
-      if (!raf) draw();
-      trRaf = trv > 0 || trGoal > 0 ? requestAnimationFrame(trStep) : 0;
-    }
-    function go(target) {
-      if (!ready) return;
-      trace(target === 1 ? 1 : 0);
-      from = p; to = target; t0 = performance.now();
-      dur = Math.max(1, (target > p ? cfg.inMs : cfg.outMs) * Math.abs(target - p));
-      if (reduce) { p = target; draw(); return; }
-      if (!raf) raf = requestAnimationFrame(loop);
+    function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+    function aim(e, jump) {
+      var r = box.getBoundingClientRect();
+      tx = e.clientX - r.left; ty = e.clientY - r.top;
+      if (jump) { cx = tx; cy = ty; }
     }
     /* kleur volgen bij light/dark mode en diapositief (de variabelen hebben een overgang van 0,6 s) */
     var follow = 0;
@@ -2524,20 +2493,11 @@
     if (img.complete && (img.currentSrc || img.src)) load(); else img.addEventListener('load', load, { once: true });
 
     if (hover) {
-      /* richting: hoek van het midden van de case naar de cursor, de vlek komt van die kant.
-         Alleen bijsturen als de vlek (bijna) helemaal open of dicht is. */
-      var aim = function (e) {
-        var r = box.getBoundingClientRect();
-        var x = (e.clientX - r.left) / r.width - .5, y = .5 - (e.clientY - r.top) / r.height;
-        if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) return;
-        gl.uniform1f(U.ang, Math.atan2(-y, -x));
-      };
       var labels = makeLabels(item, box);
-      item.addEventListener('mouseenter', function (e) { if (p < .05) aim(e); go(1); item.classList.add('is-active'); labels.show(e); });
-      item.addEventListener('mousemove', function (e) { labels.move(e); });
-      item.addEventListener('mouseleave', function (e) { if (p > .95) aim(e); go(0); item.classList.remove('is-active'); labels.hide(e); });
-      item.addEventListener('focusin', function () { go(1); });
-      item.addEventListener('focusout', function () { go(0); });
+      var push = !reduce;
+      item.addEventListener('mouseenter', function (e) { item.classList.add('is-active'); labels.show(e); if (push && ready) { aim(e, true); goal = 1; kick(); } });
+      item.addEventListener('mousemove', function (e) { labels.move(e); if (push && ready) { aim(e); kick(); } });
+      item.addEventListener('mouseleave', function (e) { item.classList.remove('is-active'); labels.hide(e); if (push && ready) { aim(e); goal = 0; kick(); } });
     }
   });
   }
