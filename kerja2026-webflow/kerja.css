@@ -410,3 +410,9 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) and (prefers-reduced-motion: reduce) {
   .work-cases_list > .work-cases_item { transition: none; }
 }
+
+/* Doorlopende navigatie (kerja.js): de volgende pagina in een venster over het hele scherm,
+   zodat de muziek in het bovenste venster doorspeelt. Zodra hij geladen is, verdwijnt de rest. */
+.kerja-shell_frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; margin: 0; padding: 0; display: block; z-index: 2147483647; background: transparent; }
+html.kerja-shell, html.kerja-shell body { overflow: hidden !important; height: 100%; }
+html.kerja-shell body > :not(.kerja-shell_frame) { display: none !important; }

@@ -1,6 +1,6 @@
 /* Kerja 2026 — kerja.js
    Geladen: sitebreed, footer, na lenis.min.js
-   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk, muziek, footer-gradient, work-cases.
+   Lenis, ankers, menu en scrollstatus, FAQ, split-hover, dots-lines, zigzag, woord-hover, logo, pagina-overgang en light/dark mode, cursor, coming soon, hero-gradient, scrollbalk, muziek, doorlopende navigatie, footer-gradient, work-cases.
    Bron: github.com/kerja2026/webflow-scripts, map kerja2026-webflow. Wijzig hier, niet in Webflow. */
 
 /* Lenis smooth scroll */
@@ -912,7 +912,7 @@
   /* vertrek: alles in beeld verdwijnt willekeurig, het afscheid als laatste, dan de volgende pagina */
   function leave(url) {
     if (busy) return;
-    if (reduce) { window.location.href = url; return; }
+    if (reduce) { nav(url); return; }
     busy = true;
     var list = items().filter(inView);
     var greetShown = greet && inView(greet);
@@ -924,11 +924,14 @@
       setTimeout(function () {
         if (greet) greet.classList.add('pt-hide');
         store(KEY, '1');
-        if (window.kerjaMusic) window.kerjaMusic.leave(); // muziek fadet uit, tegelijk met de olievlek
-        sink(function () { window.location.href = url; });
+        /* muziek: speelt hij door (doorlopende navigatie), dan niet uitfaden; anders uitfaden met de olievlek */
+        if (window.kerjaMusic && !(window.kerjaNav && window.kerjaNav.keeps())) window.kerjaMusic.leave();
+        sink(function () { nav(url); });
       }, greetShown ? GREET_HOLD : 0);
     });
   }
+  /* naar de volgende pagina: via de doorlopende navigatie (script na de muziek), anders gewoon laden */
+  function nav(url) { if (window.kerjaNav) window.kerjaNav.go(url); else window.location.href = url; }
   window.kerjaPageTransition = leave;
 
   /* aankomst na een overgang: alles verborgen; bij statements de woorden, zodat de kop zelf zichtbaar kan zijn */
@@ -1870,20 +1873,32 @@
      Nog een klik: fade-out (FADE_OUT ms, ease-out), terug naar de stompjes.
    - mouse-over (alleen met een muis): de equalizer beweegt zolang de muis erboven zweeft, ook als de
      muziek uit staat; muis weg en muziek uit: terug naar de stompjes
-   - de keuze 'aan' en het tijdstip gelden voor het hele bezoek (sessionStorage): op de volgende pagina
-     speelt hij verder vanaf hetzelfde punt. Bij vertrek fadet hij uit tegelijk met de olievlek (LEAVE ms).
-     Laat de browser het geluid op de nieuwe pagina nog niet toe, dan start hij bij de eerste klik, tik of toets.
+   - doorspelen: speelt de muziek en ga je naar een andere pagina, dan blijft hij zonder onderbreking
+     spelen (zie Doorlopende navigatie hieronder). Het geluid zelf (de kern) zit dan in het bovenste
+     venster; de pagina's daarbinnen gebruiken die kern en tonen alleen de knop.
+   - de keuze 'aan' en het tijdstip gelden voor het hele bezoek (sessionStorage). Laadt een pagina toch
+     opnieuw (verversen, muziek uit tijdens het klikken, of geen doorlopende navigatie mogelijk), dan
+     fadet hij uit met de olievlek (LEAVE ms) en speelt hij op de nieuwe pagina verder vanaf hetzelfde punt.
+     Laat de browser het geluid daar nog niet toe, dan start hij bij de eerste klik, tik of toets.
    - volume via Web Audio (ook op iPhone in te faden); lukt dat niet, dan via audio.volume
    - bij 'reduced motion' staat de equalizer stil */
 (function () {
   var btn = document.querySelector('[data-volume]');
   if (!btn) return;
-  var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b0216f1946d00316c778c65_2-late.mp3';
-  var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, LEAVE = 1200, TICK = 170;
-  var KEY_T = 'kerja-music-t-2late', KEY_ON = 'kerja-music-on'; // KEY_T per nummer: geen tijdstip van een ander nummer
+  var TICK = 170;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var bars = Array.prototype.slice.call(btn.querySelectorAll('.volume_bar'));
-  function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
+
+  /* kern: van het bovenste venster als deze pagina daarin draait, anders een eigen kern */
+  var core = null, framed = false;
+  try {
+    if (window.parent !== window && window.parent.kerjaShell && window.parent.kerjaMusicCore) {
+      core = window.parent.kerjaMusicCore;
+      framed = true;
+    }
+  } catch (e) { core = null; }
+  if (!core) core = window.kerjaMusicCore = musicCore();
+  window.kerjaMusic = core; // leave, pulse en hit, voor de pagina-overgang, de hero en de footer
 
   btn.setAttribute('role', 'button');
   btn.setAttribute('tabindex', '0');
@@ -1913,138 +1928,261 @@
     btn.addEventListener('mouseenter', function () { if (hover) return; hover = true; if (!shown) render(); });
     btn.addEventListener('mouseleave', function () { hover = false; if (!shown) render(); });
   }
-
-  /* geluid */
-  var audio = new Audio();
-  audio.loop = true;
-  audio.preload = 'auto';
-  var ctx = null, gain = null, triedCors = false;
-  var AC = window.AudioContext || window.webkitAudioContext;
-  if (AC) { audio.crossOrigin = 'anonymous'; triedCors = true; }
-  audio.src = SRC;
-  audio.addEventListener('error', function () {
-    /* Web Audio vraagt CORS; geeft de server dat niet, dan zonder (volume via audio.volume) */
-    if (!triedCors || ctx) return;
-    triedCors = false;
-    audio.removeAttribute('crossorigin');
-    audio.src = SRC;
-    if (want) start();
-  });
-  function graph() {
-    if (ctx || !triedCors) return;
-    try {
-      ctx = new AC();
-      gain = ctx.createGain();
-      gain.gain.value = 0;
-      ctx.createMediaElementSource(audio).connect(gain);
-      gain.connect(ctx.destination);
-    } catch (e) { ctx = null; gain = null; }
-  }
-  var vol = 0;
-  function setVol(v) { vol = v; if (gain) gain.gain.value = v; else audio.volume = Math.max(0, Math.min(1, v)); }
-  var fadeId = 0;
-  function fade(to, dur, ease, done) {
-    var id = ++fadeId, from = vol, t0 = performance.now();
-    (function step(now) {
-      if (id !== fadeId) return;
-      var k = Math.min(1, (now - t0) / dur);
-      setVol(from + (to - from) * ease(k));
-      if (k < 1) requestAnimationFrame(step); else if (done) done();
-    })(t0);
-  }
-  function easeIn(k) { return k * k * k; }
-  function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
-
-  var want = store(KEY_ON) === '1';  // heeft de bezoeker de muziek aangezet? Standaard uit.
-  var playing = false, waiting = false;
-  var resumeAt = parseFloat(store(KEY_T)) || 0;
-  audio.addEventListener('loadedmetadata', function () {
-    if (resumeAt && resumeAt < audio.duration) { try { audio.currentTime = resumeAt; } catch (e) {} }
-  });
-  function save() { if (audio.currentTime) store(KEY_T, String(audio.currentTime)); }
-  setInterval(function () { if (playing) save(); }, 1000);
-  window.addEventListener('pagehide', save);
-
-  function start() {
-    graph();
-    if (ctx && ctx.state === 'suspended') ctx.resume();
-    if (!vol) setVol(0);
-    var p = audio.play();
-    if (p && p.then) p.then(started, blocked); else started();
-  }
-  function started() {
-    playing = true; waiting = false;
-    ui(true);
-    fade(VOL, FADE_IN, easeIn);
-  }
-  /* geblokkeerd: wachten op de eerste handeling van de bezoeker */
-  function blocked() {
-    if (waiting) return;
-    waiting = true;
-    ui(false);
-    var go = function (e) {
-      if (e && btn.contains(e.target)) return; // een klik op de knop zelf regelt de knop
-      ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.removeEventListener(t, go, true); });
-      waiting = false;
-      if (want && !playing) start();
-    };
-    ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.addEventListener(t, go, true); });
-  }
-  function stop() {
-    playing = false;
-    ui(false);
-    fade(0, FADE_OUT, easeOut, function () { if (!playing) { audio.pause(); save(); } });
-  }
-  function toggle() {
-    if (playing) { want = false; store(KEY_ON, ''); stop(); }
-    else { want = true; store(KEY_ON, '1'); start(); }
-  }
-  btn.addEventListener('click', function (e) { e.preventDefault(); toggle(); });
+  btn.addEventListener('click', function (e) { e.preventDefault(); core.toggle(); });
   btn.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); core.toggle(); }
   });
 
-  /* vertrek naar een andere pagina: uitfaden tegelijk met de olievlek (de keuze 'aan' blijft staan,
-     zodat de muziek op de volgende pagina weer infadet) */
-  /* maat van 2-late.mp3 (80,75 BPM), vooraf berekend uit het bestand (librosa beat_track):
-     BEATS = tijdstip van elke tel in ms, BEAT_S = kracht van de bas op die tel (0-9).
-     Nieuw nummer? Dan deze twee lijsten opnieuw laten berekenen. */
-  var BEATS = [766,1533,2276,3065,3738,4412,5085,5805,6571,7291,8057,8800,9543,10286,11029,11773,12516,13259,14002,14745,15488,16231,16997,17740,18483,19226,19969,20712,21455,22175,22941,23684,24451,25194,25913,26657,27376,28143,28909,29652,30372,31115,31881,32601,33367,34110,34853,35596,36339,37082,37825,38568,39311,40054,40821,41564,42307,43050,43770,44536,45279,45999,46765,47508,48274,48994,49737,50457,51200,51966,52709,53429,54195,54938,55705,56424,57191,57934,58677,59420,60163,60906,61649,62392,63135,63878,64644,65364,66130,66873,67617,68360];
-  var BEAT_S = '10000083739292839293839382939382828283849393928382838383810382828383839483838282828383738282';
-  var BEAT_DECAY = 0.2;   // s: hoe snel een tel uitdooft (lager = korte tik, hoger = lange golf); geldt voor hero en footer
-  /* pulse(): 0-1, piekt op elke tel en dooft uit; geschaald met het volume, zodat hij mee in- en uitfadet */
-  function pulse() {
-    if (!playing || audio.paused || !BEATS.length) return 0;
-    var ms = audio.currentTime * 1000, lo = 0, hi = BEATS.length - 1;
-    if (ms < BEATS[0]) return 0;
-    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BEATS[mid] <= ms) lo = mid; else hi = mid - 1; }
-    var dt = (ms - BEATS[lo]) / 1000;
-    var amp = .6 + .4 * (+BEAT_S.charAt(lo) / 9);
-    var attack = Math.min(1, dt / .04);
-    return amp * attack * Math.exp(-dt / BEAT_DECAY) * Math.min(1, vol / VOL);
+  /* de knop volgt de kern; bij vertrek van deze pagina afmelden (terug uit de browsercache: weer aanmelden) */
+  var off = core.on(ui);
+  window.addEventListener('pagehide', function () { off(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { off(); off = core.on(ui); } });
+  /* op een pagina in het bovenste venster: een klik of tik hier telt ook als toestemming voor het geluid */
+  if (framed) {
+    ['pointerdown', 'keydown', 'touchend'].forEach(function (t) {
+      document.addEventListener(t, function (e) { if (!btn.contains(e.target)) core.nudge(); }, true);
+    });
+  }
+  if (!framed) core.init();
+
+  /* het geluid zelf */
+  function musicCore() {
+    var SRC = 'https://cdn.prod.website-files.com/69fb0ba3e84d63f239880b74/6b0216f1946d00316c778c65_2-late.mp3';
+    var VOL = 0.6, FADE_IN = 1600, FADE_OUT = 1000, LEAVE = 1200;
+    var KEY_T = 'kerja-music-t-2late', KEY_ON = 'kerja-music-on'; // KEY_T per nummer: geen tijdstip van een ander nummer
+    function store(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
+
+    /* wie luistert er mee (de knop van elke pagina) */
+    var subs = [];
+    function emit(on) {
+      subs.slice().forEach(function (fn) {
+        try { fn(on); } catch (e) { subs = subs.filter(function (f) { return f !== fn; }); } // pagina bestaat niet meer
+      });
+    }
+
+    var audio = new Audio();
+    audio.loop = true;
+    audio.preload = 'auto';
+    var ctx = null, gain = null, triedCors = false;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) { audio.crossOrigin = 'anonymous'; triedCors = true; }
+    audio.src = SRC;
+    audio.addEventListener('error', function () {
+      /* Web Audio vraagt CORS; geeft de server dat niet, dan zonder (volume via audio.volume) */
+      if (!triedCors || ctx) return;
+      triedCors = false;
+      audio.removeAttribute('crossorigin');
+      audio.src = SRC;
+      if (want) start();
+    });
+    function graph() {
+      if (ctx || !triedCors) return;
+      try {
+        ctx = new AC();
+        gain = ctx.createGain();
+        gain.gain.value = 0;
+        ctx.createMediaElementSource(audio).connect(gain);
+        gain.connect(ctx.destination);
+      } catch (e) { ctx = null; gain = null; }
+    }
+    var vol = 0;
+    function setVol(v) { vol = v; if (gain) gain.gain.value = v; else audio.volume = Math.max(0, Math.min(1, v)); }
+    var fadeId = 0;
+    function fade(to, dur, ease, done) {
+      var id = ++fadeId, from = vol, t0 = performance.now();
+      (function step(now) {
+        if (id !== fadeId) return;
+        var k = Math.min(1, (now - t0) / dur);
+        setVol(from + (to - from) * ease(k));
+        if (k < 1) requestAnimationFrame(step); else if (done) done();
+      })(t0);
+    }
+    function easeIn(k) { return k * k * k; }
+    function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
+
+    var want = store(KEY_ON) === '1';  // heeft de bezoeker de muziek aangezet? Standaard uit.
+    var playing = false, waiting = false, wake = null;
+    var resumeAt = parseFloat(store(KEY_T)) || 0;
+    audio.addEventListener('loadedmetadata', function () {
+      if (resumeAt && resumeAt < audio.duration) { try { audio.currentTime = resumeAt; } catch (e) {} }
+    });
+    function save() { if (audio.currentTime) store(KEY_T, String(audio.currentTime)); }
+    setInterval(function () { if (playing) save(); }, 1000);
+    window.addEventListener('pagehide', save);
+
+    function start() {
+      graph();
+      if (ctx && ctx.state === 'suspended') ctx.resume();
+      if (!vol) setVol(0);
+      var p = audio.play();
+      if (p && p.then) p.then(started, blocked); else started();
+    }
+    function started() {
+      playing = true; waiting = false;
+      emit(true);
+      fade(VOL, FADE_IN, easeIn);
+    }
+    /* geblokkeerd: wachten op de eerste handeling van de bezoeker */
+    function blocked() {
+      if (waiting) return;
+      waiting = true;
+      emit(false);
+      wake = function (e) {
+        if (e && e.target && e.target.closest && e.target.closest('[data-volume]')) return; // een klik op de knop zelf regelt de knop
+        ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.removeEventListener(t, wake, true); });
+        waiting = false;
+        if (want && !playing) start();
+      };
+      ['pointerdown', 'keydown', 'touchend'].forEach(function (t) { document.addEventListener(t, wake, true); });
+    }
+    function stop() {
+      playing = false;
+      emit(false);
+      fade(0, FADE_OUT, easeOut, function () { if (!playing) { audio.pause(); save(); } });
+    }
+
+    /* maat van 2-late.mp3 (80,75 BPM), vooraf berekend uit het bestand (librosa beat_track):
+       BEATS = tijdstip van elke tel in ms, BEAT_S = kracht van de bas op die tel (0-9).
+       Nieuw nummer? Dan deze twee lijsten opnieuw laten berekenen. */
+    var BEATS = [766,1533,2276,3065,3738,4412,5085,5805,6571,7291,8057,8800,9543,10286,11029,11773,12516,13259,14002,14745,15488,16231,16997,17740,18483,19226,19969,20712,21455,22175,22941,23684,24451,25194,25913,26657,27376,28143,28909,29652,30372,31115,31881,32601,33367,34110,34853,35596,36339,37082,37825,38568,39311,40054,40821,41564,42307,43050,43770,44536,45279,45999,46765,47508,48274,48994,49737,50457,51200,51966,52709,53429,54195,54938,55705,56424,57191,57934,58677,59420,60163,60906,61649,62392,63135,63878,64644,65364,66130,66873,67617,68360];
+    var BEAT_S = '10000083739292839293839382939382828283849393928382838383810382828383839483838282828383738282';
+    var BEAT_DECAY = 0.2;   // s: hoe snel een tel uitdooft (lager = korte tik, hoger = lange golf); geldt voor hero en footer
+    function beat() {
+      if (!playing || audio.paused || !BEATS.length) return -1;
+      var ms = audio.currentTime * 1000, lo = 0, hi = BEATS.length - 1;
+      if (ms < BEATS[0]) return -1;
+      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BEATS[mid] <= ms) lo = mid; else hi = mid - 1; }
+      return lo;
+    }
+
+    return {
+      init: function () { if (want && !playing) start(); },
+      toggle: function () {
+        if (playing) { want = false; store(KEY_ON, ''); stop(); }
+        else { want = true; store(KEY_ON, '1'); start(); }
+      },
+      /* klik of tik op een pagina in het bovenste venster: telt als toestemming */
+      nudge: function () { if (waiting && wake) wake(null); },
+      playing: function () { return playing; },
+      on: function (fn) {
+        subs.push(fn);
+        fn(playing);
+        return function () { subs = subs.filter(function (f) { return f !== fn; }); };
+      },
+      /* vertrek met een gewone paginalading: uitfaden tegelijk met de olievlek (de keuze 'aan' blijft
+         staan, zodat de muziek op de volgende pagina weer infadet) */
+      leave: function () {
+        if (!playing) return;
+        save();
+        fade(0, LEAVE, easeOut, save);
+      },
+      /* pulse(): 0-1, piekt op elke tel en dooft uit; geschaald met het volume, zodat hij mee in- en uitfadet */
+      pulse: function () {
+        var lo = beat();
+        if (lo < 0) return 0;
+        var dt = (audio.currentTime * 1000 - BEATS[lo]) / 1000;
+        var amp = .6 + .4 * (+BEAT_S.charAt(lo) / 9);
+        var attack = Math.min(1, dt / .04);
+        return amp * attack * Math.exp(-dt / BEAT_DECAY) * Math.min(1, vol / VOL);
+      },
+      /* hit(): de tel die nu klinkt, { i: volgnummer, s: kracht 0-1 }, of null als er niets speelt.
+         De hero gebruikt dit om op elke nieuwe tel de vlek een duw te geven. */
+      hit: function () {
+        var lo = beat();
+        if (lo < 0) return null;
+        if (audio.currentTime * 1000 - BEATS[lo] > 150) return { i: lo, s: 0, late: true };
+        return { i: lo, s: (.55 + .45 * (+BEAT_S.charAt(lo) / 9)) * Math.min(1, vol / VOL) };
+      }
+    };
+  }
+})();
+
+/* Doorlopende navigatie: de muziek speelt door als je van pagina wisselt.
+   Een gewone paginalading stopt alle geluid, en op telefoons mag het daarna pas weer na een tik.
+   Daarom, alleen als de muziek speelt bij een klik naar een andere pagina van deze site:
+   - deze pagina blijft staan (met het geluid) en de nieuwe pagina laadt eroverheen in een venster
+     over het hele scherm (iframe .kerja-shell_frame, CSS in kerja.css). De nieuwe pagina laadt
+     daarin volledig en gewoon, met alle scripts, dus alles werkt zoals bij een gewone lading.
+   - volgende klikken laden binnen dat venster; de muziek blijft in het bovenste venster spelen
+   - adresbalk en paginatitel volgen de pagina in het venster; terug en vooruit werken
+   - links naar een andere site openen in het hele tabblad, niet in het venster
+   - speelt de muziek niet, of lukt het venster niet, dan gewoon de volgende pagina laden zoals altijd
+   - verversen laadt de pagina gewoon opnieuw (zonder venster)
+   Uitzetten: SHELL = false. */
+(function () {
+  var SHELL = true;
+  var WAIT = 20000; // ms: is de nieuwe pagina dan nog niet geladen, gewoon navigeren
+  var root = document.documentElement;
+  function plain(url) { window.location.href = url; }
+
+  /* deze pagina draait in het venster: alleen de adresbalk bijwerken en links naar buiten in het hele tabblad */
+  var shell = null;
+  try { if (window.parent !== window && window.parent.kerjaShell) shell = window.parent.kerjaShell; } catch (e) { shell = null; }
+  if (shell) {
+    var sync = function () { try { shell.sync(location.href, document.title); } catch (e) {} };
+    sync();
+    ['hashchange', 'popstate', 'pageshow'].forEach(function (t) { window.addEventListener(t, sync); });
+    ['pushState', 'replaceState'].forEach(function (m) {
+      var orig = history[m];
+      history[m] = function () { var r = orig.apply(history, arguments); sync(); return r; };
+    });
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a || (a.target && a.target !== '_self')) return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) a.target = '_top';
+    }, true);
+    window.kerjaNav = { keeps: function () { return true; }, go: plain };
+    return;
+  }
+  if (!SHELL || window.parent !== window) { window.kerjaNav = { keeps: function () { return false; }, go: plain }; return; }
+
+  var frame = null;
+  function playing() { return !!(window.kerjaMusicCore && window.kerjaMusicCore.playing()); }
+
+  function open(url) {
+    var done = false;
+    var fail = function () { if (done) return; done = true; plain(url); };
+    try {
+      frame = document.createElement('iframe');
+      frame.className = 'kerja-shell_frame';
+      frame.setAttribute('title', document.title);
+      frame.setAttribute('allow', 'autoplay; fullscreen; clipboard-write');
+      var timer = setTimeout(fail, WAIT);
+      frame.addEventListener('load', function () {
+        if (done) return;
+        var ok = false;
+        try { ok = !!(frame.contentDocument && frame.contentDocument.body && frame.contentWindow.location.href !== 'about:blank'); } catch (e) { ok = false; }
+        if (!ok) { clearTimeout(timer); fail(); return; }
+        done = true;
+        clearTimeout(timer);
+        root.classList.add('kerja-shell');
+        if (window.lenis) window.lenis.stop();
+        try { frame.contentWindow.focus(); } catch (e) {}
+      });
+      frame.src = url;
+      document.body.appendChild(frame);
+      history.pushState({ kerjaShell: 1 }, '', url);
+    } catch (e) { fail(); }
   }
 
-  window.kerjaMusic = {
-    leave: function () {
-      if (!playing) return;
-      save();
-      fade(0, LEAVE, easeOut, save);
-    },
-    pulse: pulse,
-    /* hit(): de tel die nu klinkt, { i: volgnummer, s: kracht 0-1 }, of null als er niets speelt.
-       De hero gebruikt dit om op elke nieuwe tel de vlek een duw te geven. */
-    hit: function () {
-      if (!playing || audio.paused || !BEATS.length) return null;
-      var ms = audio.currentTime * 1000, lo = 0, hi = BEATS.length - 1;
-      if (ms < BEATS[0]) return null;
-      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BEATS[mid] <= ms) lo = mid; else hi = mid - 1; }
-      if (ms - BEATS[lo] > 150) return { i: lo, s: 0, late: true };
-      return { i: lo, s: (.55 + .45 * (+BEAT_S.charAt(lo) / 9)) * Math.min(1, vol / VOL) };
+  window.kerjaShell = {
+    sync: function (href, title) {
+      if (!frame) return;
+      if (href !== location.href) { try { history.replaceState(history.state, '', href); } catch (e) {} }
+      if (title) { document.title = title; frame.setAttribute('title', title); }
     }
   };
-
-  ui(false);
-  if (want) start();
+  /* terug tot voorbij de eerste pagina in het venster: die pagina in het venster laden */
+  window.addEventListener('popstate', function (e) {
+    if (!frame || (e.state && e.state.kerjaShell)) return;
+    try { frame.contentWindow.location.replace(location.href); } catch (err) { location.reload(); }
+  });
+  window.kerjaNav = {
+    keeps: function () { return !!frame || playing(); },
+    go: function (url) { if (frame || !playing()) plain(url); else open(url); }
+  };
 })();
 
 /* Gradient onder de footer ([section_footer], elke pagina even sterk): onderaan de pagina komt linksonder
