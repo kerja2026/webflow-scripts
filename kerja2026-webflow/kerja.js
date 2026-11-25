@@ -2172,7 +2172,7 @@
    muis (kerja.css). data-work-focus="x y" (0-1) bepaalt welk deel van de foto in beeld blijft bij het
    bijsnijden (standaard het midden).
    Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt 3.125rem breder, de andere
-   twee elk de helft smaller (is-active, CSS in kerja.css). De hoogte blijft gelijk. De foto schaalt niet
+   cases op dezelfde rij elk de helft smaller (is-active en is-shrink, CSS in kerja.css). Rijen van drie. De hoogte blijft gelijk. De foto schaalt niet
    mee: de uitsnede wordt breder. Het raster hangt aan het midden van de case en de rondjes houden hun
    maat (gerekend op de breedte in rust, WORK_RATIO).
    Telefoon en tablet (geen muis) en reduced motion: alleen de halftone, zonder golven.
@@ -2383,6 +2383,13 @@
     setTimeout(start, 12000);
   } else setup();
 
+  /* groeien per rij: de andere cases op dezelfde rij (zelfde hoogte op de pagina) worden smaller (is-shrink) */
+  function row(item, on) {
+    var top = item.offsetTop;
+    Array.prototype.forEach.call(items, function (o) {
+      o.classList.toggle('is-shrink', on && o !== item && Math.abs(o.offsetTop - top) < 2);
+    });
+  }
   function setup() {
   Array.prototype.forEach.call(items, function (item, idx) {
     var box = item.querySelector('.work-cases_visual');
@@ -2495,9 +2502,9 @@
     if (hover) {
       var labels = makeLabels(item, box);
       var push = !reduce;
-      item.addEventListener('mouseenter', function (e) { item.classList.add('is-active'); labels.show(e); if (push && ready) { aim(e, true); goal = 1; kick(); } });
+      item.addEventListener('mouseenter', function (e) { item.classList.add('is-active'); row(item, true); labels.show(e); if (push && ready) { aim(e, true); goal = 1; kick(); } });
       item.addEventListener('mousemove', function (e) { labels.move(e); if (push && ready) { aim(e); kick(); } });
-      item.addEventListener('mouseleave', function (e) { item.classList.remove('is-active'); labels.hide(e); if (push && ready) { aim(e); goal = 0; kick(); } });
+      item.addEventListener('mouseleave', function (e) { item.classList.remove('is-active'); row(item, false); labels.hide(e); if (push && ready) { aim(e); goal = 0; kick(); } });
     }
   });
   }

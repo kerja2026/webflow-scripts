@@ -327,7 +327,8 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 
 /* Work-cases (pagina Work, script: work-cases): kader om de cases met lijnen en holle bolletjes op de
    hoeken, zoals de lijnen van het menu (stoppen voor de bolletjes). De canvas met de halftone ligt over
-   de foto, het kader daar weer boven. Op telefoon staan de cases onder elkaar en heeft elk een eigen kader. */
+   de foto, het kader daar weer boven. Rijen van drie: de laatste case van elke rij (en de allerlaatste) krijgt
+   ook de rechterlijn. Op telefoon staan de cases onder elkaar en heeft elk een eigen kader. */
 .work-cases_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
 .work-cases_visual::before, .work-cases_visual::after { content: ""; position: absolute; pointer-events: none; z-index: 2; }
 .work-cases_visual::before {
@@ -342,12 +343,12 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
   --ring: radial-gradient(circle, transparent 0 0.15625rem, var(--light) 0.15625rem 0.21875rem, transparent 0.21875rem);
   background: var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat;
 }
-.work-cases_item:last-child .work-cases_visual::before { background:
+.work-cases_item:is(:nth-child(3n), :last-child) .work-cases_visual::before { background:
     linear-gradient(var(--light), var(--light)) 0.3125rem 0 / calc(100% - 0.625rem) 0.0625rem no-repeat,
     linear-gradient(var(--light), var(--light)) 0.3125rem 100% / calc(100% - 0.625rem) 0.0625rem no-repeat,
     linear-gradient(var(--light), var(--light)) 0 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat,
     linear-gradient(var(--light), var(--light)) 100% 0.3125rem / 0.0625rem calc(100% - 0.625rem) no-repeat; }
-.work-cases_item:last-child .work-cases_visual::after { background:
+.work-cases_item:is(:nth-child(3n), :last-child) .work-cases_visual::after { background:
     var(--ring) left top / 0.4375rem 0.4375rem no-repeat, var(--ring) left bottom / 0.4375rem 0.4375rem no-repeat,
     var(--ring) right top / 0.4375rem 0.4375rem no-repeat, var(--ring) right bottom / 0.4375rem 0.4375rem no-repeat; }
 @media screen and (max-width: 767px) {
@@ -380,16 +381,19 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
 .work-cases_label.is-name { font-size: 1rem; height: 2.5rem; min-width: 8rem; padding: 0 1.875rem 0 0.875rem; }
 .work-cases_label.is-on { visibility: visible; }
 .work-cases_label-text { position: relative; z-index: 1; }
-/* Work-cases, groeien (alleen met een muis, vanaf 768px): de case onder de cursor (is-active, script:
-   work-cases) wordt 3.125rem (50px op 1512) breder, de andere twee elk 1.5625rem smaller. Zelfde beweging
-   als de Services (0.6s, ease-out). Het raster wordt hier een rij met flex (grid-kolommen animeren niet
-   vloeiend). De hoogte blijft die van een case in rust (463/470); de foto toont dan meer aan de
-   zijkanten (script). */
+/* Work-cases, groeien (alleen met een muis, vanaf 768px): rijen van drie (flex-wrap). De case onder de cursor
+   (is-active, script: work-cases) wordt 3.125rem (50px op 1512) breder, de andere cases op dezelfde rij
+   (is-shrink) elk 1.5625rem smaller; staat een case alleen op een rij, dan groeit hij gewoon naar rechts.
+   Zelfde beweging als de Services (0.6s, ease-out). De hoogte blijft die van een case in rust (463/470);
+   de foto toont dan meer aan de zijkanten (script). */
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
-  .work-cases_list { display: flex; container-type: inline-size; }
+  /* rijen sluiten op elkaar aan: de onderlijn van de ene rij is de bovenlijn van de volgende (tekst staat
+     met een muis in de labels, dus er hoeft niets tussen) */
+  .work-cases_list { display: flex; flex-wrap: wrap; row-gap: 0; container-type: inline-size; }
+  .work-cases_list .work-cases_visual { margin-bottom: 0; }
   .work-cases_list > .work-cases_item { flex: 0 0 calc(100% / 3); min-width: 0; transition: flex-basis 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-  .work-cases_list:has(> .work-cases_item.is-active) > .work-cases_item { flex-basis: calc(100% / 3 - 1.5625rem); }
-  .work-cases_list:has(> .work-cases_item.is-active) > .work-cases_item.is-active { flex-basis: calc(100% / 3 + 3.125rem); }
+  .work-cases_list > .work-cases_item.is-shrink { flex-basis: calc(100% / 3 - 1.5625rem); }
+  .work-cases_list > .work-cases_item.is-active { flex-basis: calc(100% / 3 + 3.125rem); }
   .work-cases_visual { aspect-ratio: auto; height: calc(100cqw / 3 * 470 / 463); }
 }
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) and (prefers-reduced-motion: reduce) {
