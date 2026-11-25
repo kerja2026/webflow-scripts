@@ -376,7 +376,8 @@ html.theme-light :is(.menu_cell-frame, .volume_frame) { --menu-glass: color-mix(
   white-space: nowrap; visibility: hidden; transform-origin: 50% 50%; will-change: transform; }
 /* de achtergrond loopt tot de lijnen van het kader (.menu_cell-frame staat 0.1875rem binnen de rand), niet eroverheen */
 .work-cases_label .menu_cell-frame { background-color: var(--bright-blue); }
-.work-cases_label.is-name { font-size: 1rem; }
+/* projectnaam: iets groter label met meer ruimte rond de tekst */
+.work-cases_label.is-name { font-size: 1rem; height: 2.5rem; min-width: 8rem; padding: 0 1.875rem 0 0.875rem; }
 .work-cases_label.is-on { visibility: visible; }
 .work-cases_label-text { position: relative; z-index: 1; }
 /* Work-cases, groeien (alleen met een muis, vanaf 768px): de case onder de cursor (is-active, script:
