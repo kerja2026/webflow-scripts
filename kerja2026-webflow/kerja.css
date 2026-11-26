@@ -124,6 +124,8 @@ html.is-scrolling .kerja-scrollbar { opacity: 1; }
   transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .link-split_letter { text-decoration: inherit; }
+/* een spatie als losse letter (labels met meer woorden, zoals de keuzes op Connect 2) moet breedte houden */
+.menu_label-letter { white-space: pre; }
 
 /* Dots-lines groeien van links naar rechts zodra ze in beeld komen.
    De lijn groeit via flex-grow, zodat het rechter bolletje vanzelf meeschuift.
@@ -421,4 +423,7 @@ html.kerja-shell body > :not(.kerja-shell_frame) { display: none !important; }
    bolletjes op de lijn eronder; een stap die niet aan de beurt is, blijft weg (ook als een class display zet). */
 .menu_cell.is-option[aria-pressed="true"] .menu_cell-dot { background-color: var(--light); }
 .connect-form_field:focus-within .dots-line_dot { background-color: var(--light); }
+/* toetsenbordfocus op een keuze of knop: stippellijn in de lichte kleur in plaats van de blauwe rand van de browser */
+.connect-form_form :is(.menu_cell, .connect-form_back):focus { outline: 0; }
+.connect-form_form :is(.menu_cell, .connect-form_back):focus-visible { outline: 1px dashed var(--light); outline-offset: 0.25rem; }
 [data-cf-step][hidden] { display: none !important; }

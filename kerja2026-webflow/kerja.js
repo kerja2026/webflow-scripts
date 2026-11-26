@@ -2660,7 +2660,7 @@
      de keuzes gaan mee in verborgen velden ([data-cf-hidden], embed in het formulier)
    - wisselen van stap: alles verdwijnt in losse stukken en de volgende stap verschijnt zo, binnen DUR ms
      (zoals de pagina-overgang); de woorden van de vraag in gehusselde groepjes van 3 of 4
-   - Enter in een veld = volgende; 'reduced motion': direct wisselen */
+   - Enter in een veld = volgende; na het wisselen krijgt alleen een invulveld de focus; 'reduced motion': direct wisselen */
 (function () {
   var form = document.querySelector('[data-cf]');
   if (!form) return;
@@ -2741,7 +2741,7 @@
     setTimeout(done, DUR + 20);
   }
   function focusStep() {
-    var f = steps[cur].querySelector('[data-cf-input], [data-cf-option]');
+    var f = steps[cur].querySelector('[data-cf-input]'); // alleen velden; een keuze krijgt geen focus vanzelf
     if (f && window.matchMedia('(hover: hover)').matches) f.focus({ preventScroll: true });
   }
   function go(n) {
