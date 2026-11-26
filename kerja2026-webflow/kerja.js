@@ -2305,8 +2305,8 @@
    gelijkmatig naar buiten. Het effect reikt tot PUSH_RADIUS rem en loopt naar buiten
    toe zacht af. De plek volgt de cursor met wat naloop (PUSH_FOLLOW); bij binnenkomen en weggaan
    wijken de bolletjes in PUSH_FADE ms uit en gaan ze terug. Er is geen kleurenfoto meer.
-   Labels: projectnaam en werkzaamheden springen bij mouse-over uit het cursorbolletje, aan lijnen
-   (zie makeLabels). Daarom staan titel en werkzaamheden onder de cases alleen op apparaten zonder
+   Labels: bij mouse-over wordt de cursor het label met de projectnaam; de werkzaamheden hangen er met
+   lijnen aan (zie makeLabels). Daarom staan titel en werkzaamheden onder de cases alleen op apparaten zonder
    muis (kerja.css). data-work-focus="x y" (0-1) bepaalt welk deel van de foto in beeld blijft bij het
    bijsnijden (standaard het midden).
    Groeien (alleen met een muis, vanaf 768px): de case onder de cursor wordt 3.125rem breder, de andere
@@ -2383,15 +2383,16 @@
     return fb;
   }
 
-  /* Labels (alleen met een muis): bij mouse-over komen uit het cursorbolletje labels met de projectnaam
-     en de werkzaamheden, met een snelle ease-in-out (LBL_IN ms, kort na elkaar: LBL_STAGGER). Elk label
-     hangt met een lijn van 1px aan het cursorbolletje: van de rand van het bolletje naar de dichtstbijzijnde
-     hoek van het label. De lijnen bewegen mee met de cursor.
-     - Projectnaam: linksboven, LBL_PAD rem van boven en links, en staat daarna stil.
+  /* Labels (alleen met een muis): bij mouse-over wordt de cursor het label met de projectnaam. Het label
+     staat met zijn midden precies op de muis en beweegt zonder naloop mee, net als een gewone cursor; het
+     cursorbolletje is dan weg (html.is-case-cursor). De werkzaamheden springen eruit met een snelle
+     ease-in-out (LBL_IN ms, kort na elkaar: LBL_STAGGER) en hangen er met een lijn van 1px aan: van de
+     dichtstbijzijnde hoek van de projectnaam naar de dichtstbijzijnde hoek van het label (steeds de
+     buitenkant van de hoekbolletjes). De lijnen bewegen mee met de cursor.
      - Werkzaamheden: elke mouse-over op andere plekken in de case, met minstens LBL_GAP rem ruimte tussen
        de labels en LBL_EDGE rem tot de rand; daarna zweven ze licht (LBL_FLOAT rem uitslag).
-     Mouse-out: de labels zijn meteen weg (geen fade), de lijnen schieten in LBL_BACK ms terug naar het
-     cursorbolletje. Tekst komt uit de case zelf (Section Title en .work-cases_services), dus aanpassen in
+     Mouse-out: de labels zijn meteen weg (geen fade) en het cursorbolletje is terug; de lijnen schieten in
+     LBL_BACK ms terug naar de muis. Tekst komt uit de case zelf (Section Title en .work-cases_services), dus aanpassen in
      Webflow. Opmaak: .work-cases_label in kerja.css, kaders met de classes van de menuknop. */
   var LBL_PAD = 2.5, LBL_GAP = 1.25, LBL_EDGE = 1, LBL_FLOAT = 0.3;
   var LBL_IN = 420, LBL_STAGGER = 45, LBL_BACK = 160;
@@ -2429,7 +2430,7 @@
       var pad = LBL_PAD * rem, gap = LBL_GAP * rem, edge = LBL_EDGE * rem, rects = [];
       L.forEach(function (l) { l.w = l.el.offsetWidth; l.h = l.el.offsetHeight; });
       L.forEach(function (l) {
-        if (l.name) { l.fx = (pad + l.w / 2) / W; l.fy = (pad + l.h / 2) / H; rects.push([pad, pad, l.w, l.h]); return; }
+        if (l.name) return; // de projectnaam is de cursor
         var best = null, bestD = -1;
         for (var k = 0; k < 40; k++) {
           var x = edge + Math.random() * Math.max(1, W - l.w - 2 * edge), y = edge + Math.random() * Math.max(1, H - l.h - 2 * edge);
@@ -2446,39 +2447,75 @@
         l.fx = (best[0] + l.w / 2) / W; l.fy = (best[1] + l.h / 2) / H;
       });
     }
-    /* lijn van de rand van het cursorbolletje naar de dichtstbijzijnde hoek (buitenkant van het hoekbolletje) */
-    function line(l, ex, ey) {
-      var dx = ex - cx, dy = ey - cy, len = Math.sqrt(dx * dx + dy * dy) || 1, r0 = CUR_R * rem, r1 = l.name || l.s > .5 ? DOT_R * rem : 0;
+    /* lijn van (sx, sy) naar (ex, ey), aan beide kanten tot de buitenkant van het hoekbolletje (r0, r1) */
+    function line(l, sx, sy, ex, ey, r0, r1) {
+      var dx = ex - sx, dy = ey - sy, len = Math.sqrt(dx * dx + dy * dy) || 1;
       if (len <= r0 + r1) { l.ln.setAttribute('visibility', 'hidden'); return; }
       l.ln.setAttribute('visibility', 'visible');
-      l.ln.setAttribute('x1', cx + dx / len * r0); l.ln.setAttribute('y1', cy + dy / len * r0);
+      l.ln.setAttribute('x1', sx + dx / len * r0); l.ln.setAttribute('y1', sy + dy / len * r0);
       l.ln.setAttribute('x2', ex - dx / len * r1); l.ln.setAttribute('y2', ey - dy / len * r1);
     }
-    /* hoek = midden van het hoekbolletje (0.21875rem binnen de rand van het label, zie .menu_cell-dot) */
-    function corner(l) {
+    /* hoek van label l richting punt (px, py) = midden van het hoekbolletje (0.21875rem binnen de rand) */
+    function corner(l, px, py) {
       var hw = (l.w / 2 - DOT_R * rem) * l.s, hh = (l.h / 2 - DOT_R * rem) * l.s;
-      return [l.x + (cx < l.x ? -hw : hw), l.y + (cy < l.y ? -hh : hh)];
+      return [l.x + (px < l.x ? -hw : hw), l.y + (py < l.y ? -hh : hh)];
+    }
+    var N = L.filter(function (l) { return l.name; })[0];
+    /* een werkzaamheid mag nooit onder de projectnaam (de cursor) komen: komt de projectnaam te dichtbij,
+       dan schuift het label opzij, met minstens LBL_GAP rem ruimte. Het schuift langs de as waar het het
+       minst hoeft te bewegen, naar de kant waar het al stond (l.side), zodat het niet heen en weer springt
+       als de cursor eroverheen gaat. Binnen de case blijven; lukt dat niet, dan langs de andere as. */
+    function dodge(l, tx, ty) {
+      if (!N) return [tx, ty];
+      var gap = LBL_GAP * rem, edge = LBL_EDGE * rem;
+      var mx = (l.w + N.w) / 2 + gap, my = (l.h + N.h) / 2 + gap;
+      var dx = tx - cx, dy = ty - cy;
+      if (Math.abs(dx) >= mx || Math.abs(dy) >= my) { l.side = null; return [tx, ty]; }
+      if (!l.side) l.side = { x: dx < 0 ? -1 : 1, y: dy < 0 ? -1 : 1, axis: (mx - Math.abs(dx)) < (my - Math.abs(dy)) ? 'x' : 'y' };
+      var minX = edge + l.w / 2, maxX = W - edge - l.w / 2, minY = edge + l.h / 2, maxY = H - edge - l.h / 2;
+      var ax = Math.min(maxX, Math.max(minX, cx + l.side.x * mx)), ay = Math.min(maxY, Math.max(minY, cy + l.side.y * my));
+      var xFree = Math.abs(ax - cx) >= mx - .5, yFree = Math.abs(ay - cy) >= my - .5;
+      if (l.side.axis === 'x' ? xFree : !yFree && xFree) return [ax, ty];
+      if (yFree) return [tx, ay];
+      /* geen ruimte aan die kant: de andere kant op */
+      var bx = Math.min(maxX, Math.max(minX, cx - l.side.x * mx));
+      if (Math.abs(bx - cx) >= mx - .5) { l.side.x = -l.side.x; return [bx, ty]; }
+      var by = Math.min(maxY, Math.max(minY, cy - l.side.y * my));
+      l.side.y = -l.side.y; return [tx, by];
     }
     function frame(now) {
       raf = 0;
       var dt = Math.min(.05, (now - last) / 1000); last = now;
       measure();
       var t = (now - t0) / 1000, busy = false;
+      var dr = DOT_R * rem;
       L.forEach(function (l) {
         if (on) {
-          var tx = l.fx * W, ty = l.fy * H;
-          if (!l.name && !reduce) { tx += Math.sin(t * l.sp + l.ph) * LBL_FLOAT * rem; ty += Math.cos(t * l.sp * .8 + l.ph * 1.3) * LBL_FLOAT * rem; }
           var k = reduce ? 1 : Math.min(1, Math.max(0, (now - t0 - l.i * LBL_STAGGER) / LBL_IN));
           var e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;   // ease-in-out
-          l.x = l.sx + (tx - l.sx) * e; l.y = l.sy + (ty - l.sy) * e; l.s = e;
+          if (l.name) { l.x = cx; l.y = cy; }   // de projectnaam staat altijd precies op de muis
+          else {
+            var tx = l.fx * W, ty = l.fy * H;
+            if (!reduce) { tx += Math.sin(t * l.sp + l.ph) * LBL_FLOAT * rem; ty += Math.cos(t * l.sp * .8 + l.ph * 1.3) * LBL_FLOAT * rem; }
+            var d = dodge(l, tx, ty); tx = d[0]; ty = d[1];
+            l.x = l.sx + (tx - l.sx) * e; l.y = l.sy + (ty - l.sy) * e;
+          }
+          l.s = e;
           l.el.style.transform = 'translate3d(' + (l.x - l.w / 2) + 'px,' + (l.y - l.h / 2) + 'px,0) scale(' + Math.max(0, l.s) + ')';
-          var c = corner(l); l.ex = c[0]; l.ey = c[1];
-          line(l, l.ex, l.ey);
           busy = true;
+        }
+      });
+      L.forEach(function (l) {
+        if (l.name) return;
+        if (on) {
+          /* van de hoek van de projectnaam naar de hoek van dit label, elk de hoek die naar de ander wijst */
+          var a = N ? corner(N, l.x, l.y) : [cx, cy], c = corner(l, a[0], a[1]);
+          l.ax = a[0]; l.ay = a[1]; l.ex = c[0]; l.ey = c[1];
+          line(l, l.ax, l.ay, l.ex, l.ey, N && N.s > .5 ? dr : 0, l.s > .5 ? dr : 0);
         } else if (back) {
-          /* terugschieten: het eindpunt van de lijn loopt in LBL_BACK ms naar het cursorbolletje */
+          /* terugschieten: de lijn loopt in LBL_BACK ms terug naar de muis */
           var k = Math.min(1, (now - back) / LBL_BACK), e = k * k;
-          if (k < 1) { line(l, l.ex + (cx - l.ex) * e, l.ey + (cy - l.ey) * e); busy = true; }
+          if (k < 1) { line(l, l.ax + (cx - l.ax) * e, l.ay + (cy - l.ay) * e, l.ex + (cx - l.ex) * e, l.ey + (cy - l.ey) * e, 0, 0); busy = true; }
           else l.ln.setAttribute('visibility', 'hidden');
         }
       });
@@ -2491,7 +2528,8 @@
       show: function (e) {
         point(e); measure();
         on = true; back = 0; t0 = performance.now();
-        L.forEach(function (l) { l.el.classList.add('is-on'); l.x = l.sx = cx; l.y = l.sy = cy; l.s = 0; });
+        root.classList.add('is-case-cursor');
+        L.forEach(function (l) { l.el.classList.add('is-on'); l.x = l.sx = cx; l.y = l.sy = cy; l.s = 0; l.side = null; });
         place();
         kick();
       },
@@ -2499,6 +2537,7 @@
       hide: function (e) {
         if (e) point(e);
         on = false;
+        root.classList.remove('is-case-cursor');
         L.forEach(function (l) { l.el.classList.remove('is-on'); });
         if (reduce) { L.forEach(function (l) { l.ln.setAttribute('visibility', 'hidden'); }); return; }
         back = performance.now(); kick();
