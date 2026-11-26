@@ -2647,3 +2647,163 @@
   });
   }
 })();
+
+/* Connect-formulier ([data-cf], pagina Connect 2): een aanvraag in stappen, met rechts een overzicht van de antwoorden.
+   - opbouw en opmaak staan in Webflow: per stap een blok [data-cf-step="sleutel"] met data-cf-type
+     (text, email, one = één keuze, many = meerdere keuzes, review = controleren en versturen) en
+     data-cf-error-text (melding als er niets is ingevuld of gekozen)
+   - keuzes: [data-cf-option] (kader met bolletjes, classes van de menuknop); gekozen = aria-pressed="true",
+     de bolletjes vullen zich (kerja.css). Knoppen: [data-cf-next], [data-cf-back], verzenden [data-cf-send]
+   - het overzicht: rij [data-cf-row="sleutel"] met de waarde in [data-cf-value]; rijen die nog moeten komen
+     krijgen is-todo (gedimd, Webflow). [data-cf-name] toont de naam in de vragen en het bedankje.
+   - versturen gaat via het gewone Webflow-formulier: naam en e-mail zijn de echte velden ([data-cf-input]),
+     de keuzes gaan mee in verborgen velden ([data-cf-hidden], embed in het formulier)
+   - wisselen van stap: alles verdwijnt in losse stukken en de volgende stap verschijnt zo, binnen DUR ms
+     (zoals de pagina-overgang); de woorden van de vraag in gehusselde groepjes van 3 of 4
+   - Enter in een veld = volgende; 'reduced motion': direct wisselen */
+(function () {
+  var form = document.querySelector('[data-cf]');
+  if (!form) return;
+  var steps = Array.prototype.slice.call(form.querySelectorAll('[data-cf-step]'));
+  if (!steps.length) return;
+  var DUR = 500;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var answers = {};
+  var cur = 0, busy = false;
+  var all = function (sel, root) { return Array.prototype.slice.call((root || form).querySelectorAll(sel)); };
+  steps.forEach(function (s) { answers[s.getAttribute('data-cf-step')] = s.getAttribute('data-cf-type') === 'many' ? [] : ''; });
+
+  /* tekst in losse woorden (pt-word, zelfde als de pagina-overgang); al gesplitst blijft zoals het is */
+  function split(node) {
+    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+      if (child.nodeType === 3) {
+        var frag = document.createDocumentFragment();
+        child.textContent.split(/(\s+)/).forEach(function (part) {
+          if (!part) return;
+          if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+          var s = document.createElement('span');
+          s.className = 'pt-word';
+          s.textContent = part;
+          frag.appendChild(s);
+        });
+        node.replaceChild(frag, child);
+      } else if (child.nodeType === 1 && !child.classList.contains('pt-word') && !child.classList.contains('word-hover_word')) {
+        split(child);
+      }
+    });
+  }
+  function setName(name) {
+    all('[data-cf-name]', document).forEach(function (el) { el.textContent = name; split(el); });
+  }
+  /* knoppen zonder echte link: toetsenbord en schermlezer */
+  function bind(el, fn) {
+    if (el.tagName === 'A') { el.removeAttribute('href'); el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); }
+    el.addEventListener('click', function (e) { e.preventDefault(); fn(); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+  }
+  function value(k) { var v = answers[k]; return Array.isArray(v) ? v.join(', ') : v; }
+  function error(text) { var e = steps[cur].querySelector('[data-cf-error]'); if (e) e.textContent = text || ''; }
+
+  /* overzicht en verborgen velden bijwerken */
+  function sync() {
+    all('[data-cf-row]').forEach(function (row) {
+      var k = row.getAttribute('data-cf-row');
+      var v = value(k);
+      var out = row.querySelector('[data-cf-value]');
+      if (out) out.textContent = v || '–';
+      var i = steps.findIndex(function (s) { return s.getAttribute('data-cf-step') === k; });
+      row.classList.toggle('is-todo', !v && i > cur);
+    });
+    all('[data-cf-hidden]').forEach(function (h) { h.value = value(h.getAttribute('data-cf-hidden')); });
+  }
+
+  function valid() {
+    var s = steps[cur], k = s.getAttribute('data-cf-step'), t = s.getAttribute('data-cf-type');
+    if (t === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers[k]);
+    if (t === 'many') return answers[k].length > 0;
+    if (t === 'review') return true;
+    return !!answers[k];
+  }
+
+  /* onderdelen van een stap die los verdwijnen en verschijnen */
+  function units(step) {
+    var out = [], words = [];
+    all('.statement_heading', step).forEach(function (h) { if (!h.querySelector('.pt-word, .word-hover_word')) split(h); words = words.concat(all('.pt-word, .word-hover_word', h)); });
+    for (var i = words.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = words[i]; words[i] = words[j]; words[j] = t; }
+    for (var k = 0; k < words.length;) { var n = Math.random() < 0.5 ? 3 : 4; out.push(words.slice(k, k + n)); k += n; }
+    all('.connect-form_sub, .connect-form_field, [data-cf-option], .connect-form_actions > *', step).forEach(function (el) { out.push([el]); });
+    return out;
+  }
+  function scatter(step, hide, done) {
+    var list = units(step);
+    if (reduce) { list.forEach(function (u) { u.forEach(function (el) { el.classList.toggle('pt-hide', hide); }); }); done(); return; }
+    list.forEach(function (u) { setTimeout(function () { u.forEach(function (el) { el.classList.toggle('pt-hide', hide); }); }, Math.random() * DUR); });
+    setTimeout(done, DUR + 20);
+  }
+  function focusStep() {
+    var f = steps[cur].querySelector('[data-cf-input], [data-cf-option]');
+    if (f && window.matchMedia('(hover: hover)').matches) f.focus({ preventScroll: true });
+  }
+  function go(n) {
+    if (busy || n < 0 || n >= steps.length || n === cur) return;
+    busy = true;
+    error('');
+    scatter(steps[cur], true, function () {
+      steps[cur].hidden = true;
+      cur = n;
+      var s = steps[cur];
+      units(s).forEach(function (u) { u.forEach(function (el) { el.classList.add('pt-hide'); }); });
+      s.hidden = false;
+      sync();
+      scatter(s, false, function () { busy = false; focusStep(); });
+    });
+  }
+  function next() {
+    if (busy) return;
+    if (!valid()) { error(steps[cur].getAttribute('data-cf-error-text')); return; }
+    if (steps[cur].getAttribute('data-cf-step') === 'name') setName(answers.name);
+    go(cur + 1);
+  }
+
+  /* velden */
+  all('[data-cf-input]').forEach(function (inp) {
+    var k = inp.getAttribute('data-cf-input');
+    var ph = inp.getAttribute('data-cf-placeholder');
+    if (ph) inp.setAttribute('placeholder', ph);
+    inp.addEventListener('input', function () { answers[k] = inp.value.trim(); error(''); sync(); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); next(); } });
+  });
+  /* keuzes en knoppen per stap */
+  steps.forEach(function (step) {
+    var k = step.getAttribute('data-cf-step'), many = step.getAttribute('data-cf-type') === 'many';
+    var opts = all('[data-cf-option]', step);
+    opts.forEach(function (o) {
+      var v = (o.getAttribute('data-cf-option') || o.getAttribute('aria-label') || o.textContent).trim();
+      o.setAttribute('aria-pressed', 'false');
+      bind(o, function () {
+        if (many) {
+          var on = o.getAttribute('aria-pressed') !== 'true';
+          o.setAttribute('aria-pressed', on ? 'true' : 'false');
+          answers[k] = opts.filter(function (x) { return x.getAttribute('aria-pressed') === 'true'; })
+            .map(function (x) { return (x.getAttribute('data-cf-option') || x.getAttribute('aria-label') || x.textContent).trim(); });
+        } else {
+          opts.forEach(function (x) { x.setAttribute('aria-pressed', x === o ? 'true' : 'false'); });
+          answers[k] = v;
+        }
+        error('');
+        sync();
+      });
+    });
+    all('[data-cf-next]', step).forEach(function (b) { bind(b, next); });
+    all('[data-cf-back]', step).forEach(function (b) { bind(b, function () { go(cur - 1); }); });
+  });
+  /* versturen alleen vanaf de laatste stap; Enter elders = volgende stap */
+  document.addEventListener('submit', function (e) {
+    if (e.target !== form) return;
+    if (steps[cur].getAttribute('data-cf-type') !== 'review') { e.preventDefault(); e.stopImmediatePropagation(); next(); return; }
+    sync();
+  }, true);
+
+  steps.forEach(function (s, i) { s.hidden = i !== 0; });
+  sync();
+})();
